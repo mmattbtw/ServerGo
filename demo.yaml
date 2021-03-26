@@ -1,0 +1,28 @@
+level: "info"
+
+redis_uri: "redis://username:password@url/db"
+mongo_uri: "mongodb://username:password@url:port/?authSource=db"
+mongo_db: "db"
+
+conn_uri: "0.0.0.0:8080"
+conn_type: "tcp"
+
+website_url: "https://example.com/"
+cookie_domain: "example.com"
+cookie_secure: true
+
+twitch_redirect_uri: "https://example.com/twitch/login/callback"
+twitch_client_id: ""
+twitch_client_secret: ""
+
+temp_file_store: "./tmp"
+
+jwt_secret: ""
+
+aws_akid: ""
+aws_secret_key: ""
+aws_session_token: ""
+aws_region: "eu-central-1"
+aws_cdn_bucket: ""
+
+node_id: ""

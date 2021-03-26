@@ -1,0 +1,191 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Mutation {
+  # Edit an emote. Requires permission.
+  editEmote(emote: EmoteInput!, reason: String): Response
+  # Delete an emote. Requires permission.
+  deleteEmote(id: String!, reason: String): Response
+  # Restore an emote that has been deleted. Requires permission.
+  restoreEmote(id: String!, reason: String): Response
+  # Add an emote to a channel. Requires permission.
+  addChannelEmote(channel_id: String!, emote_id: String!, reason: String): Response
+  # Remove an emote from a channel. Requires permission.
+  removeChannelEmote(channel_id: String!, emote_id: String!, reason: String): Response
+  # Add an editor to a channel. Requires permission.
+  addChannelEditor(channel_id: String!, editor_id: String!, reason: String): Response
+  # Remove an editor from a channel. Requires permission.
+  removeChannelEditor(channel_id: String!, editor_id: String!, reason: String): Response
+  # Report an emote. Requires login.
+  reportEmote(emote_id: String!, reason: String): Response
+  # Report a user. Requires login.
+  reportUser(user_id: String!, reason: String): Response
+  # Ban a user. Requires permission.
+  banUser(user_id: String!, reason: String): Response
+  # Unban a user. Requires permission.
+  unbanUser(user_id: String!, reason: String): Response
+}
+
+type Response {
+  # Status Code 200 = success
+  status: Int!
+  # Message in response
+  message: String!
+}
+
+type Query {
+  # Get emote by id.
+  emote(id: String!): Emote
+  # Get emotes by user id.
+  emotes(user_id: String!): [Emote]
+  # Search for emotes.
+  search_emotes(query: String!, limit: Int): [Emote]!
+  # Get a user by id.
+  user(id: String!): User
+  # Get a user by their twitch name.
+  twitch_user(channel_name: String!): User
+  # Search for users.
+  search_users(query: String!, limit: Int): [UserPartial]!
+}
+
+input EmoteInput {
+  # Id of the emote
+  id: String!
+  # name of the emote
+  name: String
+  # id of the owner of the emote
+  owner_id: String
+  # visibility of the emote
+  visibility: Int
+  # tags for this emote
+  tags: [String!]
+}
+
+type Emote {
+  # Id of the emote
+  id: String!
+  # name of the emote
+  name: String!
+  # id of the owner of the emote
+  owner_id: String!
+  # visibility of the emote
+  visibility: Int!
+  # the mime/content-type of the emote
+  mime: String!
+  # the emote status
+  status: Int!
+  # tags for this emote
+  tags: [String!]!
+  # date of creation
+  created_at: String!
+  # Get audit log entries for this emote.
+  audit_entries: [String!]!
+  # Get the owner of this emote.
+  owner: User
+  # Get the reports on emote. Requries Permission.
+  reports: [Report]
+}
+
+type User {
+  # id of this user
+  id: String!
+  # email of this user
+  email: String
+  # rank of this user
+  rank: Int!
+  # emotes of this user
+  emote_ids: [String!]!
+  # editor ids for this user
+  editor_ids: [String!]!
+  # date of creation
+  created_at: String!
+  # twitch id
+  twitch_id: String!
+  # twitch display name
+  display_name: String!
+  # twitch login
+  login: String!
+  # twitch profile picture
+  profile_image_url: String!
+  # date of pair
+  paired_at: String!
+  # Get the emotes added to this users channel.
+  emotes: [Emote!]!
+  # Get the emotes this user has uploaded.
+  owned_emotes: [Emote!]!
+  # Get the editors of this user.
+  editors: [UserPartial!]!
+  # Get where this user is an editor.
+  editor_in: [UserPartial!]!
+  # Get the reports on this uer. Requries Permission.
+  reports: [Report]
+  # Get the logs on this user. Requries Permission.
+  audit_entries: [String!]
+  # Get the bans on this user. Requries Permission.
+  bans: [Ban!]
+}
+
+type UserPartial {
+  # id of this user
+  id: String!
+  # email of this user
+  email: String
+  # rank of this user
+  rank: Int!
+  # emotes of this user
+  emote_ids: [String!]!
+  # editor ids for this user
+  editor_ids: [String!]!
+  # date of creation
+  created_at: String!
+  # twitch id
+  twitch_id: String!
+  # twitch display name
+  display_name: String!
+  # twitch login
+  login: String!
+  # twitch profile picture
+  profile_image_url: String!
+  # date of pair
+  paired_at: String!
+}
+
+type Report {
+  # The user id of the reporter.
+  reporter_id: String
+  # The user/emote id of the reported.
+  target_id: String
+  # The type that was reported either user or emote.
+  target_type: String!
+  # The reason of the report.
+  reason: String!
+  # If a moderator has marked this as cleared.
+  cleared: Boolean!
+  # The user target of this report filled if target_type is user.
+  u_target: UserPartial
+  # The emote target of this report filled if the target_type is emote.
+  e_target: Emote
+  # The reporter who reported this emote.
+  reporter: UserPartial
+  # Logs of this report.
+  audit_entries: [String!]!
+}
+
+type Ban {
+  # ID of the ban.
+  id: String!
+  # user who got banned's id.
+  user_id: String
+  # Reason they got banned.
+  reason: String!
+  # ban is still active.
+  active: Boolean!
+  # Who banned the user.
+  issued_by_id: String
+  # The user who got banned.
+  user: UserPartial
+  # The moderator who banned them.
+  issued_by: UserPartial
+}
