@@ -279,7 +279,7 @@ func Emotes(app fiber.Router) fiber.Router {
 			log.Errorf("mongo, err=%v, id=%s", err, _id.Hex())
 		}
 
-		return 200, utils.S2B(fmt.Sprintf(`{"status":200,"id":"%s"}`, _id.Hex())), &mongo.AuditLog{
+		return 201, utils.S2B(fmt.Sprintf(`{"status":201,"id":"%s"}`, _id.Hex())), &mongo.AuditLog{
 			Type:      mongo.AuditLogTypeEmoteCreate,
 			Target:    &mongo.Target{ID: &_id, Type: "emotes"},
 			CreatedBy: usr.ID,
