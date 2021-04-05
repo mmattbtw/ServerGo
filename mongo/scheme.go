@@ -15,7 +15,7 @@ type Emote struct {
 	Status           int32                `json:"status" bson:"status"`
 	Tags             []string             `json:"tags" bson:"tags"`
 	SharedWith       []primitive.ObjectID `json:"shared_with" bson:"shared_with"`
-	LastModifiedDate time.Time                `json:"last_modified_date" bson:"last_modified_date"`
+	LastModifiedDate time.Time            `json:"last_modified_date" bson:"last_modified_date"`
 
 	Owner        *User        `json:"owner" bson:"-"`
 	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
@@ -29,8 +29,8 @@ const (
 )
 
 const (
-	EmoteStatusDeleted    int32 = -1
-	EmoteStatusProcessing int32 = iota
+	EmoteStatusDeleted int32 = iota - 1
+	EmoteStatusProcessing
 	EmoteStatusPending
 	EmoteStatusDisabled
 	EmoteStatusLive

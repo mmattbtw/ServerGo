@@ -185,9 +185,9 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	query := strings.Trim(args.Query, " ")
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
-	opts := options.Find().SetSort(bson.M{
-		"name": 1,
-		"tags": 1,
+	opts := options.Find().SetSort(bson.D{
+		{Key: "name", Value: 1},
+		{Key: "tags", Value: 1},
 	}).SetLimit(limit)
 
 	emotes := []*mongo.Emote{}
