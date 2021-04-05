@@ -3,10 +3,10 @@ package server
 import (
 	"net"
 
+	apiv2 "github.com/SevenTV/ServerGo/server/api/v2"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/SevenTV/ServerGo/configure"
-	"github.com/SevenTV/ServerGo/server/api"
 	"github.com/SevenTV/ServerGo/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -55,7 +55,7 @@ func New() *Server {
 		return c.Next()
 	})
 
-	api.API(server.app)
+	apiv2.API(server.app)
 	Twitch(server.app)
 
 	server.app.Use(func(c *fiber.Ctx) error {
