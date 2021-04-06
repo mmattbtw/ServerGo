@@ -12,7 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/api"
 	"github.com/SevenTV/ServerGo/jwt"
 	"github.com/SevenTV/ServerGo/mongo"
-	"github.com/SevenTV/ServerGo/session"
+	"github.com/SevenTV/ServerGo/server/middleware"
 	"github.com/SevenTV/ServerGo/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -48,6 +48,11 @@ type TwitchCallbackSubscription struct {
 	Transport TwitchCallbackTransport `json:"transport"`
 }
 
+type csrfJWT struct {
+	State     string    `json:"state"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type TwitchCallbackTransport struct {
 	Method   string `json:"method"`
 	Callback string `json:"callback"`
@@ -58,21 +63,6 @@ func Twitch(app fiber.Router) fiber.Router {
 	twitch := app.Group("/twitch")
 
 	twitch.Get("/login", func(c *fiber.Ctx) error {
-		sessionStore, err := session.Store.Get(c)
-
-		if err != nil {
-			log.Errorf("session, err=%v", err)
-			return c.Status(500).JSON(&fiber.Map{
-				"message": "Internal server error.",
-				"status":  500,
-			})
-		}
-		defer func() {
-			if err := sessionStore.Save(); err != nil {
-				log.Errorf("session, err=%v", err)
-			}
-		}()
-
 		csrfToken, err := utils.GenerateRandomString(64)
 		if err != nil {
 			log.Errorf("secure bytes, err=%v", err)
@@ -86,7 +76,19 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		scopes = append(scopes, "user:read:email")
 
-		sessionStore.Set("csrf_token", csrfToken)
+		cookieStore, err := jwt.Sign(csrfJWT{
+			State:     csrfToken,
+			CreatedAt: time.Now(),
+		})
+
+		c.Cookie(&fiber.Cookie{
+			Name:     "csrf_token",
+			Value:    cookieStore,
+			Expires:  time.Now().Add(time.Hour),
+			Domain:   configure.Config.GetString("cookie_domain"),
+			Secure:   configure.Config.GetBool("cookie_secure"),
+			HTTPOnly: true,
+		})
 
 		params, _ := qs.Marshal(map[string]string{
 			"client_id":     configure.Config.GetString("twitch_client_id"),
@@ -102,21 +104,6 @@ func Twitch(app fiber.Router) fiber.Router {
 	})
 
 	twitch.Get("/login/callback", func(c *fiber.Ctx) error {
-		sessionStore, err := session.Store.Get(c)
-		if err != nil {
-			log.Errorf("session, err=%v", err)
-			return c.Status(500).JSON(&fiber.Map{
-				"message": "Internal server error.",
-				"status":  500,
-			})
-		}
-		defer func() {
-			err := sessionStore.Save()
-			if err != nil {
-				log.Errorf("session, err=%v", err)
-			}
-		}()
-
 		twitchToken := c.Query("state")
 
 		if twitchToken == "" {
@@ -126,36 +113,43 @@ func Twitch(app fiber.Router) fiber.Router {
 			})
 		}
 
-		sessionToken, ok := sessionStore.Get("csrf_token").(string)
-		if !ok {
+		token := strings.Split(c.Cookies("csrf_token"), ".")
+		if len(token) != 3 {
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
-				"message": "Invalid response from sessiom store.",
+				"message": "Invalid response from cookies.",
 			})
 		}
 
-		if sessionToken == "" {
+		pl := &csrfJWT{}
+		if err := jwt.Verify(token, pl); err != nil {
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
-				"message": "Invalid response from sessiom store.",
+				"message": "Invalid response from cookies.",
 			})
 		}
 
-		if twitchToken != sessionToken {
+		if pl.CreatedAt.Before(time.Now().Add(-time.Hour)) {
+			return c.Status(400).JSON(&fiber.Map{
+				"status":  400,
+				"message": "Expired.",
+			})
+		}
+
+		if twitchToken != pl.State {
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
 				"message": "Invalid response from twitch, csrf_token token missmatch.",
 			})
 		}
 
-		if err != nil {
-			return c.Status(400).JSON(&fiber.Map{
-				"status":  400,
-				"message": "Invalid return url.",
-			})
-		}
-
-		sessionStore.Delete("csrf_token")
+		c.Cookie(&fiber.Cookie{
+			Name:     "csrf_token",
+			MaxAge:   -1,
+			Domain:   configure.Config.GetString("cookie_domain"),
+			Secure:   configure.Config.GetBool("cookie_secure"),
+			HTTPOnly: true,
+		})
 
 		code := c.Query("code")
 
@@ -239,6 +233,8 @@ func Twitch(app fiber.Router) fiber.Router {
 					"message": "Failed to create new account.",
 				})
 			}
+
+			var ok bool
 			mongoUser.ID, ok = res.InsertedID.(primitive.ObjectID)
 			if !ok {
 				log.Errorf("mongo, v=%v", res)
@@ -264,12 +260,12 @@ func Twitch(app fiber.Router) fiber.Router {
 			})
 		}
 
-		pl := &jwt.Payload{
+		authPl := &middleware.PayloadJWT{
 			ID:   mongoUser.ID.Hex(),
 			TWID: mongoUser.TwitchID,
 		}
 
-		token, err := jwt.Sign(pl)
+		authToken, err := jwt.Sign(authPl)
 		if err != nil {
 			log.Errorf("jwt, err=%v", err)
 			return c.Status(500).JSON(&fiber.Map{
@@ -280,11 +276,10 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		c.Cookie(&fiber.Cookie{
 			Name:     "auth",
-			Value:    token,
-			Domain:   configure.Config.GetString("cookie_domain"),
+			Value:    authToken,
 			HTTPOnly: false,
+			Domain:   configure.Config.GetString("cookie_domain"),
 			Secure:   configure.Config.GetBool("cookie_secure"),
-			SameSite: "LAX",
 			Expires:  time.Now().Add(time.Hour * 24 * 14),
 		})
 

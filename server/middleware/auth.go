@@ -13,6 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type PayloadJWT struct {
+	ID   string `json:"id"`
+	TWID string `json:"twid"`
+}
+
 func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		auth := strings.Split(c.Get("Authorization"), " ")
@@ -38,8 +43,8 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			})
 		}
 
-		pl, err := jwt.Verify(token)
-		if err != nil {
+		pl := &PayloadJWT{}
+		if err := jwt.Verify(token, pl); err != nil {
 			log.Errorf("jwt, err=%v", err)
 			if !required {
 				return c.Next()
