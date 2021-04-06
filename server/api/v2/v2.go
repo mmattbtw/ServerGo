@@ -9,6 +9,7 @@ import (
 func API(app fiber.Router) fiber.Router {
 	api := app.Group("/v2")
 
+	Twitch(api)
 	emotes.Emotes(api)
 	gql.GQL(api)
 

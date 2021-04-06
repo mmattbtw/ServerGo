@@ -1,4 +1,4 @@
-package server
+package v2
 
 import (
 	"encoding/json"
@@ -60,9 +60,9 @@ type TwitchCallbackTransport struct {
 }
 
 func Twitch(app fiber.Router) fiber.Router {
-	twitch := app.Group("/twitch")
+	twitch := app.Group("/auth")
 
-	twitch.Get("/login", func(c *fiber.Ctx) error {
+	twitch.Get("/", func(c *fiber.Ctx) error {
 		csrfToken, err := utils.GenerateRandomString(64)
 		if err != nil {
 			log.Errorf("secure bytes, err=%v", err)
@@ -103,7 +103,7 @@ func Twitch(app fiber.Router) fiber.Router {
 		return c.Redirect(u)
 	})
 
-	twitch.Get("/login/callback", func(c *fiber.Ctx) error {
+	twitch.Get("/callback", func(c *fiber.Ctx) error {
 		twitchToken := c.Query("state")
 
 		if twitchToken == "" {
