@@ -22,6 +22,20 @@ func GenerateRandomBytes(n int) ([]byte, error) {
 	return b, nil
 }
 
+//
+// Util - Ternary:
+// A golang equivalent to JS Ternary Operator
+//
+// It takes a condition, and returns a result depending on the outcome
+//
+func Ternary(condition bool, whenTrue interface{}, whenFalse interface{}) interface{} {
+	if condition {
+		return whenTrue
+	}
+
+	return whenFalse
+}
+
 // GenerateRandomString returns a URL-safe, base64 encoded
 // securely generated random string.
 // It will return an error if the system's secure random

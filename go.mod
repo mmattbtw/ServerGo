@@ -9,7 +9,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/gobuffalo/packr/v2 v2.8.1
-	github.com/gofiber/fiber/v2 v2.6.0
+	github.com/gofiber/fiber/v2 v2.7.1
 	github.com/google/uuid v1.2.0
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
 	github.com/json-iterator/go v1.1.10

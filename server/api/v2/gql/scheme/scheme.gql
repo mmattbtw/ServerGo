@@ -41,7 +41,7 @@ type Query {
   # Get emotes by user id.
   emotes(user_id: String!): [Emote]
   # Search for emotes.
-  search_emotes(query: String!, limit: Int): [Emote]!
+  search_emotes(query: String!, limit: Int, page: Int, pageSize: Int): [Emote]!
   # Get a user by id.
   user(id: String!): User
   # Get a user by their twitch name.

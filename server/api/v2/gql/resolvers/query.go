@@ -8,6 +8,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/cache"
 	"github.com/SevenTV/ServerGo/mongo"
+	"github.com/SevenTV/ServerGo/utils"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/selection"
 	jsoniter "github.com/json-iterator/go"
@@ -166,8 +167,10 @@ func (*RootResolver) TwitchUser(ctx context.Context, args struct{ ChannelName st
 }
 
 func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
-	Query string
-	Limit *int32
+	Query    string
+	Page     *int32
+	PageSize *int32
+	Limit    *int32
 }) ([]*emoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
 	if failed {
@@ -183,29 +186,37 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 
 	query := strings.Trim(args.Query, " ")
+	hasQuery := len(query) > 0
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
-	opts := options.Find().SetSort(bson.D{
-		{Key: "name", Value: 1},
-		{Key: "tags", Value: 1},
-	}).SetLimit(limit)
+	opts := options.Find().SetLimit(limit)
+	if hasQuery { // Query param is specified: set sorting option
+		opts.SetSort(bson.D{
+			{Key: "name", Value: 1},
+			{Key: "tags", Value: 1},
+		})
+	}
 
 	emotes := []*mongo.Emote{}
-	cur, err := mongo.Database.Collection("emotes").Find(mongo.Ctx, bson.M{
-		"status": mongo.EmoteStatusLive,
-		"$or": bson.A{
-			bson.M{
-				"name": bson.M{
-					"$regex": lQuery,
+	cur, err := mongo.Database.Collection("emotes").Find(mongo.Ctx, utils.Ternary(
+		hasQuery,
+		bson.M{
+			"status": mongo.EmoteStatusLive,
+			"$or": bson.A{
+				bson.M{
+					"name": bson.M{
+						"$regex": lQuery,
+					},
 				},
-			},
-			bson.M{
-				"tags": bson.M{
-					"$regex": lQuery,
+				bson.M{
+					"tags": bson.M{
+						"$regex": lQuery,
+					},
 				},
 			},
 		},
-	}, opts)
+		bson.M{"status": mongo.EmoteStatusLive},
+	), opts)
 	if err == nil {
 		err = cur.All(mongo.Ctx, &emotes)
 	}

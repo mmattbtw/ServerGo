@@ -9,6 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/configure"
 	"github.com/SevenTV/ServerGo/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
@@ -40,6 +41,10 @@ func New() *Server {
 		}),
 		listener: l,
 	}
+	server.app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,PATCH,DELETE",
+	}))
 
 	server.app.Use(logger.New(logger.Config{
 		Output: &CustomLogger{},
