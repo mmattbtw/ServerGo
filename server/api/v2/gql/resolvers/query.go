@@ -8,7 +8,6 @@ import (
 
 	"github.com/SevenTV/ServerGo/cache"
 	"github.com/SevenTV/ServerGo/mongo"
-	"github.com/SevenTV/ServerGo/utils"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/selection"
 	jsoniter "github.com/json-iterator/go"
@@ -189,34 +188,46 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	hasQuery := len(query) > 0
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
-	opts := options.Find().SetLimit(limit)
-	if hasQuery { // Query param is specified: set sorting option
-		opts.SetSort(bson.D{
-			{Key: "name", Value: 1},
-			{Key: "tags", Value: 1},
-		})
+	// Pagination
+	page := int64(*args.Page)
+	if page < 1 {
+		page = int64(1)
 	}
+	pageSize := int64(*args.PageSize)
+	log.Info("Pagination", page, pageSize)
+
+	opts := options.Aggregate()
 
 	emotes := []*mongo.Emote{}
-	cur, err := mongo.Database.Collection("emotes").Find(mongo.Ctx, utils.Ternary(
-		hasQuery,
-		bson.M{
-			"status": mongo.EmoteStatusLive,
-			"$or": bson.A{
-				bson.M{
-					"name": bson.M{
-						"$regex": lQuery,
-					},
+	match := bson.M{
+		"status": mongo.EmoteStatusLive,
+		"$or": bson.A{
+			bson.M{
+				"name": bson.M{
+					"$regex": lQuery,
 				},
-				bson.M{
-					"tags": bson.M{
-						"$regex": lQuery,
-					},
+			},
+			bson.M{
+				"tags": bson.M{
+					"$regex": lQuery,
 				},
 			},
 		},
-		bson.M{"status": mongo.EmoteStatusLive},
-	), opts)
+	}
+
+	// Create mongo pipeline
+	pipeline := mongo.Pipeline{
+		bson.D{primitive.E{Key: "$match", Value: match}},                // Match query
+		bson.D{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}}, // Paginate
+		bson.D{primitive.E{Key: "$limit", Value: pageSize}},             // Set limit
+	}
+	if hasQuery { // If a query is specified, add sorting
+		pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
+			{Key: "name", Value: 1},
+			{Key: "tags", Value: 1},
+		}}})
+	}
+	cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, pipeline, opts)
 	if err == nil {
 		err = cur.All(mongo.Ctx, &emotes)
 	}
