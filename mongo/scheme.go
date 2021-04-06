@@ -37,12 +37,13 @@ const (
 )
 
 type User struct {
-	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Email     string               `json:"email" bson:"email"`
-	Rank      int32                `json:"rank" bson:"rank"`
-	EmoteIDs  []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
-	EditorIDs []primitive.ObjectID `json:"editor_ids" bson:"editors"`
-	Role      *primitive.ObjectID  `json:"role" bson:"role"`
+	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Email        string               `json:"email" bson:"email"`
+	Rank         int32                `json:"rank" bson:"rank"`
+	EmoteIDs     []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
+	EditorIDs    []primitive.ObjectID `json:"editor_ids" bson:"editors"`
+	Role         *primitive.ObjectID  `json:"role" bson:"role"`
+	TokenVersion string               `json:"token_version" bson:"token_version"`
 
 	TwitchID        string `json:"twitch_id" bson:"id"`
 	DisplayName     string `json:"display_name" bson:"display_name"`

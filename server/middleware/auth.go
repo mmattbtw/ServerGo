@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"strings"
+	"time"
 
 	"github.com/SevenTV/ServerGo/jwt"
 	"github.com/SevenTV/ServerGo/mongo"
 	"github.com/SevenTV/ServerGo/redis"
-	"github.com/SevenTV/ServerGo/utils"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,8 +14,10 @@ import (
 )
 
 type PayloadJWT struct {
-	ID   string `json:"id"`
-	TWID string `json:"twid"`
+	ID           primitive.ObjectID `json:"id"`
+	TWID         string             `json:"twid"`
+	TokenVersion string             `json:"version"`
+	CreatedAt    time.Time          `json:"created_at"`
 }
 
 func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
@@ -39,7 +41,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Invalid token.2",
+				"error":  "Invalid token.",
 			})
 		}
 
@@ -51,28 +53,26 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Invalid token.3",
+				"error":  "Invalid token.",
 			})
 		}
 
-		val := utils.B2S(utils.S2B(pl.ID))
-
-		id, err := primitive.ObjectIDFromHex(val)
-		if err != nil {
+		if pl.CreatedAt.Before(time.Now().Add(-time.Hour * 24 * 60)) {
 			if !required {
 				return c.Next()
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Invalid token.4",
+				"error":  "Token expired",
 			})
 		}
 
 		res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
-			"_id": id,
+			"_id":           pl.ID,
+			"token_version": pl.TokenVersion,
 		})
 
-		err = res.Err()
+		err := res.Err()
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				if !required {
@@ -80,7 +80,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 				}
 				return c.Status(403).JSON(&fiber.Map{
 					"status": 403,
-					"error":  "Invalid token.5",
+					"error":  "Invalid token.",
 				})
 			}
 			log.Errorf("mongo, err=%v", err)

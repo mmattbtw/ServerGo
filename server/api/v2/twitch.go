@@ -80,6 +80,13 @@ func Twitch(app fiber.Router) fiber.Router {
 			State:     csrfToken,
 			CreatedAt: time.Now(),
 		})
+		if err != nil {
+			log.Errorf("jwt, err=%v", err)
+			return c.Status(500).JSON(&fiber.Map{
+				"message": "Internal server error.",
+				"status":  500,
+			})
+		}
 
 		c.Cookie(&fiber.Cookie{
 			Name:     "csrf_token",
@@ -261,8 +268,10 @@ func Twitch(app fiber.Router) fiber.Router {
 		}
 
 		authPl := &middleware.PayloadJWT{
-			ID:   mongoUser.ID.Hex(),
-			TWID: mongoUser.TwitchID,
+			ID:           mongoUser.ID,
+			TWID:         mongoUser.TwitchID,
+			TokenVersion: mongoUser.TokenVersion,
+			CreatedAt:    time.Now(),
 		}
 
 		authToken, err := jwt.Sign(authPl)

@@ -11,7 +11,7 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-const alg = `{"alg": "HS256","typ": "JWT"}`
+var alg = jwt.EncodeSegment(utils.S2B(`{"alg":"HS256","typ":"JWT"}`))
 
 func Sign(pl interface{}) (string, error) {
 	bytes, err := json.MarshalToString(pl)
@@ -19,11 +19,7 @@ func Sign(pl interface{}) (string, error) {
 		return "", err
 	}
 
-	algEnc := jwt.EncodeSegment(utils.S2B(alg))
-	payload := jwt.EncodeSegment(utils.S2B(bytes))
-
-	first := fmt.Sprintf("%s.%s", algEnc, payload)
-
+	first := fmt.Sprintf("%s.%s", alg, jwt.EncodeSegment(utils.S2B(bytes)))
 	sign, err := jwt.SigningMethodHS256.Sign(first, utils.S2B(configure.Config.GetString("jwt_secret")))
 	if err != nil {
 		return "", err

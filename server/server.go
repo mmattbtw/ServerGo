@@ -2,8 +2,12 @@ package server
 
 import (
 	"net"
+	"strings"
+	"time"
 
+	"github.com/SevenTV/ServerGo/jwt"
 	apiv2 "github.com/SevenTV/ServerGo/server/api/v2"
+	"github.com/SevenTV/ServerGo/server/middleware"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/SevenTV/ServerGo/configure"
@@ -41,6 +45,7 @@ func New() *Server {
 		}),
 		listener: l,
 	}
+
 	server.app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,PATCH,DELETE",
@@ -57,6 +62,34 @@ func New() *Server {
 		if nodeID != "" {
 			c.Set("X-Node-ID", nodeID)
 		}
+		delete := true
+		auth := strings.Split(c.Cookies("auth"), ".")
+		if len(auth) != 3 {
+			pl := &middleware.PayloadJWT{}
+			if err := jwt.Verify(auth, pl); err == nil {
+				if pl.CreatedAt.After(time.Now().Add(-time.Hour * 24 * 60)) {
+					delete = false
+					c.Cookie(&fiber.Cookie{
+						Name:     "auth",
+						Value:    c.Cookies("auth"),
+						Domain:   configure.Config.GetString("cookie_domain"),
+						Expires:  time.Now().Add(time.Hour * 24 * 14),
+						Secure:   configure.Config.GetBool("cookie_secure"),
+						HTTPOnly: false,
+					})
+				}
+			}
+		}
+		if delete {
+			c.Cookie(&fiber.Cookie{
+				Name:     "auth",
+				Domain:   configure.Config.GetString("cookie_domain"),
+				MaxAge:   -1,
+				Secure:   configure.Config.GetBool("cookie_secure"),
+				HTTPOnly: false,
+			})
+		}
+
 		return c.Next()
 	})
 
