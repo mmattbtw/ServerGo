@@ -129,7 +129,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		user.Editors = &[]*mongo.User{}
 		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", userID.Hex()), bson.M{
 			"_id": bson.M{
-				"$in": user.EditorIDs,
+				"$in": utils.Ternary(len(user.EditorIDs) > 0, user.EditorIDs, []primitive.ObjectID{}).([]primitive.ObjectID),
 			},
 		}, user.Editors); err != nil {
 			log.Errorf("mongo, err=%v", err)
@@ -305,6 +305,10 @@ func (r *userResolver) DisplayName() string {
 
 func (r *userResolver) Login() string {
 	return r.v.Login
+}
+
+func (r *userResolver) BroadcasterType() string {
+	return r.v.BroadcasterType
 }
 
 func (r *userResolver) ProfileImageURL() string {

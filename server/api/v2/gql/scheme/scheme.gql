@@ -107,6 +107,8 @@ type User {
   display_name: String!
   # twitch login
   login: String!
+  # twitch broadcaster type
+  broadcaster_type: String!
   # twitch profile picture
   profile_image_url: String!
   # date of pair

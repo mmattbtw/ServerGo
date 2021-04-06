@@ -45,9 +45,11 @@ type User struct {
 	Role         *primitive.ObjectID  `json:"role" bson:"role"`
 	TokenVersion string               `json:"token_version" bson:"token_version"`
 
+	// Twitch Data
 	TwitchID        string `json:"twitch_id" bson:"id"`
 	DisplayName     string `json:"display_name" bson:"display_name"`
 	Login           string `json:"login" bson:"login"`
+	BroadcasterType string `json:"broadcaster_type" bson:"broadcaster_type"`
 	ProfileImageURL string `json:"profile_image_url" bson:"profile_image_url"`
 
 	// Relational Data
