@@ -292,7 +292,7 @@ func Twitch(app fiber.Router) fiber.Router {
 			Expires:  time.Now().Add(time.Hour * 24 * 14),
 		})
 
-		return c.SendStatus(200)
+		return c.Redirect(configure.Config.GetString("website_url") + "/callback")
 	})
 
 	return twitch
