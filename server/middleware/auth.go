@@ -14,9 +14,10 @@ import (
 )
 
 type PayloadJWT struct {
-	ID           primitive.ObjectID `json:"id"`
-	TWID         string             `json:"twid"`
-	TokenVersion string             `json:"version"`
+	ID           primitive.ObjectID `json:"id"`          // User App ID
+	TWID         string             `json:"twid"`        // Twitch ID
+	Permissions  string             `json:"permissions"` // Permission bitmask from user's role
+	TokenVersion string             `json:"version"`     // Token version to match against for JWT invalidation
 	CreatedAt    time.Time          `json:"created_at"`
 }
 
