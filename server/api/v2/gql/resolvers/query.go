@@ -8,6 +8,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/cache"
 	"github.com/SevenTV/ServerGo/mongo"
+	"github.com/SevenTV/ServerGo/utils"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/selection"
 	jsoniter "github.com/json-iterator/go"
@@ -69,6 +70,31 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 }
 
 func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userResolver, error) {
+	isMe := args.ID == "@me" // Handle @me (current authenticated user)
+	var currentUser *mongo.User
+
+	id, err := primitive.ObjectIDFromHex(args.ID)
+	if err != nil && !isMe {
+		return nil, nil
+	}
+
+	// Get current user from context if @me
+	if u, ok := ctx.Value(utils.UserKey).(*mongo.User); isMe && u != nil && ok {
+		currentUser = u
+	}
+	if isMe && currentUser == nil { // Handle error: current user requested but request was unauthenticated
+		return nil, nil
+	}
+
+	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	if failed {
+		return nil, errDepth
+	}
+
+	return GenerateUserResolver(ctx, currentUser, &id, field.children)
+}
+
+func (*RootResolver) Role(ctx context.Context, args struct{ ID string }) (*roleResolver, error) {
 	id, err := primitive.ObjectIDFromHex(args.ID)
 	if err != nil {
 		return nil, nil
@@ -79,7 +105,7 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 		return nil, errDepth
 	}
 
-	return GenerateUserResolver(ctx, nil, &id, field.children)
+	return GenerateRoleResolver(ctx, &id, field.children)
 }
 
 func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emoteResolver, error) {
