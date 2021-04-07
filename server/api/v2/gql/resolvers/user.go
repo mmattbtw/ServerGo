@@ -211,6 +211,17 @@ func (r *userResolver) Rank() int32 {
 	return r.v.Rank
 }
 
+func (r *userResolver) Role() (*roleResolver, error) {
+	role := r.v.Role
+	res, err := GenerateRoleResolver(r.ctx, role, r.fields["role"].children)
+	if err != nil {
+		log.Errorf("generation, err=%v", err)
+		return nil, errInternalServer
+	}
+
+	return res, nil
+}
+
 func (r *userResolver) EmoteIDs() []string {
 	ids := make([]string, len(r.v.EmoteIDs))
 	for i, id := range r.v.EmoteIDs {

@@ -20,7 +20,7 @@ type GQLRequest struct {
 }
 
 func GQL(app fiber.Router) fiber.Router {
-	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))
+	gql := app.Group("/gql", middleware.UserAuthMiddleware(true))
 
 	box := packr.New("gql", "./scheme")
 
@@ -39,7 +39,7 @@ func GQL(app fiber.Router) fiber.Router {
 			log.Errorf("gql req, err=%v", err)
 			return c.Status(400).JSON(fiber.Map{
 				"status":  400,
-				"message": "Invalid GraphQL Request.",
+				"message": "Invalid GraphQL Request. (" + err.Error() + ")",
 			})
 		}
 

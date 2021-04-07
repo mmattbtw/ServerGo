@@ -44,6 +44,8 @@ type Query {
   search_emotes(query: String!, limit: Int, page: Int, pageSize: Int): [Emote]!
   # Get a user by id.
   user(id: String!): User
+  #  Get a role by id
+  role(id: String!): Role
   # Get a user by their twitch name.
   twitch_user(channel_name: String!): User
   # Search for users.
@@ -65,7 +67,7 @@ input EmoteInput {
 
 type Emote {
   # Id of the emote
-  id: String!
+  _id: String!
   # name of the emote
   name: String!
   # id of the owner of the emote
@@ -90,11 +92,12 @@ type Emote {
 
 type User {
   # id of this user
-  id: String!
+  _id: String!
   # email of this user
   email: String
   # rank of this user
   rank: Int!
+  role: Role!
   # emotes of this user
   emote_ids: [String!]!
   # editor ids for this user
@@ -152,6 +155,14 @@ type UserPartial {
   profile_image_url: String!
   # date of pair
   paired_at: String!
+}
+
+type Role {
+  id: String!
+  name: String!
+  color: Int!
+  allowed: String!
+  denied: String!
 }
 
 type Report {
