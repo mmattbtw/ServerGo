@@ -7,7 +7,7 @@ import (
 )
 
 type Emote struct {
-	ID               primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	ID               primitive.ObjectID   `json:"_id" bson:"_id,omitempty"`
 	Name             string               `json:"name" bson:"name"`
 	OwnerID          primitive.ObjectID   `json:"owner_id" bson:"owner"`
 	Visibility       int32                `json:"visibility" bson:"visibility"`
@@ -37,7 +37,7 @@ const (
 )
 
 type User struct {
-	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	ID           primitive.ObjectID   `json:"_id" bson:"_id,omitempty"`
 	Email        string               `json:"email" bson:"email"`
 	Rank         int32                `json:"rank" bson:"rank"`
 	EmoteIDs     []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
