@@ -42,7 +42,7 @@ type User struct {
 	Rank         int32                `json:"rank" bson:"rank"`
 	EmoteIDs     []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
 	EditorIDs    []primitive.ObjectID `json:"editor_ids" bson:"editors"`
-	Role         *primitive.ObjectID  `json:"role" bson:"role"`
+	RoleID       *primitive.ObjectID  `json:"role_id" bson:"role"`
 	TokenVersion string               `json:"token_version" bson:"token_version"`
 
 	// Twitch Data
@@ -56,6 +56,7 @@ type User struct {
 	Emotes       *[]*Emote    `json:"emotes" bson:"-"`
 	OwnedEmotes  *[]*Emote    `json:"owned_emotes" bson:"-"`
 	Editors      *[]*User     `json:"editors" bson:"-"`
+	Role         *Role        `json:"role" bson:"-"`
 	EditorIn     *[]*User     `json:"editor_in" bson:"-"`
 	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
 	Reports      *[]*Report   `json:"reports" bson:"-"`
@@ -63,26 +64,31 @@ type User struct {
 }
 
 type Role struct {
-	ID      primitive.ObjectID `json:"id" bson:"_id"`
-	Name    string             `json:"name" bson:"name"`
-	Color   int32              `json:"color" bson:"color"`
-	Allowed int64              `json:"allowed" bson:"allowed"`
-	Denied  int64              `json:"denied" bson:"denied"`
+	ID       primitive.ObjectID `json:"id" bson:"_id"`
+	Name     string             `json:"name" bson:"name"`
+	Position int32              `json:"position" bson:"position"`
+	Color    int32              `json:"color" bson:"color"`
+	Allowed  int64              `json:"allowed" bson:"allowed"`
+	Denied   int64              `json:"denied" bson:"denied"`
 }
 
 const (
-	RolePermissionEmoteUpload  int64 = 2 << iota // 1
-	RolePermissionEmoteDelete  int64 = 2 << iota // 4
-	RolePermissionEmoteRestore int64 = 2 << iota // 8
-	RolePermissionEmoteEdit    int64 = 2 << iota // 16
-	UserPermissionEmoteGlobal  int64 = 2 << iota // 64
-	UserPermissionReport       int64 = 2 << iota // 128
-	UserPermissionBan          int64 = 2 << iota // 256
-	UserPermissionManageOthers int64 = 2 << iota // 1024
-	UserPermissionEditorChange int64 = 2 << iota // 2048
-	RolePermissionRolesEdit    int64 = 2 << iota // 8192
-	UserPermissionAll          int64 = (2 << iota) - 1
-	UserPermissionsDefault     int64 = RolePermissionEmoteUpload & RolePermissionEmoteEdit & RolePermissionEmoteDelete & UserPermissionReport & RolePermissionEmoteRestore
+	RolePermissionEmoteCreate    int64 = 2 << iota // 1 - Allows creating emotes
+	RolePermissionEmoteEditOwned int64 = 2 << iota // 4 - Allows editing own emotes
+	RolePermissionEditAll        int64 = 2 << iota // 8 - (Elevated) Allows editing all emotes
+
+	RolePermissionCreateReports int64 = 2 << iota // 16 - Allows creating reports
+	RolePermissionManageReports int64 = 2 << iota // 32 - (Elevated) Allows managing reports
+
+	RolePermissionBanUsers      int64 = 2 << iota // 64 - (Elevated) Allows banning other users
+	RolePermissionAdministrator int64 = 2 << iota // 128 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
+	RolePermissionManageRoles   int64 = 2 << iota // 256 - (Elevated) Allows managing roles
+	RolePermissionManageUsers   int64 = 2 << iota // 512 - (Elevated) Allows managing users
+
+	RolePermissionManageEditors int64 = 2 << iota // 1024 - Allows adding and removing editors from own channel
+
+	RolePermissionAll     int64 = (2 << iota) - 1                                                                                                        // Sum of all permissions combined
+	RolePermissionDefault int64 = (RolePermissionEmoteCreate | RolePermissionEmoteEditOwned | RolePermissionCreateReports | RolePermissionManageEditors) // Default permissions for users without a role
 )
 
 const (

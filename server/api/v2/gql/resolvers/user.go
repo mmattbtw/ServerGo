@@ -125,6 +125,20 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		}
 	}
 
+	if _, ok := fields["role"]; ok && user.Role == nil {
+		role := &[]*mongo.Role{}
+		if err := cache.Find("users", fmt.Sprintf("user:%s:role", userID.Hex()), bson.M{
+			"_id": user.RoleID,
+		}, role); err != nil {
+			log.Errorf("mongo, err=%v", err)
+			return nil, errInternalServer
+		}
+
+		if len(*role) > 0 {
+			user.Role = (*role)[0]
+		}
+	}
+
 	if _, ok := fields["editors"]; ok && user.Editors == nil {
 		user.Editors = &[]*mongo.User{}
 		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", userID.Hex()), bson.M{
@@ -212,13 +226,16 @@ func (r *userResolver) Rank() int32 {
 }
 
 func (r *userResolver) Role() (*roleResolver, error) {
-	role := r.v.Role
-	res, err := GenerateRoleResolver(r.ctx, role, r.fields["role"].children)
+	role := r.v.RoleID
+	res, err := GenerateRoleResolver(r.ctx, nil, role, r.fields["role"].children)
 	if err != nil {
 		log.Errorf("generation, err=%v", err)
 		return nil, errInternalServer
 	}
 
+	if res == nil {
+		return GenerateRoleResolver(r.ctx, DefaultRole, nil, r.fields["role"].children)
+	}
 	return res, nil
 }
 

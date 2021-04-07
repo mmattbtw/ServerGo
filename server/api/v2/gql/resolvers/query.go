@@ -105,7 +105,7 @@ func (*RootResolver) Role(ctx context.Context, args struct{ ID string }) (*roleR
 		return nil, errDepth
 	}
 
-	return GenerateRoleResolver(ctx, &id, field.children)
+	return GenerateRoleResolver(ctx, nil, &id, field.children)
 }
 
 func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emoteResolver, error) {

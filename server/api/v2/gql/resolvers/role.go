@@ -18,9 +18,25 @@ type roleResolver struct {
 	fields map[string]*SelectedField
 }
 
-func GenerateRoleResolver(ctx context.Context, roleID *primitive.ObjectID, fields map[string]*SelectedField) (*roleResolver, error) {
-	role := &mongo.Role{}
+// The default role.
+// It grants permissions for users without a defined role
+var DefaultRole *mongo.Role = &mongo.Role{
+	ID:      primitive.NewObjectID(),
+	Name:    "Default",
+	Allowed: mongo.RolePermissionDefault,
+	Denied:  0,
+}
 
+func GenerateRoleResolver(ctx context.Context, pRole *mongo.Role, roleID *primitive.ObjectID, fields map[string]*SelectedField) (*roleResolver, error) {
+	if pRole != nil {
+		return &roleResolver{
+			ctx:    ctx,
+			v:      pRole,
+			fields: fields,
+		}, nil
+	}
+
+	role := &mongo.Role{}
 	if role.ID.IsZero() {
 		if err := cache.FindOne("roles", "", bson.M{
 			"_id": roleID,
@@ -51,6 +67,10 @@ func (r *roleResolver) ID() string {
 
 func (r *roleResolver) Name() string {
 	return r.v.Name
+}
+
+func (r *roleResolver) Position() int32 {
+	return r.v.Position
 }
 
 func (r *roleResolver) Color() int32 {
