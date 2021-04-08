@@ -223,7 +223,7 @@ func (r *userResolver) ID() string {
 }
 
 func (r *userResolver) Email() *string {
-	if u, ok := r.ctx.Value(utils.UserKey).(*mongo.User); ok && (r.v.ID == u.ID || HasPermission(u, mongo.RolePermissionManageUsers)) {
+	if u, ok := r.ctx.Value(utils.UserKey).(*mongo.User); ok && (r.v.ID == u.ID || mongo.UserHasPermission(u, mongo.RolePermissionManageUsers)) {
 		return &r.v.Email
 	} else { // Hide the email address if
 		s := "<hidden>"
@@ -421,21 +421,4 @@ func (r *userResolver) AuditEntries() (*[]string, error) {
 		}
 	}
 	return &logs, nil
-}
-
-// Test whether a User has a permission flag
-func HasPermission(user *mongo.User, flag int64) bool {
-	allowed := utils.Ternary(&user.Role.Allowed != nil, user.Role.Allowed, 0).(int64)
-	denied := utils.Ternary(&user.Role.Denied != nil, user.Role.Denied, 0).(int64)
-	if user == nil {
-		return false
-	}
-	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
-		log.Errorf("HasPermission, err=flag is not power of two (%s)", flag)
-		return false
-	}
-
-	// Get the sum with denied permissions removed from the bitset
-	sum := utils.RemoveBits(allowed, denied)
-	return utils.HasBits(sum, flag) || utils.HasBits(sum, mongo.RolePermissionAdministrator)
 }

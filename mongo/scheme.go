@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/SevenTV/ServerGo/utils"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -64,6 +65,23 @@ type User struct {
 	Bans         *[]*Ban      `json:"bans" bson:"-"`
 }
 
+// Test whether a User has a permission flag
+func UserHasPermission(user *User, flag int64) bool {
+	allowed := utils.Ternary(&user.Role.Allowed != nil, user.Role.Allowed, 0).(int64)
+	denied := utils.Ternary(&user.Role.Denied != nil, user.Role.Denied, 0).(int64)
+	if user == nil {
+		return false
+	}
+	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
+		log.Errorf("HasPermission, err=flag is not power of two (%s)", flag)
+		return false
+	}
+
+	// Get the sum with denied permissions removed from the bitset
+	sum := utils.RemoveBits(allowed, denied)
+	return utils.HasBits(sum, flag) || utils.HasBits(sum, RolePermissionAdministrator)
+}
+
 type Role struct {
 	ID       primitive.ObjectID `json:"id" bson:"_id"`
 	Name     string             `json:"name" bson:"name"`
@@ -105,21 +123,21 @@ func GetRole(id primitive.ObjectID) Role {
 }
 
 const (
-	RolePermissionEmoteCreate    int64 = 2 << iota // 2 - Allows creating emotes
-	RolePermissionEmoteEditOwned int64 = 2 << iota // 4 - Allows editing own emotes
-	RolePermissionEditAll        int64 = 2 << iota // 8 - (Elevated) Allows editing all emotes
+	RolePermissionEmoteCreate    int64 = 1 << iota // 1 - Allows creating emotes
+	RolePermissionEmoteEditOwned int64 = 1 << iota // 2 - Allows editing own emotes
+	RolePermissionEditAll        int64 = 1 << iota // 4 - (Elevated) Allows editing all emotes
 
-	RolePermissionCreateReports int64 = 2 << iota // 16 - Allows creating reports
-	RolePermissionManageReports int64 = 2 << iota // 32 - (Elevated) Allows managing reports
+	RolePermissionCreateReports int64 = 1 << iota // 8 - Allows creating reports
+	RolePermissionManageReports int64 = 1 << iota // 16 - (Elevated) Allows managing reports
 
-	RolePermissionBanUsers      int64 = 2 << iota // 64 - (Elevated) Allows banning other users
-	RolePermissionAdministrator int64 = 2 << iota // 128 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
-	RolePermissionManageRoles   int64 = 2 << iota // 256 - (Elevated) Allows managing roles
-	RolePermissionManageUsers   int64 = 2 << iota // 512 - (Elevated) Allows managing users
+	RolePermissionBanUsers      int64 = 1 << iota // 32 - (Elevated) Allows banning other users
+	RolePermissionAdministrator int64 = 1 << iota // 64 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
+	RolePermissionManageRoles   int64 = 1 << iota // 128 - (Elevated) Allows managing roles
+	RolePermissionManageUsers   int64 = 1 << iota // 256 - (Elevated) Allows managing users
 
-	RolePermissionManageEditors int64 = 2 << iota // 1024 - Allows adding and removing editors from own channel
+	RolePermissionManageEditors int64 = 1 << iota // 512 - Allows adding and removing editors from own channel
 
-	RolePermissionAll     int64 = (2 << iota) - 1                                                                                                        // Sum of all permissions combined
+	RolePermissionAll     int64 = (1 << iota) - 1                                                                                                        // Sum of all permissions combined
 	RolePermissionDefault int64 = (RolePermissionEmoteCreate | RolePermissionEmoteEditOwned | RolePermissionCreateReports | RolePermissionManageEditors) // Default permissions for users without a role
 )
 
