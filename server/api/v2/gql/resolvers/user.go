@@ -24,7 +24,9 @@ type userResolver struct {
 
 func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primitive.ObjectID, fields map[string]*SelectedField) (*userResolver, error) {
 	if user == nil {
-		user = &mongo.User{}
+		user = &mongo.User{
+			Role: mongo.DefaultRole,
+		}
 		if err := cache.FindOne("users", "", bson.M{
 			"_id": userID,
 		}, user); err != nil {
@@ -38,6 +40,23 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 
 	if user == nil {
 		return nil, nil
+	}
+
+	if _, ok := fields["role"]; ok && user.Role == nil {
+		role := &[]*mongo.Role{}
+		if err := cache.Find("users", fmt.Sprintf("user:%s:role", userID.Hex()), bson.M{
+			"_id": user.RoleID,
+		}, role); err != nil {
+			log.Errorf("mongo, err=%v", err)
+			return nil, errInternalServer
+		}
+
+		if len(*role) > 0 {
+			user.Role = (*role)[0]
+		}
+		if user.Role == nil { // Resolve default role if no role assigned
+			user.Role = mongo.DefaultRole
+		}
 	}
 
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
@@ -125,20 +144,6 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		}
 	}
 
-	if _, ok := fields["role"]; ok && user.Role == nil {
-		role := &[]*mongo.Role{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:role", userID.Hex()), bson.M{
-			"_id": user.RoleID,
-		}, role); err != nil {
-			log.Errorf("mongo, err=%v", err)
-			return nil, errInternalServer
-		}
-
-		if len(*role) > 0 {
-			user.Role = (*role)[0]
-		}
-	}
-
 	if _, ok := fields["editors"]; ok && user.Editors == nil {
 		user.Editors = &[]*mongo.User{}
 		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", userID.Hex()), bson.M{
@@ -218,7 +223,12 @@ func (r *userResolver) ID() string {
 }
 
 func (r *userResolver) Email() *string {
-	return &r.v.Email
+	if u, ok := r.ctx.Value(utils.UserKey).(*mongo.User); ok && (r.v.ID == u.ID || HasPermission(u, mongo.RolePermissionManageUsers)) {
+		return &r.v.Email
+	} else { // Hide the email address if
+		s := "<hidden>"
+		return &s
+	}
 }
 
 func (r *userResolver) Rank() int32 {
@@ -234,8 +244,9 @@ func (r *userResolver) Role() (*roleResolver, error) {
 	}
 
 	if res == nil {
-		return GenerateRoleResolver(r.ctx, DefaultRole, nil, r.fields["role"].children)
+		return GenerateRoleResolver(r.ctx, mongo.DefaultRole, nil, r.fields["role"].children)
 	}
+
 	return res, nil
 }
 
@@ -410,4 +421,21 @@ func (r *userResolver) AuditEntries() (*[]string, error) {
 		}
 	}
 	return &logs, nil
+}
+
+// Test whether a User has a permission flag
+func HasPermission(user *mongo.User, flag int64) bool {
+	allowed := utils.Ternary(&user.Role.Allowed != nil, user.Role.Allowed, 0).(int64)
+	denied := utils.Ternary(&user.Role.Denied != nil, user.Role.Denied, 0).(int64)
+	if user == nil {
+		return false
+	}
+	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
+		log.Errorf("HasPermission, err=flag is not power of two (%s)", flag)
+		return false
+	}
+
+	// Get the sum with denied permissions removed from the bitset
+	sum := utils.RemoveBits(allowed, denied)
+	return utils.HasBits(sum, flag) || utils.HasBits(sum, mongo.RolePermissionAdministrator)
 }

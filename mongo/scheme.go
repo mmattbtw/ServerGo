@@ -3,6 +3,7 @@ package mongo
 import (
 	"time"
 
+	"github.com/SevenTV/ServerGo/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -70,6 +71,37 @@ type Role struct {
 	Color    int32              `json:"color" bson:"color"`
 	Allowed  int64              `json:"allowed" bson:"allowed"`
 	Denied   int64              `json:"denied" bson:"denied"`
+}
+
+// The default role.
+// It grants permissions for users without a defined role
+var DefaultRole *Role = &Role{
+	ID:      primitive.NewObjectID(),
+	Name:    "Default",
+	Allowed: RolePermissionDefault,
+	Denied:  0,
+}
+
+// Get cached roles
+func GetRoles() []Role {
+	return Ctx.Value(utils.AllRolesKey).([]Role)
+}
+
+// Get a cached role by ID
+func GetRole(id primitive.ObjectID) Role {
+	var role Role
+	roles := GetRoles()
+
+	for _, r := range roles {
+		if r.ID != id {
+			continue
+		}
+
+		role = r
+		break
+	}
+
+	return role
 }
 
 const (

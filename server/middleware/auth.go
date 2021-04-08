@@ -7,6 +7,7 @@ import (
 	"github.com/SevenTV/ServerGo/jwt"
 	"github.com/SevenTV/ServerGo/mongo"
 	"github.com/SevenTV/ServerGo/redis"
+	"github.com/SevenTV/ServerGo/utils"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -129,6 +130,14 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 				"error":  "You are banned.",
 				"reason": reason,
 			})
+		}
+
+		// Assign role to user
+		if user.RoleID != nil {
+			role := mongo.GetRole(*user.RoleID)                                                 // Try to get the cached role
+			user.Role = utils.Ternary(role.ID.IsZero(), mongo.DefaultRole, &role).(*mongo.Role) // Assign cached role if available, otherwise set default role
+		} else {
+			user.Role = mongo.DefaultRole // If no role assign default role
 		}
 
 		c.Locals("user", user)

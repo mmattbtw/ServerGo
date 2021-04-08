@@ -18,15 +18,6 @@ type roleResolver struct {
 	fields map[string]*SelectedField
 }
 
-// The default role.
-// It grants permissions for users without a defined role
-var DefaultRole *mongo.Role = &mongo.Role{
-	ID:      primitive.NewObjectID(),
-	Name:    "Default",
-	Allowed: mongo.RolePermissionDefault,
-	Denied:  0,
-}
-
 func GenerateRoleResolver(ctx context.Context, pRole *mongo.Role, roleID *primitive.ObjectID, fields map[string]*SelectedField) (*roleResolver, error) {
 	if pRole != nil {
 		return &roleResolver{
