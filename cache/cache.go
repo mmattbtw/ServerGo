@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/SevenTV/ServerGo/cache/decoder"
 	"github.com/SevenTV/ServerGo/mongo"
@@ -113,7 +114,7 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 		for i, v := range out {
 			oid, ok := v["_id"].(primitive.ObjectID)
 			if !ok {
-				return fmt.Errorf("invalid mogno, resp=%s", spew.Sdump(out))
+				return fmt.Errorf("invalid mongo, resp=%s", spew.Sdump(out))
 			}
 			args[2*i] = oid.Hex()
 			args[2*i+1], err = json.MarshalToString(v)
@@ -146,7 +147,7 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 		for i, v := range results {
 			oid, ok := v["_id"].(primitive.ObjectID)
 			if !ok {
-				return fmt.Errorf("invalid mogno, resp=%s", spew.Sdump(results))
+				return fmt.Errorf("invalid mongo, resp=%s", spew.Sdump(results))
 			}
 			args[2*i] = oid.Hex()
 			args[2*i+1], err = json.MarshalToString(v)
@@ -197,7 +198,7 @@ func FindOne(collection, commonIndex string, q interface{}, output interface{}, 
 
 		oid, ok := out["_id"].(primitive.ObjectID)
 		if !ok {
-			return fmt.Errorf("invalid mogno, resp=%s", spew.Sdump(out))
+			return fmt.Errorf("invalid mongo, resp=%s", spew.Sdump(out))
 		}
 
 		data, err := json.MarshalToString(out)
@@ -212,4 +213,26 @@ func FindOne(collection, commonIndex string, q interface{}, output interface{}, 
 		return decoder.Decode(out, output)
 	}
 	return decoder.Decode(val[0], output)
+}
+
+// Gets the collection size then caches it in redis for some time
+func GetCollectionSize(collection string, q interface{}, opts ...*options.CountOptions) (int64, error) {
+	sha1, err := genSha("collection-size", collection, q, opts)
+	if err != nil {
+		return 0, err
+	}
+	key := "cached:collection-size:" + collection + ":" + sha1
+
+	if count, err := redis.Client.Get(redis.Ctx, key).Int64(); err == nil { // Try to find the cached value in redis
+		return count, nil
+	} else { // Otherwise, query mongo
+		count, err := mongo.Database.Collection(collection).CountDocuments(mongo.Ctx, q, opts...)
+		if err != nil {
+			return 0, err
+		}
+
+		redis.Client.Set(redis.Ctx, key, count, 5*time.Minute)
+		return count, nil
+	}
+
 }

@@ -126,4 +126,5 @@ func IsPointer(v interface{}) bool {
 type Key string
 
 const UserKey = Key("user")
+const RequestCtxKey = Key("RequestCtx")
 const AllRolesKey = Key("AllRoles")

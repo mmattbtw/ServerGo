@@ -51,7 +51,9 @@ func GQL(app fiber.Router) fiber.Router {
 			})
 		}
 
-		result := schema.Exec(context.WithValue(context.Background(), utils.UserKey, c.Locals("user")), req.Query, req.OperationName, req.Variables)
+		rCtx := context.WithValue(context.Background(), utils.RequestCtxKey, c)
+		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))
+		result := schema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
 
 		status := 200
 

@@ -9,6 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/cache"
 	"github.com/SevenTV/ServerGo/mongo"
 	"github.com/SevenTV/ServerGo/utils"
+	"github.com/gofiber/fiber/v2"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/selection"
 	jsoniter "github.com/json-iterator/go"
@@ -224,10 +225,8 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		page = int64(1)
 	}
 	pageSize := int64(*args.PageSize)
-	log.Info("Pagination", page, pageSize)
 
 	opts := options.Aggregate()
-
 	emotes := []*mongo.Emote{}
 	match := bson.M{
 		"status": mongo.EmoteStatusLive,
@@ -243,6 +242,19 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 				},
 			},
 		},
+	}
+
+	// Determine the full collection size
+	{
+		f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
+
+		// Count documents in the collection
+		count, err := cache.GetCollectionSize("emotes", match)
+		if err != nil {
+			return nil, err
+		}
+
+		f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
 	}
 
 	// Create mongo pipeline
