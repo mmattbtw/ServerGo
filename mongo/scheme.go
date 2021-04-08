@@ -73,7 +73,7 @@ type Role struct {
 }
 
 const (
-	RolePermissionEmoteCreate    int64 = 2 << iota // 1 - Allows creating emotes
+	RolePermissionEmoteCreate    int64 = 2 << iota // 2 - Allows creating emotes
 	RolePermissionEmoteEditOwned int64 = 2 << iota // 4 - Allows editing own emotes
 	RolePermissionEditAll        int64 = 2 << iota // 8 - (Elevated) Allows editing all emotes
 

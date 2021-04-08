@@ -72,18 +72,22 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userResolver, error) {
 	isMe := args.ID == "@me" // Handle @me (current authenticated user)
 	var currentUser *mongo.User
-
-	id, err := primitive.ObjectIDFromHex(args.ID)
-	if err != nil && !isMe {
-		return nil, nil
-	}
-
-	// Get current user from context if @me
-	if u, ok := ctx.Value(utils.UserKey).(*mongo.User); isMe && u != nil && ok {
-		currentUser = u
-	}
-	if isMe && currentUser == nil { // Handle error: current user requested but request was unauthenticated
-		return nil, nil
+	var id *primitive.ObjectID
+	if isMe {
+		// Get current user from context if @me
+		if u, ok := ctx.Value(utils.UserKey).(*mongo.User); isMe && u != nil && ok {
+			currentUser = u
+			id = &u.ID
+		}
+		if isMe && currentUser == nil { // Handle error: current user requested but request was unauthenticated
+			return nil, nil
+		}
+	} else {
+		if hexId, err := primitive.ObjectIDFromHex(args.ID); err == nil {
+			id = &hexId
+		} else {
+			return nil, nil
+		}
 	}
 
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
@@ -91,7 +95,7 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 		return nil, errDepth
 	}
 
-	return GenerateUserResolver(ctx, currentUser, &id, field.children)
+	return GenerateUserResolver(ctx, currentUser, id, field.children)
 }
 
 func (*RootResolver) Role(ctx context.Context, args struct{ ID string }) (*roleResolver, error) {

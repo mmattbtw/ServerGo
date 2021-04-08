@@ -20,7 +20,7 @@ type GQLRequest struct {
 }
 
 func GQL(app fiber.Router) fiber.Router {
-	gql := app.Group("/gql", middleware.UserAuthMiddleware(true))
+	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))
 
 	box := packr.New("gql", "./scheme")
 
