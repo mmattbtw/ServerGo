@@ -36,6 +36,13 @@ func Ternary(condition bool, whenTrue interface{}, whenFalse interface{}) interf
 	return whenFalse
 }
 
+//
+// Util - Is Power Of Two
+//
+func IsPowerOfTwo(n int64) bool {
+	return (n != 0) && ((n & (n - 1)) == 0)
+}
+
 // GenerateRandomString returns a URL-safe, base64 encoded
 // securely generated random string.
 // It will return an error if the system's secure random
@@ -119,3 +126,4 @@ func IsPointer(v interface{}) bool {
 type Key string
 
 const UserKey = Key("user")
+const AllRolesKey = Key("AllRoles")
