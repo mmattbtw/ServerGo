@@ -4,10 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SevenTV/ServerGo/cache"
 	"github.com/SevenTV/ServerGo/mongo"
-	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -26,27 +23,14 @@ func GenerateRoleResolver(ctx context.Context, pRole *mongo.Role, roleID *primit
 			fields: fields,
 		}, nil
 	}
-
-	role := &mongo.Role{}
-	if role.ID.IsZero() {
-		if err := cache.FindOne("roles", "", bson.M{
-			"_id": roleID,
-		}, role); err != nil {
-			if err != mongo.ErrNoDocuments {
-				log.Errorf("mongo, err=%v", err)
-				return nil, errInternalServer
-			}
-			return nil, nil
-		}
-	}
-
-	if role == nil {
+	if roleID == nil {
 		return nil, nil
 	}
 
+	role := mongo.GetRole(*roleID)
 	r := &roleResolver{
 		ctx:    ctx,
-		v:      role,
+		v:      &role,
 		fields: fields,
 	}
 	return r, nil

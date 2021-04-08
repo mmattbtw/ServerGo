@@ -43,18 +43,10 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 	}
 
 	if _, ok := fields["role"]; ok && user.Role == nil {
-		role := &[]*mongo.Role{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:role", userID.Hex()), bson.M{
-			"_id": user.RoleID,
-		}, role); err != nil {
-			log.Errorf("mongo, err=%v", err)
-			return nil, errInternalServer
-		}
-
-		if len(*role) > 0 {
-			user.Role = (*role)[0]
-		}
-		if user.Role == nil { // Resolve default role if no role assigned
+		role := mongo.GetRole(*user.RoleID)
+		if !role.ID.IsZero() {
+			user.Role = &role
+		} else {
 			user.Role = mongo.DefaultRole
 		}
 	}

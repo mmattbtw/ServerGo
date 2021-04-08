@@ -47,8 +47,9 @@ func New() *Server {
 	}
 
 	server.app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,PATCH,DELETE",
+		AllowOrigins:  "*",
+		ExposeHeaders: "X-Collection-Size",
+		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
 	}))
 
 	server.app.Use(logger.New(logger.Config{
