@@ -17,10 +17,11 @@ type Emote struct {
 	Status           int32                `json:"status" bson:"status"`
 	Tags             []string             `json:"tags" bson:"tags"`
 	SharedWith       []primitive.ObjectID `json:"shared_with" bson:"shared_with"`
-	LastModifiedDate time.Time            `json:"last_modified_date" bson:"last_modified_date"`
+	LastModifiedDate time.Time            `json:"edited_at" bson:"edited_at"`
 
 	Owner        *User        `json:"owner" bson:"-"`
 	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
+	Channels     *[]*User     `json:"channels" bson:"-"`
 	Reports      *[]*Report   `json:"reports" bson:"-"`
 }
 
@@ -159,9 +160,9 @@ type AuditLog struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Type      int32              `json:"type" bson:"type"`
 	Target    *Target            `json:"target" bson:"target"`
-	Changes   []*AutitLogChange  `json:"changes" bson:"changes"`
+	Changes   []*AuditLogChange  `json:"changes" bson:"changes"`
 	Reason    *string            `json:"reason" bson:"reason"`
-	CreatedBy primitive.ObjectID `json:"created_by" bson:"created_by"`
+	CreatedBy primitive.ObjectID `json:"action_user" bson:"action_user"`
 }
 
 type Target struct {
@@ -169,7 +170,7 @@ type Target struct {
 	Type string              `json:"type" bson:"type"`
 }
 
-type AutitLogChange struct {
+type AuditLogChange struct {
 	Key      string      `json:"type" bson:"type"`
 	OldValue interface{} `json:"old_value" bson:"old_value"`
 	NewValue interface{} `json:"new_value" bson:"new_value"`

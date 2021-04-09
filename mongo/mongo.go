@@ -1,14 +1,18 @@
 package mongo
 
 import (
+	"fmt"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 
 	"context"
 
 	"github.com/SevenTV/ServerGo/configure"
+	"github.com/SevenTV/ServerGo/redis"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -76,7 +80,7 @@ func init() {
 		return
 	}
 
-	_, err = Database.Collection("logs").Indexes().CreateMany(Ctx, []mongo.IndexModel{
+	_, err = Database.Collection("audit").Indexes().CreateMany(Ctx, []mongo.IndexModel{
 		{Keys: bson.M{"type": 1}},
 		{Keys: bson.M{"target.type": 1}},
 		{Keys: bson.M{"target.id": 1}},
@@ -96,64 +100,58 @@ func init() {
 		return
 	}
 
-	// opts := options.ChangeStream().SetFullDocument(options.UpdateLookup)
+	opts := options.ChangeStream().SetFullDocument(options.UpdateLookup)
 
-	// for _, v := range []string{"users", "emotes", "bans", "reports", "logs"} {
-	// 	go func(col string) {
-	// 		userChangeStream, err := Database.Collection(col).Watch(Ctx, mongo.Pipeline{}, opts)
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-	// 		go func() {
-	// 			for userChangeStream.Next(Ctx) {
-	// 				data := bson.M{}
-	// 				if err := userChangeStream.Decode(&data); err != nil {
-	// 					log.Errorf("mongo change stream, err=%v, col=%s", err, col)
-	// 					continue
-	// 				}
-	// 				changeStream(col, data)
-	// 			}
-	// 		}()
-	// 	}(v)
-	// }
+	for _, v := range []string{"users", "emotes", "bans", "reports", "audit"} {
+		go func(col string) {
+			userChangeStream, err := Database.Collection(col).Watch(Ctx, mongo.Pipeline{}, opts)
+			if err != nil {
+				panic(err)
+			}
+			go func() {
+				for userChangeStream.Next(Ctx) {
+					data := bson.M{}
+					if err := userChangeStream.Decode(&data); err != nil {
+						log.Errorf("mongo change stream, err=%v, col=%s", err, col)
+						continue
+					}
+					changeStream(col, data)
+				}
+			}()
+		}(v)
+	}
 
 }
 
-// func changeStream(collection string, data bson.M) {
-// 	defer func() {
-// 		if err := recover(); err != nil {
-// 			log.Errorf("recovered, err=%v", err)
-// 		}
-// 	}()
-
-// 	spew.Dump(data)
-
-// 	var commonIndex string
-// 	var ojson string
-
-// 	eventType := data["operationType"].(string)
-// 	eventID := (data["_id"].(bson.M))["_data"].(string)
-// 	oid := ((data["documentKey"].(bson.M))["_id"].(primitive.ObjectID)).Hex()
-
-// 	if eventType != "delete" {
-// 		document := data["fullDocument"].(bson.M)
-// 		dataString, err := json.MarshalToString(document)
-// 		if err != nil {
-// 			log.Errorf("json, err=%v", err)
-// 			return
-// 		}
-// 		ojson = dataString
-// 	}
-// 	if eventType == "create" {
-// 		switch collection {
-// 		case "emote":
-
-// 		}
-// 	}
-
-// 	val, err := redis.InvalidateCache(fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
-// 	if err != nil {
-// 		log.Errorf("redis, err=%s", err)
-// 	}
-// 	log.Infoln(val)
-// }
+func changeStream(collection string, data bson.M) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf("recovered, err=%v", err)
+		}
+	}()
+	// spew.Dump(data)
+	var commonIndex string
+	var ojson string
+	eventType := data["operationType"].(string)
+	eventID := (data["_id"].(bson.M))["_data"].(string)
+	oid := ((data["documentKey"].(bson.M))["_id"].(primitive.ObjectID)).Hex()
+	if eventType != "delete" {
+		document := data["fullDocument"].(bson.M)
+		dataString, err := jsoniter.MarshalToString(document)
+		if err != nil {
+			log.Errorf("json, err=%v", err)
+			return
+		}
+		ojson = dataString
+	}
+	if eventType == "create" {
+		switch collection {
+		case "emote":
+		}
+	}
+	val, err := redis.InvalidateCache(fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
+	if err != nil {
+		log.Errorf("redis, err=%s", err)
+	}
+	log.Infoln(val)
+}

@@ -69,7 +69,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		}
 		if _, ok := v.children["audit_entries"]; ok {
 			logs := []*mongo.AuditLog{}
-			if err := cache.Find("logs", fmt.Sprintf("user:%s:owned_emotes", userID.Hex()), bson.M{
+			if err := cache.Find("audit", fmt.Sprintf("user:%s:owned_emotes", userID.Hex()), bson.M{
 				"target.id": bson.M{
 					"$in": ids,
 				},
@@ -114,7 +114,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 			}
 			if _, ok := v.children["audit_entries"]; ok {
 				logs := []*mongo.AuditLog{}
-				if err := cache.Find("logs", "", bson.M{
+				if err := cache.Find("audit", "", bson.M{
 					"target.id": bson.M{
 						"$in": ids,
 					},
@@ -228,6 +228,10 @@ func (r *userResolver) Rank() int32 {
 }
 
 func (r *userResolver) Role() (*roleResolver, error) {
+	if r.v.Role == nil {
+		return &roleResolver{v: mongo.DefaultRole}, nil
+	}
+
 	role := r.v.RoleID
 	res, err := GenerateRoleResolver(r.ctx, nil, role, r.fields["role"].children)
 	if err != nil {
@@ -295,6 +299,9 @@ func (r *userResolver) EditorIn() ([]*userResolver, error) {
 }
 
 func (r *userResolver) Emotes() ([]*emoteResolver, error) {
+	if r.v.Emotes == nil {
+		return nil, nil
+	}
 	emotes := *r.v.Emotes
 	resolvers := []*emoteResolver{}
 	for _, e := range emotes {
@@ -344,10 +351,6 @@ func (r *userResolver) BroadcasterType() string {
 
 func (r *userResolver) ProfileImageURL() string {
 	return r.v.ProfileImageURL
-}
-
-func (r *userResolver) PairedAt() string {
-	return r.v.ID.Timestamp().Format(time.RFC3339)
 }
 
 func (r *userResolver) Reports() (*[]*reportResolver, error) {

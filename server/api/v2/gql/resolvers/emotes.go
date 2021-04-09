@@ -42,11 +42,25 @@ func GenerateEmoteResolver(ctx context.Context, emote *mongo.Emote, emoteID *pri
 	if emote.AuditEntries == nil {
 		if _, ok := fields["audit_entries"]; ok {
 			emote.AuditEntries = &[]*mongo.AuditLog{}
-			if err := cache.Find("logs", fmt.Sprintf("logs:%s", emote.ID.Hex()), bson.M{
+			if err := cache.Find("audit", fmt.Sprintf("logs:%s", emote.ID.Hex()), bson.M{
 				"target.id":   emote.ID,
 				"target.type": "emotes",
 			}, emote.AuditEntries); err != nil {
 				log.Errorf("mongo, err=%v", err)
+				return nil, errInternalServer
+			}
+		}
+	}
+
+	if emote.Channels == nil {
+		if _, ok := fields["channels"]; ok {
+			emote.Channels = &[]*mongo.User{}
+
+			if err := cache.Find("users", fmt.Sprintf("emotes:%s", emote.ID.Hex()), bson.M{
+				"emotes": bson.M{
+					"$in": []primitive.ObjectID{emote.ID},
+				},
+			}, emote.Channels); err != nil {
 				return nil, errInternalServer
 			}
 		}
@@ -149,6 +163,25 @@ func (r *emoteResolver) AuditEntries() ([]string, error) {
 		}
 	}
 	return logs, nil
+}
+
+func (r *emoteResolver) Channels() (*[]*userResolver, error) {
+	if r.v.Channels == nil {
+		return nil, nil
+	}
+
+	u := *r.v.Channels
+	users := make([]*userResolver, len(u))
+	for i, usr := range u {
+		resolver, err := GenerateUserResolver(r.ctx, usr, &usr.ID, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		users[i] = resolver
+	}
+
+	return &users, nil
 }
 
 func (r *emoteResolver) Reports() (*[]*reportResolver, error) {

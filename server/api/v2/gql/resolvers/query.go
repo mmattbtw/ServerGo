@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 
@@ -259,9 +260,9 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 
 	// Create mongo pipeline
 	pipeline := mongo.Pipeline{
-		bson.D{primitive.E{Key: "$match", Value: match}},                // Match query
-		bson.D{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}}, // Paginate
-		bson.D{primitive.E{Key: "$limit", Value: pageSize}},             // Set limit
+		bson.D{primitive.E{Key: "$match", Value: match}},                                                    // Match query
+		bson.D{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}},                                     // Paginate
+		bson.D{primitive.E{Key: "$limit", Value: math.Max(0, math.Min(float64(pageSize), float64(limit)))}}, // Set limit
 	}
 	if hasQuery { // If a query is specified, add sorting
 		pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{

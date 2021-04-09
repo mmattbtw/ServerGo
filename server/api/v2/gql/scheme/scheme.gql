@@ -5,7 +5,7 @@ schema {
 
 type Mutation {
   # Edit an emote. Requires permission.
-  editEmote(emote: EmoteInput!, reason: String): Response
+  editEmote(emote: EmoteInput!, reason: String): Emote
   # Delete an emote. Requires permission.
   deleteEmote(id: String!, reason: String): Response
   # Restore an emote that has been deleted. Requires permission.
@@ -84,6 +84,8 @@ type Emote {
   created_at: String!
   # Get audit log entries for this emote.
   audit_entries: [String!]!
+  # Get the channels the emote is added to
+  channels: [User]
   # Get the owner of this emote.
   owner: User
   # Get the reports on emote. Requries Permission.
@@ -116,7 +118,7 @@ type User {
   # twitch profile picture
   profile_image_url: String!
   # date of pair
-  paired_at: String!
+  created_at: String!
   # Get the emotes added to this users channel.
   emotes: [Emote!]!
   # Get the emotes this user has uploaded.
@@ -154,8 +156,6 @@ type UserPartial {
   login: String!
   # twitch profile picture
   profile_image_url: String!
-  # date of pair
-  paired_at: String!
 }
 
 type Role {
