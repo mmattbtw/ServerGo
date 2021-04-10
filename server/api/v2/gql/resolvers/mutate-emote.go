@@ -156,7 +156,9 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		}, &options.FindOneAndUpdateOptions{
 			ReturnDocument: &after,
 		})
-		doc.Decode(emote)
+		if err := doc.Decode(emote); err != nil {
+			return nil, err
+		}
 
 		if doc.Err() != nil {
 			log.Errorf("mongo, err=%v, id=%s", doc.Err(), id.Hex())

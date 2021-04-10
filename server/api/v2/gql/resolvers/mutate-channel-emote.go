@@ -129,7 +129,9 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	}, &options.FindOneAndUpdateOptions{
 		ReturnDocument: &after,
 	})
-	doc.Decode(channel)
+	if err := doc.Decode(channel); err != nil {
+		return nil, err
+	}
 
 	if doc.Err() != nil {
 		log.Errorf("mongo, err=%v", err)
@@ -257,7 +259,9 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 	}, &options.FindOneAndUpdateOptions{
 		ReturnDocument: &after,
 	})
-	doc.Decode(channel)
+	if err := doc.Decode(channel); err != nil {
+		return nil, err
+	}
 
 	if doc.Err() != nil {
 		log.Errorf("mongo, err=%v", err)

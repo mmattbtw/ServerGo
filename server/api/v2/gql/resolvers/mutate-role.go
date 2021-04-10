@@ -11,7 +11,6 @@ type roleInput struct {
 	Denied   *complex128 `json:"denied"`
 }
 
-func (r *RootResolver) CreateRole(ctx context.Context, args struct {
-}) (*roleResolver, error) {
+func (r *RootResolver) CreateRole(ctx context.Context, args roleInput) (*roleResolver, error) {
 	return nil, nil
 }

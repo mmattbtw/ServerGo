@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/SevenTV/ServerGo/utils"
@@ -68,13 +69,15 @@ type User struct {
 
 // Test whether a User has a permission flag
 func UserHasPermission(user *User, flag int64) bool {
-	allowed := utils.Ternary(&user.Role.Allowed != nil, user.Role.Allowed, 0).(int64)
-	denied := utils.Ternary(&user.Role.Denied != nil, user.Role.Denied, 0).(int64)
-	if user == nil {
-		return false
+	var allowed int64 = 0
+	var denied int64 = 0
+	if user != nil {
+		allowed = user.Role.Allowed
+		denied = user.Role.Denied
 	}
+
 	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
-		log.Errorf("HasPermission, err=flag is not power of two (%s)", flag)
+		log.Errorf("HasPermission, err=flag is not power of two (%s)", fmt.Sprint(flag))
 		return false
 	}
 
@@ -112,6 +115,7 @@ func GetRole(id *primitive.ObjectID) Role {
 		return *DefaultRole
 	}
 
+	var found bool
 	var role Role
 	roles := GetRoles()
 
@@ -121,10 +125,14 @@ func GetRole(id *primitive.ObjectID) Role {
 		}
 
 		role = r
+		found = true
 		break
 	}
 
-	return utils.Ternary(&role != nil, role, DefaultRole).(Role)
+	if found {
+		return role
+	}
+	return *DefaultRole
 }
 
 const (
