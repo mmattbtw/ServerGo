@@ -16,7 +16,7 @@ COPY . .
 
 # Build the Go app
 RUN packr2
-RUN go build
+RUN go build -o seventv
 
 # Start fresh from a smaller image
 FROM alpine:3.9 
