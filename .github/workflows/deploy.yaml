@@ -1,0 +1,50 @@
+name: 7TV Go API Deploy
+
+on:
+  push:
+    branches: [master]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository
+      - uses: actions/checkout@v2
+
+      # Build image
+      - name: Build Image
+        id: build_step
+        uses: docker/build-push-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          repository: seventv/servergo
+          tag_with_ref: true
+          outputs: type=docker,dest=/tmp/image.tar
+
+#  deploy:
+#    runs-on: ubuntu-latest
+#    needs: # Run this after build
+#      - build
+#
+#    steps:
+#        # Checkout repository
+#        - uses: actions/checkout@v2
+#
+#        # Deploy to k8s
+#        - name: Install kubectl&
+#          uses: azure/setup-kubectl@v1
+#
+#        - name: Apply Deployment & Rollout
+#          env:
+#            KUBE_CONFIG_DATA: ${{ secrets.K8S_CONFIG }}
+#          run: |
+#            mkdir -p ~/.kube
+#            (echo $KUBE_CONFIG_DATA | base64 -d) >> ~/.kube/config
+#            kubectl config use-context 7tv-as-deployer
+#            kubectl apply -f k8s/7tv/7tv-goapi.yaml
+#            kubectl rollout restart -n 7tv sts/7tv-goapi
