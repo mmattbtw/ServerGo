@@ -107,12 +107,16 @@ func GetRoles() []Role {
 }
 
 // Get a cached role by ID
-func GetRole(id primitive.ObjectID) Role {
+func GetRole(id *primitive.ObjectID) Role {
+	if id == nil {
+		return *DefaultRole
+	}
+
 	var role Role
 	roles := GetRoles()
 
 	for _, r := range roles {
-		if r.ID != id {
+		if r.ID.Hex() != id.Hex() {
 			continue
 		}
 
@@ -120,7 +124,7 @@ func GetRole(id primitive.ObjectID) Role {
 		break
 	}
 
-	return role
+	return utils.Ternary(&role != nil, role, DefaultRole).(Role)
 }
 
 const (

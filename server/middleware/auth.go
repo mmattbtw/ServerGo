@@ -134,7 +134,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		// Assign role to user
 		if user.RoleID != nil {
-			role := mongo.GetRole(*user.RoleID)                                                 // Try to get the cached role
+			role := mongo.GetRole(user.RoleID)                                                  // Try to get the cached role
 			user.Role = utils.Ternary(role.ID.IsZero(), mongo.DefaultRole, &role).(*mongo.Role) // Assign cached role if available, otherwise set default role
 		} else {
 			user.Role = mongo.DefaultRole // If no role assign default role

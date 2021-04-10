@@ -27,7 +27,7 @@ func GenerateRoleResolver(ctx context.Context, pRole *mongo.Role, roleID *primit
 		return nil, nil
 	}
 
-	role := mongo.GetRole(*roleID)
+	role := mongo.GetRole(roleID)
 	r := &roleResolver{
 		ctx:    ctx,
 		v:      &role,

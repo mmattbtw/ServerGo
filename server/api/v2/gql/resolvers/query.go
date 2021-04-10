@@ -73,16 +73,26 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 
 func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userResolver, error) {
 	isMe := args.ID == "@me" // Handle @me (current authenticated user)
-	var currentUser *mongo.User
+	user := &mongo.User{}
 	var id *primitive.ObjectID
 	if isMe {
 		// Get current user from context if @me
 		if u, ok := ctx.Value(utils.UserKey).(*mongo.User); isMe && u != nil && ok {
-			currentUser = u
+			user = u
 			id = &u.ID
 		}
-		if isMe && currentUser == nil { // Handle error: current user requested but request was unauthenticated
-			return nil, nil
+		if isMe && user == nil { // Handle error: current user requested but request was unauthenticated
+			return nil, fmt.Errorf("Cannot request @me while unauthenticated")
+		}
+	} else if !primitive.IsValidObjectID(args.ID) {
+		if err := cache.FindOne("users", "", bson.M{
+			"login": strings.ToLower(args.ID),
+		}, user); err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, nil
+			}
+			log.Errorf("mongo, err=%v", err)
+			return nil, errInternalServer
 		}
 	} else {
 		if hexId, err := primitive.ObjectIDFromHex(args.ID); err == nil {
@@ -97,7 +107,7 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 		return nil, errDepth
 	}
 
-	return GenerateUserResolver(ctx, currentUser, id, field.children)
+	return GenerateUserResolver(ctx, user, id, field.children)
 }
 
 func (*RootResolver) Role(ctx context.Context, args struct{ ID string }) (*roleResolver, error) {

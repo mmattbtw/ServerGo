@@ -42,15 +42,6 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		return nil, nil
 	}
 
-	if _, ok := fields["role"]; ok && user.Role == nil {
-		role := mongo.GetRole(*user.RoleID)
-		if !role.ID.IsZero() {
-			user.Role = &role
-		} else {
-			user.Role = mongo.DefaultRole
-		}
-	}
-
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
 		user.OwnedEmotes = &[]*mongo.Emote{}
 		if err := cache.Find("emotes", fmt.Sprintf("owner:%s", userID.Hex()), bson.M{
@@ -228,12 +219,10 @@ func (r *userResolver) Rank() int32 {
 }
 
 func (r *userResolver) Role() (*roleResolver, error) {
-	if r.v.Role == nil {
-		return &roleResolver{v: mongo.DefaultRole}, nil
-	}
+	roleID := r.v.RoleID
+	role := mongo.GetRole(roleID)
 
-	role := r.v.RoleID
-	res, err := GenerateRoleResolver(r.ctx, nil, role, r.fields["role"].children)
+	res, err := GenerateRoleResolver(r.ctx, &role, roleID, nil)
 	if err != nil {
 		log.Errorf("generation, err=%v", err)
 		return nil, errInternalServer
