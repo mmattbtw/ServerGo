@@ -81,7 +81,7 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 			user = u
 			id = &u.ID
 		}
-		if isMe && user == nil { // Handle error: current user requested but request was unauthenticated
+		if isMe && user.ID.IsZero() { // Handle error: current user requested but request was unauthenticated
 			return nil, fmt.Errorf("Cannot request @me while unauthenticated")
 		}
 	} else if !primitive.IsValidObjectID(args.ID) {
@@ -97,6 +97,7 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 	} else {
 		if hexId, err := primitive.ObjectIDFromHex(args.ID); err == nil {
 			id = &hexId
+			user = nil
 		} else {
 			return nil, nil
 		}
