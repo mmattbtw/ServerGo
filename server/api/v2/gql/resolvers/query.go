@@ -231,18 +231,6 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	emotes := []*mongo.Emote{}
 	match := bson.M{
 		"status": mongo.EmoteStatusLive,
-		"$or": bson.A{
-			bson.M{
-				"name": bson.M{
-					"$regex": lQuery,
-				},
-			},
-			bson.M{
-				"tags": bson.M{
-					"$regex": lQuery,
-				},
-			},
-		},
 	}
 
 	// Determine the full collection size
@@ -269,6 +257,18 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 			{Key: "name", Value: 1},
 			{Key: "tags", Value: 1},
 		}}})
+		match["$or"] = bson.A{
+			bson.M{
+				"name": bson.M{
+					"$regex": lQuery,
+				},
+			},
+			bson.M{
+				"tags": bson.M{
+					"$regex": lQuery,
+				},
+			},
+		}
 	}
 	cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, pipeline, opts)
 	if err == nil {
