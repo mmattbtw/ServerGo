@@ -59,9 +59,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	}
 	if req.Visibility != nil {
 		i32 := int32(*req.Visibility)
-		if !validation.ValidateEmoteVisibility(i32) {
-			return nil, errInvalidVisibility
-		}
+
 		update["visibility"] = i32
 	}
 
@@ -93,7 +91,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,
@@ -247,7 +245,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			found := false
 			for _, e := range channel.EditorIDs {
@@ -274,22 +272,6 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	emoteRes := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
 		"_id":    emoteID,
 		"status": mongo.EmoteStatusLive,
-		"$or": bson.A{
-			bson.M{
-				"visibility": mongo.EmoteVisibilityNormal,
-			},
-			bson.M{
-				"visibility": mongo.EmoteVisibilityPrivate,
-				"$or": bson.A{
-					bson.M{
-						"owner": channelID,
-					},
-					bson.M{
-						"shared_with": channelID,
-					},
-				},
-			},
-		},
 	})
 
 	emote := &mongo.Emote{}
@@ -303,6 +285,16 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 		}
 		log.Errorf("mongo, err=%v", err)
 		return nil, errInternalServer
+	}
+
+	sharedWith := []string{}
+	for _, v := range emote.SharedWith {
+		sharedWith = append(sharedWith, v.Hex())
+	}
+	if utils.HasBits(int64(emote.Visibility), int64(mongo.EmoteVisibilityPrivate)) {
+		if emote.OwnerID.Hex() != channelID.Hex() || !utils.Contains(sharedWith, emoteID.Hex()) {
+			return nil, errUnknownEmote
+		}
 	}
 
 	emoteIDs := append(channel.EmoteIDs, emoteID)

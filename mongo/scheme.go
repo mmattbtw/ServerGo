@@ -9,7 +9,7 @@ import (
 )
 
 type Emote struct {
-	ID               primitive.ObjectID   `json:"_id" bson:"_id,omitempty"`
+	ID               primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Name             string               `json:"name" bson:"name"`
 	OwnerID          primitive.ObjectID   `json:"owner_id" bson:"owner"`
 	Visibility       int32                `json:"visibility" bson:"visibility"`
@@ -26,9 +26,9 @@ type Emote struct {
 }
 
 const (
-	EmoteVisibilityNormal int32 = iota
-	EmoteVisibilityPrivate
+	EmoteVisibilityPrivate int32 = 1 << iota
 	EmoteVisibilityGlobal
+	EmoteVisibilityHidden
 )
 
 const (
@@ -126,7 +126,7 @@ func GetRole(id primitive.ObjectID) Role {
 const (
 	RolePermissionEmoteCreate    int64 = 1 << iota // 1 - Allows creating emotes
 	RolePermissionEmoteEditOwned int64 = 1 << iota // 2 - Allows editing own emotes
-	RolePermissionEditAll        int64 = 1 << iota // 4 - (Elevated) Allows editing all emotes
+	RolePermissionEmoteEditAll   int64 = 1 << iota // 4 - (Elevated) Allows editing all emotes
 
 	RolePermissionCreateReports int64 = 1 << iota // 8 - Allows creating reports
 	RolePermissionManageReports int64 = 1 << iota // 16 - (Elevated) Allows managing reports
@@ -171,7 +171,7 @@ type Target struct {
 }
 
 type AuditLogChange struct {
-	Key      string      `json:"type" bson:"type"`
+	Key      string      `json:"key" bson:"key"`
 	OldValue interface{} `json:"old_value" bson:"old_value"`
 	NewValue interface{} `json:"new_value" bson:"new_value"`
 }

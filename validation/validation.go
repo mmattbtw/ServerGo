@@ -36,7 +36,3 @@ func ValidateEmoteTag(tag []byte) bool {
 	}
 	return true
 }
-
-func ValidateEmoteVisibility(visibility int32) bool {
-	return visibility >= 0 && visibility <= 2
-}

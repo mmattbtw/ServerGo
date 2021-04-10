@@ -31,21 +31,20 @@ type emoteInput struct {
 }
 
 var (
-	errInvalidName       = fmt.Errorf("the new name is not valid")
-	errLoginRequired     = fmt.Errorf("you need to be logged in to do that")
-	errInvalidOwner      = fmt.Errorf("the new owner ID is not valid")
-	errInvalidTags       = fmt.Errorf("you specified more than 10 tags")
-	errInvalidTag        = fmt.Errorf("some of your tags are invalid, please check them")
-	errInvalidVisibility = fmt.Errorf("visibility is either 0,1 or 2")
-	errInvalidUpdate     = fmt.Errorf("you have to supply an update")
-	errUnknownEmote      = fmt.Errorf("an emote with that ID does not exist")
-	errUnknownChannel    = fmt.Errorf("a channel with that ID does not exist")
-	errUnknownUser       = fmt.Errorf("a user with that ID does not exist")
-	errAccessDenied      = fmt.Errorf("you don't have permission to do that")
-	errChannelBanned     = fmt.Errorf("that channel is currently banned")
-	errUserBanned        = fmt.Errorf("that user is currently banned")
-	errUserNotBanned     = fmt.Errorf("that user is currently not banned")
-	errYourself          = fmt.Errorf("you cannot do that to yourself")
+	errInvalidName    = fmt.Errorf("the new name is not valid")
+	errLoginRequired  = fmt.Errorf("you need to be logged in to do that")
+	errInvalidOwner   = fmt.Errorf("the new owner ID is not valid")
+	errInvalidTags    = fmt.Errorf("you specified more than 10 tags")
+	errInvalidTag     = fmt.Errorf("some of your tags are invalid, please check them")
+	errInvalidUpdate  = fmt.Errorf("you have to supply an update")
+	errUnknownEmote   = fmt.Errorf("an emote with that ID does not exist")
+	errUnknownChannel = fmt.Errorf("a channel with that ID does not exist")
+	errUnknownUser    = fmt.Errorf("a user with that ID does not exist")
+	errAccessDenied   = fmt.Errorf("you don't have permission to do that")
+	errChannelBanned  = fmt.Errorf("that channel is currently banned")
+	errUserBanned     = fmt.Errorf("that user is currently banned")
+	errUserNotBanned  = fmt.Errorf("that user is currently not banned")
+	errYourself       = fmt.Errorf("you cannot do that to yourself")
 )
 
 func (*RootResolver) ReportEmote(ctx context.Context, args struct {
@@ -215,7 +214,7 @@ func (*RootResolver) BanUser(ctx context.Context, args struct {
 		return nil, errLoginRequired
 	}
 
-	if usr.Rank != mongo.UserRankAdmin && usr.Rank != mongo.UserRankModerator {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionBanUsers) {
 		return nil, errAccessDenied
 	}
 
@@ -258,7 +257,7 @@ func (*RootResolver) BanUser(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if user.Rank >= usr.Rank {
+	if user.Role.Position >= usr.Role.Position {
 		return nil, errAccessDenied
 	}
 
@@ -313,7 +312,7 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, errLoginRequired
 	}
 
-	if usr.Rank != mongo.UserRankAdmin && usr.Rank != mongo.UserRankModerator {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionBanUsers) {
 		return nil, errAccessDenied
 	}
 
@@ -355,7 +354,7 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if user.Rank >= usr.Rank {
+	if user.Role.Position >= usr.Role.Position {
 		return nil, errAccessDenied
 	}
 
@@ -432,7 +431,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,
@@ -541,7 +540,7 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,
@@ -667,7 +666,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			found := false
 			for _, e := range channel.EditorIDs {
@@ -792,7 +791,7 @@ func (*RootResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			return nil, errAccessDenied
 		}
@@ -888,7 +887,7 @@ func (*RootResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if usr.Rank != mongo.UserRankAdmin {
+	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			return nil, errAccessDenied
 		}

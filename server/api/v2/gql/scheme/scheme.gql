@@ -67,7 +67,7 @@ input EmoteInput {
 
 type Emote {
   # Id of the emote
-  _id: String!
+  id: String!
   # name of the emote
   name: String!
   # id of the owner of the emote

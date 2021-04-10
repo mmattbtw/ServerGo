@@ -119,6 +119,16 @@ func IsSliceArrayPointer(v interface{}) bool {
 	return false
 }
 
+func Contains(s []string, compare string) bool {
+	for _, v := range s {
+		if v == compare {
+			return true
+		}
+	}
+
+	return false
+}
+
 func IsPointer(v interface{}) bool {
 	return reflect.TypeOf(v).Kind() == reflect.Ptr
 }
