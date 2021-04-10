@@ -16,7 +16,7 @@ COPY . .
 
 # Build the Go app
 RUN packr2
-RUN go build
+RUN go build -o seventv
 
 # Start fresh from a smaller image
 FROM alpine:3.9 
@@ -25,10 +25,6 @@ RUN apk add ca-certificates
 WORKDIR /app
 
 COPY --from=build_base /tmp/app/seventv /app/seventv
-COPY config.yaml /app/config.yaml
-
-# This container exposes port 8080 to the outside world
-EXPOSE 8080
 
 # Run the binary program produced by `go install`
 CMD ["/app/seventv"]
