@@ -11,9 +11,9 @@ type Mutation {
   # Restore an emote that has been deleted. Requires permission.
   restoreEmote(id: String!, reason: String): Response
   # Add an emote to a channel. Requires permission.
-  addChannelEmote(channel_id: String!, emote_id: String!, reason: String): Response
+  addChannelEmote(channel_id: String!, emote_id: String!, reason: String): User
   # Remove an emote from a channel. Requires permission.
-  removeChannelEmote(channel_id: String!, emote_id: String!, reason: String): Response
+  removeChannelEmote(channel_id: String!, emote_id: String!, reason: String): User
   # Add an editor to a channel. Requires permission.
   addChannelEditor(channel_id: String!, editor_id: String!, reason: String): Response
   # Remove an editor from a channel. Requires permission.
