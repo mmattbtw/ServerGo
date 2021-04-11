@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 env:
+  REGISTRY_REPO: seventv/servergo
   REGISTRTY_IMAGE_NAME: seventv/servergo:${{ github.sha }}
 
 jobs:
@@ -25,8 +26,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ env.EGISTRTY_IMAGE_NAME }}
-          tag_with_ref: true
+          push: true
+          tags: ${{ github.sha }}
           outputs: type=docker,dest=/tmp/image.tar
 
   deploy:
