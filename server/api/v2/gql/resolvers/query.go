@@ -209,16 +209,19 @@ func (*RootResolver) TwitchUser(ctx context.Context, args struct{ ChannelName st
 }
 
 func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
-	Query    string
-	Page     *int32
-	PageSize *int32
-	Limit    *int32
+	Query       string
+	Page        *int32
+	PageSize    *int32
+	Limit       *int32
+	GlobalState *string
 }) ([]*emoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
 	if failed {
 		return nil, errDepth
 	}
 
+	// Define limit
+	// This is how many emotes can be searched in one request at most
 	limit := int64(20)
 	if args.Limit != nil {
 		limit = int64(*args.Limit)
@@ -227,6 +230,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		return nil, errQueryLimit
 	}
 
+	// Get the query parameter, used to search for specific emote names or tags
 	query := strings.Trim(args.Query, " ")
 	hasQuery := len(query) > 0
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
@@ -238,6 +242,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 	pageSize := int64(*args.PageSize)
 
+	// Create aggregation
 	opts := options.Aggregate()
 	emotes := []*mongo.Emote{}
 	match := bson.M{
@@ -257,13 +262,14 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
 	}
 
-	// Create mongo pipeline
+	// Define aggregation pipeline
 	pipeline := mongo.Pipeline{
 		bson.D{primitive.E{Key: "$match", Value: match}},                                                    // Match query
 		bson.D{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}},                                     // Paginate
 		bson.D{primitive.E{Key: "$limit", Value: math.Max(0, math.Min(float64(pageSize), float64(limit)))}}, // Set limit
 	}
-	if hasQuery { // If a query is specified, add sorting
+	// If a query is specified, add sorting
+	if hasQuery {
 		pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
 			{Key: "name", Value: 1},
 			{Key: "tags", Value: 1},
@@ -281,6 +287,18 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 			},
 		}
 	}
+	// If global state is specified, filter global emotes
+	if args.GlobalState != nil {
+		globalState := *args.GlobalState
+		switch globalState {
+		case "only": // Only: query only global emotes
+			match["visibility"] = bson.M{"$bitsAllSet": int32(mongo.EmoteVisibilityGlobal)}
+		case "hide": // Hide: omit global emotes from query
+			match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityGlobal)}
+		}
+	}
+
+	// Query the DB
 	cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, pipeline, opts)
 	if err == nil {
 		err = cur.All(mongo.Ctx, &emotes)
@@ -290,6 +308,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
+	// Resolve emotes
 	resolvers := make([]*emoteResolver, len(emotes))
 	for i, e := range emotes {
 		resolvers[i], err = GenerateEmoteResolver(ctx, e, nil, field.children)
