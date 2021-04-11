@@ -69,10 +69,19 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			})
 		}
 
-		res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
-			"_id":           pl.ID,
-			"token_version": pl.TokenVersion,
-		})
+		query := bson.M{
+			"_id": pl.ID,
+		}
+
+		if pl.TokenVersion == "" {
+			query["token_version"] = bson.M{
+				"$exists": false,
+			}
+		} else {
+			query["token_version"] = pl.TokenVersion
+		}
+
+		res := mongo.Database.Collection("users").FindOne(mongo.Ctx, query)
 
 		err := res.Err()
 		if err != nil {
