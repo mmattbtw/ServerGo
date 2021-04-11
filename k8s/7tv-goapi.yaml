@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: 7tv-goapi
+  namespace: 7tv
+  labels:
+    app: 7tv-goapi
+spec:
+  serviceName: seventv-goapi-svc
+  selector:
+    matchLabels:
+      app: 7tv-goapi
+  template:
+    metadata:
+      labels:
+        app: 7tv-goapi
+    spec:
+      terminationGracePeriodSeconds: 1
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: 7tv-goapi
+          image: ghcr.io/seventv/servergo:latest
+          imagePullPolicy: Always
+
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - mountPath: /app/config.yaml
+              subPath: config.yaml
+              name: config
+          resources:
+            requests:
+              memory: "85M"
+              cpu: "200m"
+            limits:
+              memory: "1G"
+              cpu: "1000m"
+          ports:
+            - containerPort: 3000
+      volumes:
+        - name: config
+          configMap:
+            name: goapi-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seventv-goapi-svc
+spec:
+  selector:
+    app: 7tv-goapi
+  ports:
+    - port: 80
+      name: http
+      targetPort: 3000
+    - port: 443
+      name: https
+      targetPort: 3000

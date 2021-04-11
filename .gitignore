@@ -16,6 +16,7 @@
 
 seventv
 config.yaml
+k8s/config*.yaml
 config.json
 tmp/
 packrd/
