@@ -23,7 +23,7 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
-	maxDepth   = 3
+	maxDepth   = 4
 	queryLimit = 150
 )
 

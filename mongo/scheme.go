@@ -30,6 +30,12 @@ const (
 	EmoteVisibilityPrivate int32 = 1 << iota
 	EmoteVisibilityGlobal
 	EmoteVisibilityHidden
+	EmoteVisibilityOverrideBTTV
+	EmoteVisibilityOverrideFFZ
+	EmoteVisibilityOverrideTwitchGlobal
+	EmoteVisibilityOverrideTwitchSubscriber
+
+	EmoteVisibilityAll int32 = (1 << iota) - 1
 )
 
 const (
@@ -137,18 +143,15 @@ func GetRole(id *primitive.ObjectID) Role {
 
 const (
 	RolePermissionEmoteCreate    int64 = 1 << iota // 1 - Allows creating emotes
-	RolePermissionEmoteEditOwned int64 = 1 << iota // 2 - Allows editing own emotes
-	RolePermissionEmoteEditAll   int64 = 1 << iota // 4 - (Elevated) Allows editing all emotes
-
-	RolePermissionCreateReports int64 = 1 << iota // 8 - Allows creating reports
-	RolePermissionManageReports int64 = 1 << iota // 16 - (Elevated) Allows managing reports
-
-	RolePermissionBanUsers      int64 = 1 << iota // 32 - (Elevated) Allows banning other users
-	RolePermissionAdministrator int64 = 1 << iota // 64 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
-	RolePermissionManageRoles   int64 = 1 << iota // 128 - (Elevated) Allows managing roles
-	RolePermissionManageUsers   int64 = 1 << iota // 256 - (Elevated) Allows managing users
-
-	RolePermissionManageEditors int64 = 1 << iota // 512 - Allows adding and removing editors from own channel
+	RolePermissionEmoteEditOwned                   // 2 - Allows editing own emotes
+	RolePermissionEmoteEditAll                     // 4 - (Elevated) Allows editing all emotes
+	RolePermissionCreateReports                    // 8 - Allows creating reports
+	RolePermissionManageReports                    // 16 - (Elevated) Allows managing reports
+	RolePermissionBanUsers                         // 32 - (Elevated) Allows banning other users
+	RolePermissionAdministrator                    // 64 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
+	RolePermissionManageRoles                      // 128 - (Elevated) Allows managing roles
+	RolePermissionManageUsers                      // 256 - (Elevated) Allows managing users
+	RolePermissionManageEditors                    // 512 - Allows adding and removing editors from own channel
 
 	RolePermissionAll     int64 = (1 << iota) - 1                                                                                                        // Sum of all permissions combined
 	RolePermissionDefault int64 = (RolePermissionEmoteCreate | RolePermissionEmoteEditOwned | RolePermissionCreateReports | RolePermissionManageEditors) // Default permissions for users without a role
