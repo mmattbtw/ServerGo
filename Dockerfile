@@ -19,7 +19,7 @@ RUN packr2
 RUN go build -o seventv
 
 # Start fresh from a smaller image
-FROM alpine:3.9 
+FROM alfg/ffmpeg:latest
 RUN apk add ca-certificates
 
 WORKDIR /app
