@@ -99,6 +99,10 @@ func New() *Server {
 
 	apiv2.API(server.app)
 
+	server.app.Get("/health", func(c *fiber.Ctx) error {
+		return c.Status(200).SendString("OK")
+	})
+
 	server.app.Use(func(c *fiber.Ctx) error {
 		return c.Status(404).JSON(&fiber.Map{
 			"status":  404,

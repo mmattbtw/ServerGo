@@ -6,6 +6,7 @@ metadata:
   labels:
     app: 7tv-goapi
 spec:
+  replicas: 3
   serviceName: seventv-goapi-svc
   selector:
     matchLabels:
@@ -23,11 +24,27 @@ spec:
           image: ghcr.io/seventv/servergo:latest
           imagePullPolicy: Always
 
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+              httpHeaders:
+                - name: User-Agent
+                  value: InternalLivenessProbe
+
           env:
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           volumeMounts:
             - mountPath: /app/config.yaml
               subPath: config.yaml
