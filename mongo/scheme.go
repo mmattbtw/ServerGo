@@ -56,11 +56,15 @@ type User struct {
 	TokenVersion string               `json:"token_version" bson:"token_version"`
 
 	// Twitch Data
-	TwitchID        string `json:"twitch_id" bson:"id"`
-	DisplayName     string `json:"display_name" bson:"display_name"`
-	Login           string `json:"login" bson:"login"`
-	BroadcasterType string `json:"broadcaster_type" bson:"broadcaster_type"`
-	ProfileImageURL string `json:"profile_image_url" bson:"profile_image_url"`
+	TwitchID        string    `json:"twitch_id" bson:"id"`
+	DisplayName     string    `json:"display_name" bson:"display_name"`
+	Login           string    `json:"login" bson:"login"`
+	BroadcasterType string    `json:"broadcaster_type" bson:"broadcaster_type"`
+	ProfileImageURL string    `json:"profile_image_url" bson:"profile_image_url"`
+	OfflineImageURL string    `json:"offline_image_url" bson:"offline_image_url"`
+	Description     string    `json:"description" bson:"description"`
+	CreatedAt       time.Time `json:"twitch_created_at" bson:"twitch_created_at"`
+	ViewCount       int32     `json:"view_count" bson:"view_count"`
 
 	// Relational Data
 	Emotes       *[]*Emote    `json:"emotes" bson:"-"`
@@ -99,15 +103,6 @@ type Role struct {
 	Color    int32              `json:"color" bson:"color"`
 	Allowed  int64              `json:"allowed" bson:"allowed"`
 	Denied   int64              `json:"denied" bson:"denied"`
-}
-
-// The default role.
-// It grants permissions for users without a defined role
-var DefaultRole *Role = &Role{
-	ID:      primitive.NewObjectID(),
-	Name:    "Default",
-	Allowed: RolePermissionDefault,
-	Denied:  0,
 }
 
 // Get cached roles

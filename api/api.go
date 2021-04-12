@@ -21,16 +21,16 @@ type TwitchUserResp struct {
 }
 
 type TwitchUser struct {
-	ID              string    `json:"id"`
-	Login           string    `json:"login"`
-	DisplayName     string    `json:"display_name"`
-	BroadcasterType string    `json:"broadcaster_type"`
-	Description     string    `json:"description"`
-	ProfileImageURL string    `json:"profile_image_url"`
-	OfflineImageURL string    `json:"offline_image_url"`
-	ViewCount       int       `json:"view_count"`
-	Email           string    `json:"email"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID              string    `json:"id" bson:"id"`
+	Login           string    `json:"login" bson:"login"`
+	DisplayName     string    `json:"display_name" bson:"display_name"`
+	BroadcasterType string    `json:"broadcaster_type" bson:"broadcaster_type"`
+	Description     string    `json:"description" bson:"description"`
+	ProfileImageURL string    `json:"profile_image_url" bson:"profile_image_url"`
+	OfflineImageURL string    `json:"offline_image_url" bson:"offline_image_url"`
+	ViewCount       int       `json:"view_count" bson:"view_count"`
+	Email           string    `json:"email" bson:"email"`
+	CreatedAt       time.Time `json:"created_at" bson:"twitch_created_at"`
 }
 
 func GetUsers(oauth string, ids []string, logins []string) ([]TwitchUser, error) {

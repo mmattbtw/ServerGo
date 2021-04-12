@@ -16,6 +16,7 @@ import (
 	"github.com/SevenTV/ServerGo/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/SevenTV/ServerGo/configure"
 	"github.com/gofiber/fiber/v2"
@@ -107,6 +108,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		u := fmt.Sprintf("https://id.twitch.tv/oauth2/authorize?%s", params)
 
+		fmt.Println(u)
 		return c.Redirect(u)
 	})
 
@@ -209,62 +211,70 @@ func Twitch(app fiber.Router) fiber.Router {
 			log.Errorf("twitch, err=%v, resp=%v, token=%v", err, users, tokenResp)
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
-				"message": "Invalid response from twitch, failed to convert access token to user account.",
+				"message": "Invalid response from twitch, failed to convert access token to user account. (" + err.Error() + ")",
 			})
 		}
 
 		user := users[0]
-
-		findOne := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+		after := options.After
+		doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
 			"id": user.ID,
+		}, bson.M{
+			"$set": user,
+		}, &options.FindOneAndUpdateOptions{
+			ReturnDocument: &after,
 		})
 
-		var mongoUser *mongo.User
-		err = findOne.Err()
-		if err == mongo.ErrNoDocuments {
-			mongoUser = &mongo.User{
-				TwitchID:        user.ID,
-				DisplayName:     user.DisplayName,
-				Login:           user.Login,
-				ProfileImageURL: user.ProfileImageURL,
-				Email:           user.Email,
-				Rank:            mongo.UserRankDefault,
-				EmoteIDs:        []primitive.ObjectID{},
-				EditorIDs:       []primitive.ObjectID{},
-			}
-			res, err := mongo.Database.Collection("users").InsertOne(mongo.Ctx, mongoUser)
-			if err != nil {
-				log.Errorf("mongo, err=%v", err)
-				return c.Status(500).JSON(&fiber.Map{
-					"status":  500,
-					"message": "Failed to create new account.",
-				})
-			}
+		mongoUser := &mongo.User{}
+		if doc.Err() != nil {
+			fmt.Println(doc.Err())
+			if doc.Err() == mongo.ErrNoDocuments {
+				mongoUser = &mongo.User{
+					TwitchID:        user.ID,
+					DisplayName:     user.DisplayName,
+					Login:           user.Login,
+					ProfileImageURL: user.ProfileImageURL,
+					Email:           user.Email,
+					Rank:            mongo.UserRankDefault,
+					Description:     user.Description,
+					CreatedAt:       user.CreatedAt,
+					OfflineImageURL: user.OfflineImageURL,
+					ViewCount:       int32(user.ViewCount),
+					EmoteIDs:        []primitive.ObjectID{},
+					EditorIDs:       []primitive.ObjectID{},
+					TokenVersion:    "1",
+				}
+				res, err := mongo.Database.Collection("users").InsertOne(mongo.Ctx, mongoUser)
+				if err != nil {
+					log.Errorf("mongo, err=%v", err)
+					return c.Status(500).JSON(&fiber.Map{
+						"status":  500,
+						"message": "Failed to create new account.",
+					})
+				}
 
-			var ok bool
-			mongoUser.ID, ok = res.InsertedID.(primitive.ObjectID)
-			if !ok {
-				log.Errorf("mongo, v=%v", res)
+				var ok bool
+				mongoUser.ID, ok = res.InsertedID.(primitive.ObjectID)
+				if !ok {
+					log.Errorf("mongo, v=%v", res)
+					return c.Status(500).JSON(&fiber.Map{
+						"status":  500,
+						"message": "Failed to read account.",
+					})
+				}
+			} else {
 				return c.Status(500).JSON(&fiber.Map{
 					"status":  500,
-					"message": "Failed to read account.",
-				})
-			}
-		} else if err == nil {
-			mongoUser = &mongo.User{}
-			if err := findOne.Decode(mongoUser); err != nil {
-				log.Errorf("mongo, err=%v", err)
-				return c.Status(500).JSON(&fiber.Map{
-					"status":  500,
-					"message": "Failed to read account.",
+					"message": "Failed to create or update the account (" + doc.Err().Error() + ")",
 				})
 			}
 		} else {
-			log.Errorf("mongo, err=%v", err)
-			return c.Status(500).JSON(&fiber.Map{
-				"status":  500,
-				"message": "Failed to fetch account.",
-			})
+			if err := doc.Decode(mongoUser); err != nil {
+				return c.Status(500).JSON(&fiber.Map{
+					"status":  500,
+					"message": "Could not decode user document (" + err.Error() + ")",
+				})
+			}
 		}
 
 		authPl := &middleware.PayloadJWT{
