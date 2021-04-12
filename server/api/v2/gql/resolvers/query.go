@@ -30,9 +30,10 @@ const (
 var searchRegex = regexp.MustCompile(`[.*+?^${}()|[\\]\\\\]`)
 
 var (
-	errInternalServer = fmt.Errorf("an internal server error occured")
-	errDepth          = fmt.Errorf("exceeded max depth of %v", maxDepth)
-	errQueryLimit     = fmt.Errorf("exeeded max query limit of %v", queryLimit)
+	errInternalServer   = fmt.Errorf("an internal server error occured")
+	errDepth            = fmt.Errorf("exceeded max depth of %v", maxDepth)
+	errQueryLimit       = fmt.Errorf("exeeded max query limit of %v", queryLimit)
+	errInvalidSortOrder = fmt.Errorf("SortOrder is either 0 (descending) or 1 (ascending)")
 )
 
 type SelectedField struct {
@@ -214,6 +215,8 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	PageSize    *int32
 	Limit       *int32
 	GlobalState *string
+	SortBy      *string
+	SortOrder   *int32
 }) ([]*emoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
 	if failed {
@@ -270,10 +273,10 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 	// If a query is specified, add sorting
 	if hasQuery {
-		pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
-			{Key: "name", Value: 1},
-			{Key: "tags", Value: 1},
-		}}})
+		// pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
+		// 	{Key: "name", Value: 1},
+		// 	{Key: "tags", Value: 1},
+		// }}})
 		match["$or"] = bson.A{
 			bson.M{
 				"name": bson.M{
@@ -295,6 +298,35 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 			match["visibility"] = bson.M{"$bitsAllSet": int32(mongo.EmoteVisibilityGlobal)}
 		case "hide": // Hide: omit global emotes from query
 			match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityGlobal)}
+		}
+	}
+
+	// Get sorting direction
+	var order int32 = 1
+	if args.SortOrder != nil {
+		order = *args.SortOrder
+	}
+	if order > 1 {
+		return nil, errInvalidSortOrder
+	}
+	if order == 1 {
+		order = -1
+	} else if order == 0 {
+		order = 1
+	}
+
+	// Handle sorting
+	if args.SortBy != nil {
+		sortBy := *args.SortBy
+		switch sortBy {
+		// Popularity Sort - Channels Added
+		case "popularity":
+
+		// Creation Date Sort
+		case "age":
+			pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
+				{Key: "_id", Value: order},
+			}}})
 		}
 	}
 
