@@ -33,6 +33,9 @@ type Pipeline = mongo.Pipeline
 
 func init() {
 	clientOptions := options.Client().ApplyURI(configure.Config.GetString("mongo_uri"))
+	if configure.Config.GetBool("mongo_direct") {
+		clientOptions.SetDirect(true)
+	}
 	client, err := mongo.Connect(Ctx, clientOptions)
 	if err != nil {
 		panic(err)

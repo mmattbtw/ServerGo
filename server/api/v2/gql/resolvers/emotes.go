@@ -146,7 +146,15 @@ func (r *emoteResolver) CreatedAt() string {
 }
 
 func (r *emoteResolver) Owner() (*userResolver, error) {
-	return GenerateUserResolver(r.ctx, r.v.Owner, &r.v.OwnerID, r.fields["owner"].children)
+	resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, &r.v.OwnerID, r.fields["owner"].children)
+	if err != nil {
+		return nil, err
+	}
+	if resolver == nil {
+		return GenerateUserResolver(r.ctx, mongo.DeletedUser, nil, nil)
+	}
+
+	return resolver, nil
 }
 
 func (r *emoteResolver) AuditEntries() ([]string, error) {
