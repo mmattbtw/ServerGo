@@ -12,6 +12,6 @@ var DefaultRole *Role = &Role{
 }
 
 var DeletedUser *User = &User{
-	Login:       "-deleteduser",
-	DisplayName: "-DeletedUser",
+	Login:       "*deleteduser",
+	DisplayName: "*DeletedUser",
 }

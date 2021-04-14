@@ -398,7 +398,9 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 	ID     string
 	Reason *string
-}) (*response, error) {
+}) (*bool, error) {
+	var success bool
+
 	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
 	if !ok {
 		return nil, errLoginRequired
@@ -500,10 +502,8 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 
 	wg.Wait()
 
-	return &response{
-		Status:  200,
-		Message: "success",
-	}, nil
+	success = true
+	return &success, nil
 }
 
 func (*RootResolver) RestoreEmote(ctx context.Context, args struct {

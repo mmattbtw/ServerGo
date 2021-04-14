@@ -7,7 +7,7 @@ type Mutation {
   # Edit an emote. Requires permission.
   editEmote(emote: EmoteInput!, reason: String): Emote
   # Delete an emote. Requires permission.
-  deleteEmote(id: String!, reason: String): Response
+  deleteEmote(id: String!, reason: String): Boolean
   # Restore an emote that has been deleted. Requires permission.
   restoreEmote(id: String!, reason: String): Response
   # Add an emote to a channel. Requires permission.

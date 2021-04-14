@@ -1,11 +1,14 @@
 package emotes
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,11 +36,14 @@ var (
 func Emotes(app fiber.Router) fiber.Router {
 	emotes := app.Group("/emotes", middleware.UserAuthMiddleware(true))
 
-	emotes.Post("/upload", middleware.UserAuthMiddleware(true), middleware.AuditRoute(func(c *fiber.Ctx) (int, []byte, *mongo.AuditLog) {
+	emotes.Post("/", middleware.UserAuthMiddleware(true), middleware.AuditRoute(func(c *fiber.Ctx) (int, []byte, *mongo.AuditLog) {
 		c.Set("Content-Type", "application/json")
 		usr, ok := c.Locals("user").(*mongo.User)
 		if !ok {
 			return 500, errInternalServer, nil
+		}
+		if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteCreate) {
+			return 403, utils.S2B(fmt.Sprintf(errAccessDenied, "You don't have permission to do that.")), nil
 		}
 
 		req := c.Request()
@@ -46,27 +52,31 @@ func Emotes(app fiber.Router) fiber.Router {
 			return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "You did not provide an upload stream.")), nil
 		}
 
+		// Get file stream
 		file := fctx.RequestBodyStream()
 		mr := multipart.NewReader(file, utils.B2S(req.Header.MultipartFormBoundary()))
-		var emoteName string
-		var channelID *primitive.ObjectID
-		var ogFilePath string
+		var emoteName string              // The name of the emote
+		var channelID *primitive.ObjectID // The channel creating this emote
+		var ogFilePath string             // The original file path
 		var contentType string
 		id, _ := uuid.NewRandom()
 
+		// The temp directory where the emote will be created
 		fileDir := fmt.Sprintf("%s/%s", configure.Config.GetString("temp_file_store"), id.String())
-
-		if err := os.MkdirAll(fileDir, 0644); err != nil {
+		if err := os.MkdirAll(fileDir, 0777); err != nil {
 			log.Errorf("mkdir, err=%v", err)
 			return 500, errInternalServer, nil
 		}
 
+		// Remove temp dir once this function completes
 		defer os.RemoveAll(fileDir)
 
+		// Get form data parts
+		channelID = &usr.ID // Default channel ID to the uploader
 		for i := 0; i < 3; i++ {
 			part, err := mr.NextPart()
 			if err != nil {
-				return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "There are not enough fields in the form body.")), nil
+				continue
 			}
 
 			if part.FormName() == "name" {
@@ -92,6 +102,10 @@ func Emotes(app fiber.Router) fiber.Router {
 				}
 				channelID = &id
 			} else if part.FormName() == "emote" {
+				if emoteName == "" { // Infer emote name from file name if it wasn't specified
+					basename := part.FileName()
+					emoteName = strings.TrimSuffix(basename, filepath.Ext(basename))
+				}
 				data := make([]byte, chunkSize)
 				contentType = part.Header.Get("Content-Type")
 				var ext string
@@ -157,7 +171,7 @@ func Emotes(app fiber.Router) fiber.Router {
 			return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The fields were not provided.")), nil
 		}
 
-		if usr.Rank != mongo.UserRankAdmin {
+		if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
 			if channelID.Hex() != usr.ID.Hex() {
 				if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 					"_id":     channelID,
@@ -179,6 +193,7 @@ func Emotes(app fiber.Router) fiber.Router {
 			{fmt.Sprintf("%s/1x.webp", fileDir), "1x"},
 		}
 
+		// Convert original file into WEBP sizes
 		cmd := exec.Command("ffmpeg", []string{
 			"-y",
 			"-i", ogFilePath,
@@ -201,6 +216,16 @@ func Emotes(app fiber.Router) fiber.Router {
 			files[3][0],
 		}...)
 
+		// Print output to console for debugging
+		stderr, _ := cmd.StderrPipe()
+		go func() {
+			scan := bufio.NewScanner(stderr) // Create a scanner tied to stdout
+			fmt.Println("--- BEGIN " + cmd.String() + " CMD ---")
+			for scan.Scan() { // Capture stdout, appending it to cmd var and logging to console
+				fmt.Println(scan.Text())
+			}
+			fmt.Println("\n--- END CMD ---")
+		}()
 		err := cmd.Run()
 		if err != nil {
 			log.Errorf("cmd, err=%v", err)
@@ -210,9 +235,10 @@ func Emotes(app fiber.Router) fiber.Router {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(files))
 
+		mime := "image/webp"
 		res, err := mongo.Database.Collection("emotes").InsertOne(mongo.Ctx, &mongo.Emote{
 			Name:             emoteName,
-			Mime:             "image/webp",
+			Mime:             mime,
 			Status:           mongo.EmoteStatusProcessing,
 			Tags:             []string{},
 			Visibility:       mongo.EmoteVisibilityPrivate,
@@ -248,8 +274,8 @@ func Emotes(app fiber.Router) fiber.Router {
 					errored = true
 					return
 				}
-				webp := "image/webp"
-				if err := aws.UploadFile(configure.Config.GetString("aws_cdn_bucket"), fmt.Sprintf("emote/%s/%s", _id.Hex(), path[1]), data, &webp); err != nil {
+
+				if err := aws.UploadFile(configure.Config.GetString("aws_cdn_bucket"), fmt.Sprintf("emote/%s/%s", _id.Hex(), path[1]), data, &mime); err != nil {
 					log.Errorf("aws, err=%v", err)
 					errored = true
 				}
@@ -280,7 +306,15 @@ func Emotes(app fiber.Router) fiber.Router {
 		}
 
 		return 201, utils.S2B(fmt.Sprintf(`{"status":201,"id":"%s"}`, _id.Hex())), &mongo.AuditLog{
-			Type:      mongo.AuditLogTypeEmoteCreate,
+			Type: mongo.AuditLogTypeEmoteCreate,
+			Changes: []*mongo.AuditLogChange{
+				{Key: "name", OldValue: nil, NewValue: emoteName},
+				{Key: "tags", OldValue: nil, NewValue: []string{}},
+				{Key: "owner", OldValue: nil, NewValue: usr.ID},
+				{Key: "visibility", OldValue: nil, NewValue: mongo.EmoteVisibilityPrivate},
+				{Key: "mime", OldValue: nil, NewValue: mime},
+				{Key: "status", OldValue: nil, NewValue: mongo.EmoteStatusProcessing},
+			},
 			Target:    &mongo.Target{ID: &_id, Type: "emotes"},
 			CreatedBy: usr.ID,
 		}

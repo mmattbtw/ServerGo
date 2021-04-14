@@ -30,6 +30,11 @@ var Ctx = context.TODO()
 var ErrNoDocuments = mongo.ErrNoDocuments
 
 type Pipeline = mongo.Pipeline
+type WriteModel = mongo.WriteModel
+
+func NewUpdateOneModel() *mongo.UpdateOneModel {
+	return mongo.NewUpdateOneModel()
+}
 
 func init() {
 	clientOptions := options.Client().ApplyURI(configure.Config.GetString("mongo_uri"))
@@ -56,6 +61,7 @@ func init() {
 		{Keys: bson.M{"last_modified_date": 1}, Options: options.Index().SetExpireAfterSeconds(int32(time.Hour * 24 * 21 / time.Second)).SetPartialFilterExpression(bson.M{
 			"status": EmoteStatusDeleted,
 		})},
+		{Keys: bson.M{"channel_count_checked_at": 1}},
 	})
 	if err != nil {
 		log.Errorf("mongodb, err=%v", err)
@@ -152,9 +158,8 @@ func changeStream(collection string, data bson.M) {
 		case "emote":
 		}
 	}
-	val, err := redis.InvalidateCache(fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
+	_, err := redis.InvalidateCache(fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
 	if err != nil {
 		log.Errorf("redis, err=%s", err)
 	}
-	log.Infoln(val)
 }

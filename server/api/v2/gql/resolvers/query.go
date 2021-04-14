@@ -6,6 +6,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/SevenTV/ServerGo/cache"
 	"github.com/SevenTV/ServerGo/mongo"
@@ -252,54 +253,8 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		"status": mongo.EmoteStatusLive,
 	}
 
-	// Determine the full collection size
-	{
-		f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
-
-		// Count documents in the collection
-		count, err := cache.GetCollectionSize("emotes", match)
-		if err != nil {
-			return nil, err
-		}
-
-		f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
-	}
-
 	// Define aggregation pipeline
-	pipeline := mongo.Pipeline{
-		bson.D{primitive.E{Key: "$match", Value: match}},                                                    // Match query
-		bson.D{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}},                                     // Paginate
-		bson.D{primitive.E{Key: "$limit", Value: math.Max(0, math.Min(float64(pageSize), float64(limit)))}}, // Set limit
-	}
-	// If a query is specified, add sorting
-	if hasQuery {
-		// pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
-		// 	{Key: "name", Value: 1},
-		// 	{Key: "tags", Value: 1},
-		// }}})
-		match["$or"] = bson.A{
-			bson.M{
-				"name": bson.M{
-					"$regex": lQuery,
-				},
-			},
-			bson.M{
-				"tags": bson.M{
-					"$regex": lQuery,
-				},
-			},
-		}
-	}
-	// If global state is specified, filter global emotes
-	if args.GlobalState != nil {
-		globalState := *args.GlobalState
-		switch globalState {
-		case "only": // Only: query only global emotes
-			match["visibility"] = bson.M{"$bitsAllSet": int32(mongo.EmoteVisibilityGlobal)}
-		case "hide": // Hide: omit global emotes from query
-			match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityGlobal)}
-		}
-	}
+	pipeline := mongo.Pipeline{}
 
 	// Get sorting direction
 	var order int32 = 1
@@ -321,6 +276,69 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		switch sortBy {
 		// Popularity Sort - Channels Added
 		case "popularity":
+			// Create a pipeline for ranking emotes by channel count
+			popCheck := mongo.Pipeline{
+				{primitive.E{Key: "$match", Value: bson.M{
+					"$or": bson.A{
+						bson.M{ // Match emotes where kast check was over 6 hours ago
+							"channel_count_checked_at": bson.M{
+								"$lt": time.Now().Add(-6 * time.Hour),
+							},
+						},
+						bson.M{"channel_count_checked_at": bson.M{"$exists": false}},
+						bson.M{"channel_count_checked_at": nil},
+					},
+				}}},
+				{primitive.E{Key: "$lookup", Value: bson.M{
+					"from":         "users",
+					"localField":   "_id",
+					"foreignField": "emotes",
+					"as":           "channels",
+				}}},
+				{primitive.E{Key: "$addFields", Value: bson.M{
+					"channel_count": bson.M{"$size": "$channels"},
+				}}},
+				{primitive.E{Key: "$unset", Value: "channels"}},
+			}
+			cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, popCheck)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			countedEmotes := []*mongo.Emote{}
+			if err := cur.All(mongo.Ctx, &countedEmotes); err == nil && len(countedEmotes) > 0 {
+				if err == nil { // Get the unchecked emotes, add them to a slice
+					ops := make([]mongo.WriteModel, len(countedEmotes))
+					for i, e := range countedEmotes {
+						now := time.Now()
+						update := mongo.NewUpdateOneModel(). // Append update ops for bulk write
+											SetFilter(bson.M{"_id": e.ID}).
+											SetUpdate(bson.M{
+								"$set": bson.M{
+									"channel_count":            e.ChannelCount,
+									"channel_count_checked_at": &now,
+								},
+							})
+
+						ops[i] = update
+					}
+
+					// Update unchecked with channel count data
+					_, err := mongo.Database.Collection("emotes").BulkWrite(mongo.Ctx, ops)
+					if err != nil {
+						log.Errorf("mongo, was unable to update channel count of "+fmt.Sprint(len(countedEmotes))+" emotes, err=%v", err)
+					}
+				}
+			} else if err != nil {
+				log.Errorf("mongo, was unable to aggregate channel count of emotes, err=%v", err)
+			}
+
+			// Sort by channel count
+			pipeline = append(pipeline, []bson.D{
+				{primitive.E{Key: "$sort", Value: bson.D{
+					{Key: "channel_count", Value: -order},
+				}}},
+			}...)
 
 		// Creation Date Sort
 		case "age":
@@ -330,8 +348,56 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		}
 	}
 
+	// Match & Limit
+	pipeline = append(pipeline, []bson.D{
+		{primitive.E{Key: "$match", Value: match}},                                                    // Match query
+		{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}},                                     // Paginate
+		{primitive.E{Key: "$limit", Value: math.Max(0, math.Min(float64(pageSize), float64(limit)))}}, // Set limit
+	}...)
+
+	// If a query is specified, add sorting
+	if hasQuery {
+		match["$or"] = bson.A{
+			bson.M{
+				"name": bson.M{
+					"$regex": lQuery,
+				},
+			},
+			bson.M{
+				"tags": bson.M{
+					"$regex": lQuery,
+				},
+			},
+		}
+	}
+
+	// If global state is specified, filter global emotes
+	if args.GlobalState != nil {
+		globalState := *args.GlobalState
+		switch globalState {
+		case "only": // Only: query only global emotes
+			match["visibility"] = bson.M{"$bitsAllSet": int32(mongo.EmoteVisibilityGlobal)}
+		case "hide": // Hide: omit global emotes from query
+			match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityGlobal)}
+		}
+	}
+
+	// Determine the full collection size
+	{
+		f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
+
+		// Count documents in the collection
+		count, err := cache.GetCollectionSize("emotes", match)
+		if err != nil {
+			return nil, err
+		}
+
+		f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
+	}
+
 	// Query the DB
 	cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, pipeline, opts)
+
 	if err == nil {
 		err = cur.All(mongo.Ctx, &emotes)
 	}
