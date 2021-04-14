@@ -98,7 +98,7 @@ type Emote {
 
 type User {
   # id of this user
-  _id: String!
+  id: String!
   # email of this user
   email: String
   # rank of this user
