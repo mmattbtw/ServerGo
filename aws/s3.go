@@ -3,7 +3,6 @@ package aws
 import (
 	"bytes"
 	"fmt"
-	"net/url"
 
 	"github.com/SevenTV/ServerGo/configure"
 
@@ -19,6 +18,7 @@ import (
 var sess = session.Must(session.NewSession(&aws.Config{
 	Credentials: credentials.NewStaticCredentials(configure.Config.GetString("aws_akid"), configure.Config.GetString("aws_secret_key"), configure.Config.GetString("aws_session_token")),
 	Region:      aws.String(configure.Config.GetString("aws_region")),
+	Endpoint:    aws.String(configure.Config.GetString("aws_endpoint")),
 }))
 
 var svc = s3.New(sess)
@@ -48,19 +48,21 @@ func UploadFile(bucket, key string, body []byte, contentType *string) error {
 func Expire(bucket, key string, number int) error {
 	obj := fmt.Sprintf("deleted/%s/%vx", key, number)
 
+	sourceObject := fmt.Sprintf("%s/%s/%vx", bucket, key, number)
 	_, err := svc.CopyObject(&s3.CopyObjectInput{
+		ACL:        aws.String("private"),
 		Bucket:     aws.String(bucket),
-		CopySource: aws.String(url.PathEscape(fmt.Sprintf("%s/%s/%vx", bucket, key, number))),
+		CopySource: aws.String(sourceObject),
 		Key:        aws.String(obj),
 	})
 
 	if err != nil {
-		return fmt.Errorf("unable to expire object %q from bucket %q, %v", key, bucket, err)
+		return fmt.Errorf("1.unable to expire object %q from bucket %q, %v", key, bucket, err)
 	}
 
 	err = svc.WaitUntilObjectExists(&s3.HeadObjectInput{Bucket: aws.String(bucket), Key: aws.String(obj)})
 	if err != nil {
-		return fmt.Errorf("unable to expire object %q from bucket %q, %v", key, bucket, err)
+		return fmt.Errorf("2.unable to expire object %q from bucket %q, %v", key, bucket, err)
 	}
 
 	return DeleteFile(bucket, fmt.Sprintf("%s/%vx", key, number), false)
@@ -69,9 +71,10 @@ func Expire(bucket, key string, number int) error {
 func Unexpire(bucket, key string, number int) error {
 	obj := fmt.Sprintf("%s/%vx", key, number)
 
+	sourceObject := fmt.Sprintf("%s/deleted/%s/%vx", bucket, key, number)
 	_, err := svc.CopyObject(&s3.CopyObjectInput{
 		Bucket:     aws.String(bucket),
-		CopySource: aws.String(url.PathEscape(fmt.Sprintf("%s/deleted/%s/%vx", bucket, key, number))),
+		CopySource: aws.String(sourceObject),
 		Key:        aws.String(obj),
 	})
 
