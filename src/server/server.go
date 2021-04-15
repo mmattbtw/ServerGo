@@ -47,7 +47,7 @@ func New() *Server {
 	}
 
 	server.app.Use(cors.New(cors.Config{
-		AllowOrigins:  configure.Config.GetString("website_url") + ", twitch.tv",
+		AllowOrigins:  "*",
 		ExposeHeaders: "X-Collection-Size",
 		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
 	}))
