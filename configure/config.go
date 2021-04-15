@@ -3,6 +3,7 @@ package configure
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 
 	nested "github.com/antonfisher/nested-logrus-formatter"
@@ -52,6 +53,11 @@ var defaultConf = ServerCfg{
 }
 
 var Config = viper.New()
+
+// Capture environment variables
+var NodeName string = os.Getenv("NODE_NAME")
+var PodName string = os.Getenv("POD_NAME")
+var PodIP string = os.Getenv("POD_IP")
 
 func initLog() {
 	if l, err := log.ParseLevel(Config.GetString("level")); err == nil {

@@ -47,7 +47,7 @@ func New() *Server {
 	}
 
 	server.app.Use(cors.New(cors.Config{
-		AllowOrigins:  "*",
+		AllowOrigins:  configure.Config.GetString("website_url") + ", twitch.tv",
 		ExposeHeaders: "X-Collection-Size",
 		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
 	}))
@@ -59,10 +59,10 @@ func New() *Server {
 	server.app.Use(recover.New())
 
 	server.app.Use(func(c *fiber.Ctx) error {
-		nodeID := configure.Config.GetString("node_id")
-		if nodeID != "" {
-			c.Set("X-Node-ID", nodeID)
-		}
+		c.Set("X-Node-Name", configure.NodeName)
+		c.Set("X-Pod-Name", configure.PodName)
+		c.Set("X-Pod-Internal-Address", configure.PodIP)
+
 		delete := true
 		auth := c.Cookies("auth")
 		if auth != "" {
