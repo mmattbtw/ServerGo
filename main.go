@@ -13,11 +13,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/SevenTV/ServerGo/configure"
-	"github.com/SevenTV/ServerGo/mongo"
-	_ "github.com/SevenTV/ServerGo/redis"
-	"github.com/SevenTV/ServerGo/server"
-	"github.com/SevenTV/ServerGo/utils"
+	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/mongo"
+	_ "github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server"
+	"github.com/SevenTV/ServerGo/src/utils"
 )
 
 func init() {
