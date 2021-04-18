@@ -21,12 +21,12 @@ func init() {
 	webhookToken = &s[1]
 }
 
-func SendEmoteCreate(emote mongo.Emote, actor mongo.User) (*dgo.Message, error) {
+func SendEmoteCreate(emote mongo.Emote, actor mongo.User) {
 	if webhookID == nil || webhookToken == nil {
-		return nil, fmt.Errorf("webhook is not configured")
+		return
 	}
 
-	msg, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: fmt.Sprintf("**[activity]** 🆕 emote [%s](%v) created by %s", emote.Name, getEmotePageURL(emote), actor.DisplayName),
 		Embeds: []*dgo.MessageEmbed{
 			{
@@ -40,15 +40,13 @@ func SendEmoteCreate(emote mongo.Emote, actor mongo.User) (*dgo.Message, error) 
 	})
 	if err != nil {
 		log.Errorf("discord, SendEmoteCreate, err=%v", err)
-		return nil, err
+		return
 	}
-
-	return msg, nil
 }
 
-func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogChange, reason *string) (*dgo.Message, error) {
+func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogChange, reason *string) {
 	if webhookID == nil || webhookToken == nil {
-		return nil, fmt.Errorf("webhook is not configured")
+		return
 	}
 
 	fields := make([]*dgo.MessageEmbedField, len(logs))
@@ -66,7 +64,7 @@ func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogCh
 		})
 	}
 
-	msg, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: fmt.Sprintf("**[activity]** ✏️ emote [%s](%v) edited by [%s](%v)", emote.Name, getEmotePageURL(emote), actor.DisplayName, getUserPageURL(actor)),
 		Embeds: []*dgo.MessageEmbed{
 			{
@@ -82,18 +80,16 @@ func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogCh
 	})
 	if err != nil {
 		log.Errorf("discord, SendEmoteEdit, err=%v", err)
-		return nil, err
+		return
 	}
-
-	return msg, nil
 }
 
-func SendEmoteDelete(emote mongo.Emote, actor mongo.User, reason string) (*dgo.Message, error) {
+func SendEmoteDelete(emote mongo.Emote, actor mongo.User, reason string) {
 	if webhookID == nil || webhookToken == nil {
-		return nil, fmt.Errorf("webhook is not configured")
+		return
 	}
 
-	msg, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: fmt.Sprintf("**[activity]** ❌ emote [%s](%v) deleted by [%s](%v)", emote.Name, getEmotePageURL(emote), actor.DisplayName, getUserPageURL(actor)),
 		Embeds: []*dgo.MessageEmbed{
 			{Description: fmt.Sprintf("Reason: %s", reason)},
@@ -101,10 +97,8 @@ func SendEmoteDelete(emote mongo.Emote, actor mongo.User, reason string) (*dgo.M
 	})
 	if err != nil {
 		log.Errorf("discord, SendEmoteDelete, err=%v", err)
-		return nil, err
+		return
 	}
-
-	return msg, nil
 }
 
 func getEmoteImageURL(emote mongo.Emote) string {
