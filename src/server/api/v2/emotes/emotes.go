@@ -88,7 +88,7 @@ func Emotes(app fiber.Router) fiber.Router {
 					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "We couldn't read the name.")), nil
 				}
 				// max emote name length
-				if n > 16 {
+				if n > 100 {
 					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The emote name is longer than we expected.")), nil
 				}
 				emoteName = utils.B2S(buf[:n])
@@ -308,7 +308,7 @@ func Emotes(app fiber.Router) fiber.Router {
 			log.Errorf("mongo, err=%v, id=%s", err, _id.Hex())
 		}
 
-		discord.SendEmoteCreate(*emote, *usr)
+		go discord.SendEmoteCreate(*emote, *usr)
 		return 201, utils.S2B(fmt.Sprintf(`{"status":201,"id":"%s"}`, _id.Hex())), &mongo.AuditLog{
 			Type: mongo.AuditLogTypeEmoteCreate,
 			Changes: []*mongo.AuditLogChange{

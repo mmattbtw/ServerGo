@@ -508,7 +508,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 
 	wg.Wait()
 
-	discord.SendEmoteDelete(*emote, *usr, args.Reason)
+	go discord.SendEmoteDelete(*emote, *usr, args.Reason)
 	success = true
 	return &success, nil
 }

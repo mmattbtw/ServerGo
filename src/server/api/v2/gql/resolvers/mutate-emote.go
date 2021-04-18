@@ -178,7 +178,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 			log.Errorf("mongo, err=%v", err)
 		}
 
-		discord.SendEmoteEdit(*emote, *usr, logChanges, args.Reason)
+		go discord.SendEmoteEdit(*emote, *usr, logChanges, args.Reason)
 		return GenerateEmoteResolver(ctx, emote, &emote.ID, field.children)
 	}
 

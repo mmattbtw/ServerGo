@@ -17,8 +17,10 @@ var webhookToken *string
 
 func init() {
 	s := configure.Config.GetStringSlice("discord.webhook")
-	webhookID = &s[0]
-	webhookToken = &s[1]
+	if len(s) == 2 {
+		webhookID = &s[0]
+		webhookToken = &s[1]
+	}
 }
 
 func SendEmoteCreate(emote mongo.Emote, actor mongo.User) {
