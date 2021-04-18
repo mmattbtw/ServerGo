@@ -8,6 +8,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/aws"
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -45,6 +46,7 @@ var (
 	errUserBanned     = fmt.Errorf("that user is currently banned")
 	errUserNotBanned  = fmt.Errorf("that user is currently not banned")
 	errYourself       = fmt.Errorf("you cannot do that to yourself")
+	errNoReason       = fmt.Errorf("you must provide a reason")
 )
 
 func (*RootResolver) ReportEmote(ctx context.Context, args struct {
@@ -397,8 +399,12 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 
 func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 	ID     string
-	Reason *string
+	Reason string
 }) (*bool, error) {
+	if args.Reason == "" {
+		return nil, errNoReason
+	}
+
 	var success bool
 
 	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
@@ -469,7 +475,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 		Changes: []*mongo.AuditLogChange{
 			{Key: "status", OldValue: emote.Status, NewValue: mongo.EmoteStatusDeleted},
 		},
-		Reason: args.Reason,
+		Reason: &args.Reason,
 	})
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
@@ -502,6 +508,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 
 	wg.Wait()
 
+	discord.SendEmoteDelete(*emote, *usr, args.Reason)
 	success = true
 	return &success, nil
 }

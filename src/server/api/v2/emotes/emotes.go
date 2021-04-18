@@ -19,6 +19,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/aws"
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -55,6 +56,7 @@ func Emotes(app fiber.Router) fiber.Router {
 		// Get file stream
 		file := fctx.RequestBodyStream()
 		mr := multipart.NewReader(file, utils.B2S(req.Header.MultipartFormBoundary()))
+		var emote *mongo.Emote
 		var emoteName string              // The name of the emote
 		var channelID *primitive.ObjectID // The channel creating this emote
 		var ogFilePath string             // The original file path
@@ -236,7 +238,7 @@ func Emotes(app fiber.Router) fiber.Router {
 		wg.Add(len(files))
 
 		mime := "image/webp"
-		res, err := mongo.Database.Collection("emotes").InsertOne(mongo.Ctx, &mongo.Emote{
+		emote = &mongo.Emote{
 			Name:             emoteName,
 			Mime:             mime,
 			Status:           mongo.EmoteStatusProcessing,
@@ -244,7 +246,8 @@ func Emotes(app fiber.Router) fiber.Router {
 			Visibility:       mongo.EmoteVisibilityPrivate,
 			OwnerID:          *channelID,
 			LastModifiedDate: time.Now(),
-		})
+		}
+		res, err := mongo.Database.Collection("emotes").InsertOne(mongo.Ctx, emote)
 
 		if err != nil {
 			log.Errorf("mongo, err=%v", err)
@@ -305,6 +308,7 @@ func Emotes(app fiber.Router) fiber.Router {
 			log.Errorf("mongo, err=%v, id=%s", err, _id.Hex())
 		}
 
+		discord.SendEmoteCreate(*emote, *usr)
 		return 201, utils.S2B(fmt.Sprintf(`{"status":201,"id":"%s"}`, _id.Hex())), &mongo.AuditLog{
 			Type: mongo.AuditLogTypeEmoteCreate,
 			Changes: []*mongo.AuditLogChange{

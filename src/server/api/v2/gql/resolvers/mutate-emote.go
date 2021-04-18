@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/SevenTV/ServerGo/src/validation"
@@ -176,7 +177,10 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		if err != nil {
 			log.Errorf("mongo, err=%v", err)
 		}
+
+		discord.SendEmoteEdit(*emote, *usr, logChanges, args.Reason)
 		return GenerateEmoteResolver(ctx, emote, &emote.ID, field.children)
 	}
+
 	return GenerateEmoteResolver(ctx, emote, &emote.ID, field.children)
 }
