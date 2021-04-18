@@ -22,7 +22,7 @@ spec:
       containers:
         - name: 7tv-goapi
           image: ghcr.io/seventv/servergo:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
 
           livenessProbe:
             httpGet:
