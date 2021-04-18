@@ -422,6 +422,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 
 func (*RootResolver) SearchUsers(ctx context.Context, args struct {
 	Query string
+	Page  *int32
 	Limit *int32
 }) ([]*userResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
@@ -437,12 +438,18 @@ func (*RootResolver) SearchUsers(ctx context.Context, args struct {
 		return nil, errQueryLimit
 	}
 
+	// Pagination
+	page := int64(1)
+	if args.Page != nil && *args.Page > 1 {
+		page = int64(*args.Page)
+	}
+
 	query := strings.Trim(args.Query, " ")
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
 	opts := options.Find().SetSort(bson.M{
 		"login": 1,
-	}).SetLimit(limit)
+	}).SetLimit(limit).SetSkip((page - 1) * limit)
 
 	users := []*mongo.User{}
 

@@ -53,7 +53,7 @@ type Query {
   # Get a user by their twitch name.
   twitch_user(channel_name: String!): User
   # Search for users.
-  search_users(query: String!, limit: Int): [UserPartial]!
+  search_users(query: String!, page: Int, limit: Int): [UserPartial]!
 }
 
 input EmoteInput {
