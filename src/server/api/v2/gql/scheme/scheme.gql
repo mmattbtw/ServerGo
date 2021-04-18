@@ -146,6 +146,8 @@ type UserPartial {
   email: String
   # rank of this user
   rank: Int!
+  # role of this user
+  role: Role!
   # emotes of this user
   emote_ids: [String!]!
   # editor ids for this user

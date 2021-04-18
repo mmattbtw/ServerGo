@@ -240,11 +240,14 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
 	// Pagination
-	page := int64(*args.Page)
-	if page < 1 {
-		page = int64(1)
+	page := int64(1)
+	if args.Page != nil && *args.Page > 1 {
+		page = int64(*args.Page)
 	}
-	pageSize := int64(*args.PageSize)
+	pageSize := limit
+	if args.PageSize != nil {
+		pageSize = int64(*args.PageSize)
+	}
 
 	// Create aggregation
 	opts := options.Aggregate()
