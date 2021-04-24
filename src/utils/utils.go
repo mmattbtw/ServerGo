@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"math"
 	"reflect"
 	"unsafe"
 )
@@ -131,6 +132,17 @@ func Contains(s []string, compare string) bool {
 
 func IsPointer(v interface{}) bool {
 	return reflect.TypeOf(v).Kind() == reflect.Ptr
+}
+
+// Obtain the size ratio of width and height values
+// For image resizing
+func GetSizeRatio(og []float64, nw []float64) (int32, int32) {
+	ratio := math.Min(nw[0]/og[0], nw[1]/og[1])
+
+	var width int32 = int32(math.Floor(og[0] * ratio))
+	var height int32 = int32(math.Floor(og[1] * ratio))
+
+	return width, height
 }
 
 type Key string
