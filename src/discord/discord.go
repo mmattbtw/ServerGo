@@ -6,6 +6,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/utils"
 	dgo "github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 )
@@ -29,12 +30,12 @@ func SendEmoteCreate(emote mongo.Emote, actor mongo.User) {
 	}
 
 	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
-		Content: fmt.Sprintf("**[activity]** 🆕 emote [%s](%v) created by %s", emote.Name, getEmotePageURL(emote), actor.DisplayName),
+		Content: fmt.Sprintf("**[activity]** 🆕 emote [%s](%v) created by %s", emote.Name, utils.GetEmotePageURL(emote.ID.Hex()), actor.DisplayName),
 		Embeds: []*dgo.MessageEmbed{
 			{
 				Title: emote.Name,
 				Image: &dgo.MessageEmbedImage{
-					URL: getEmoteImageURL(emote),
+					URL: utils.GetEmoteImageURL(emote.ID.Hex()),
 				},
 				Color: toIntColor("24e575"),
 			},
@@ -67,13 +68,13 @@ func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogCh
 	}
 
 	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
-		Content: fmt.Sprintf("**[activity]** ✏️ emote [%s](%v) edited by [%s](%v)", emote.Name, getEmotePageURL(emote), actor.DisplayName, getUserPageURL(actor)),
+		Content: fmt.Sprintf("**[activity]** ✏️ emote [%s](%v) edited by [%s](%v)", emote.Name, utils.GetEmotePageURL(emote.ID.Hex()), actor.DisplayName, utils.GetUserPageURL(actor.ID.Hex())),
 		Embeds: []*dgo.MessageEmbed{
 			{
 				Title:       emote.Name,
 				Description: fmt.Sprintf("by %v", actor.DisplayName),
 				Thumbnail: &dgo.MessageEmbedThumbnail{
-					URL: getEmoteImageURL(emote),
+					URL: utils.GetEmoteImageURL(emote.ID.Hex()),
 				},
 				Fields: fields,
 				Color:  toIntColor("e3b464"),
@@ -92,7 +93,7 @@ func SendEmoteDelete(emote mongo.Emote, actor mongo.User, reason string) {
 	}
 
 	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
-		Content: fmt.Sprintf("**[activity]** ❌ emote [%s](%v) deleted by [%s](%v)", emote.Name, getEmotePageURL(emote), actor.DisplayName, getUserPageURL(actor)),
+		Content: fmt.Sprintf("**[activity]** ❌ emote [%s](%v) deleted by [%s](%v)", emote.Name, utils.GetEmotePageURL(emote.ID.Hex()), actor.DisplayName, utils.GetUserPageURL(actor.ID.Hex())),
 		Embeds: []*dgo.MessageEmbed{
 			{Description: fmt.Sprintf("Reason: %s", reason)},
 		},
@@ -101,18 +102,6 @@ func SendEmoteDelete(emote mongo.Emote, actor mongo.User, reason string) {
 		log.Errorf("discord, SendEmoteDelete, err=%v", err)
 		return
 	}
-}
-
-func getEmoteImageURL(emote mongo.Emote) string {
-	return configure.Config.GetString("cdn_url") + fmt.Sprintf("/emote/%s/%dx", emote.ID.Hex(), 4)
-}
-
-func getEmotePageURL(emote mongo.Emote) string {
-	return configure.Config.GetString("website_url") + fmt.Sprintf("/emotes/%s", emote.ID.Hex())
-}
-
-func getUserPageURL(user mongo.User) string {
-	return configure.Config.GetString("website_url") + fmt.Sprintf("/users/%s", user.ID.Hex())
 }
 
 func toIntColor(s string) int {
