@@ -231,7 +231,7 @@ func CreateRoute(router fiber.Router) {
 			rect := image.Rect(0, 0, int(width), int(height))
 
 			// Render all frames individually
-			os.Mkdir(scopedFolderPath, 0777)
+			_ = os.Mkdir(scopedFolderPath, 0777)
 
 			cmdArgs := []string{ // The argument list for the img2webp command
 				"-loop",
@@ -251,7 +251,7 @@ func CreateRoute(router fiber.Router) {
 
 				// Write frames to file
 				writer, _ := os.Create(filePath)
-				png.Encode(writer, dst)
+				_ = png.Encode(writer, dst)
 
 				// Append argument
 				cmdArgs = append(cmdArgs, []string{
