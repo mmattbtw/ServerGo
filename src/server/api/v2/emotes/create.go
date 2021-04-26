@@ -206,10 +206,10 @@ func CreateRoute(router fiber.Router) {
 
 		// Define sizes to be generated
 		files := [][]string{
-			{fmt.Sprintf("%s/4x", fileDir), "4x", "384x128"},
-			{fmt.Sprintf("%s/3x", fileDir), "3x", "228x76"},
-			{fmt.Sprintf("%s/2x", fileDir), "2x", "144x48"},
-			{fmt.Sprintf("%s/1x", fileDir), "1x", "96x32"},
+			{fmt.Sprintf("%s/4x", fileDir), "4x", "384x128", "90"},
+			{fmt.Sprintf("%s/3x", fileDir), "3x", "228x76", "80"},
+			{fmt.Sprintf("%s/2x", fileDir), "2x", "144x48", "75"},
+			{fmt.Sprintf("%s/1x", fileDir), "1x", "96x32", "65"},
 		}
 
 		// Resize the frame(s)
@@ -220,6 +220,7 @@ func CreateRoute(router fiber.Router) {
 			sizes := strings.Split(file[2], "x")
 			maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
 			maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
+			quality := file[3]
 
 			// Get calculed ratio for the size
 			width, height := utils.GetSizeRatio(
@@ -255,6 +256,8 @@ func CreateRoute(router fiber.Router) {
 
 				// Append argument
 				cmdArgs = append(cmdArgs, []string{
+					"-lossy",
+					"-q", quality,
 					"-d",
 					func() string {
 						if isGIF && len(gifOptions.Delay) > 0 {
