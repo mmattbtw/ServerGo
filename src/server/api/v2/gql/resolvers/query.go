@@ -189,27 +189,6 @@ func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (
 	return &resolvers, nil
 }
 
-func (*RootResolver) TwitchUser(ctx context.Context, args struct{ ChannelName string }) (*userResolver, error) {
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
-	if failed {
-		return nil, errDepth
-	}
-
-	user := &mongo.User{}
-
-	if err := cache.FindOne("users", "", bson.M{
-		"login": strings.ToLower(args.ChannelName),
-	}, user); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, nil
-		}
-		log.Errorf("mongo, err=%v", err)
-		return nil, errDepth
-	}
-
-	return GenerateUserResolver(ctx, user, nil, field.children)
-}
-
 func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	Query       string
 	Page        *int32
@@ -218,6 +197,8 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	GlobalState *string
 	SortBy      *string
 	SortOrder   *int32
+	Channel     *string
+	SubmittedBy *string
 }) ([]*emoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
 	if failed {

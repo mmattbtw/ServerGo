@@ -44,14 +44,13 @@ type Query {
   search_emotes(
     query: String!, limit: Int,
     page: Int, pageSize: Int,
-    globalState: String, sortBy: String, sortOrder: Int
+    globalState: String, sortBy: String, sortOrder: Int,
+    channel: String, submitted_by: String
   ): [Emote]!
   # Get a user by id, login or current authenticated user (@me).
   user(id: String!): User
   #  Get a role by id
   role(id: String!): Role
-  # Get a user by their twitch name.
-  twitch_user(channel_name: String!): User
   # Search for users.
   search_users(query: String!, page: Int, limit: Int): [UserPartial]!
 }

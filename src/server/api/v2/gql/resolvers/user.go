@@ -44,8 +44,8 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
 		user.OwnedEmotes = &[]*mongo.Emote{}
-		if err := cache.Find("emotes", fmt.Sprintf("owner:%s", userID.Hex()), bson.M{
-			"owner": userID,
+		if err := cache.Find("emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
+			"owner": user.ID,
 		}, user.OwnedEmotes); err != nil {
 			log.Errorf("mongo, err=%v", err)
 			return nil, errInternalServer
@@ -60,7 +60,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		}
 		if _, ok := v.children["audit_entries"]; ok {
 			logs := []*mongo.AuditLog{}
-			if err := cache.Find("audit", fmt.Sprintf("user:%s:owned_emotes", userID.Hex()), bson.M{
+			if err := cache.Find("audit", fmt.Sprintf("user:%s:owned_emotes", user.ID.Hex()), bson.M{
 				"target.id": bson.M{
 					"$in": ids,
 				},
@@ -87,7 +87,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 			user.Emotes = &[]*mongo.Emote{}
 		} else {
 			user.Emotes = &[]*mongo.Emote{}
-			if err := cache.Find("emotes", fmt.Sprintf("user:%s:emotes", userID.Hex()), bson.M{
+			if err := cache.Find("emotes", fmt.Sprintf("user:%s:emotes", user.ID.Hex()), bson.M{
 				"_id": bson.M{
 					"$in": user.EmoteIDs,
 				},
@@ -129,7 +129,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 
 	if _, ok := fields["editors"]; ok && user.Editors == nil {
 		user.Editors = &[]*mongo.User{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", userID.Hex()), bson.M{
+		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", user.ID.Hex()), bson.M{
 			"_id": bson.M{
 				"$in": utils.Ternary(len(user.EditorIDs) > 0, user.EditorIDs, []primitive.ObjectID{}).([]primitive.ObjectID),
 			},
@@ -141,7 +141,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 
 	if _, ok := fields["editor_in"]; ok && user.EditorIn == nil {
 		user.EditorIn = &[]*mongo.User{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:editor_in", userID.Hex()), bson.M{
+		if err := cache.Find("users", fmt.Sprintf("user:%s:editor_in", user.ID.Hex()), bson.M{
 			"editors": user.ID,
 		}, user.EditorIn); err != nil {
 			log.Errorf("mongo, err=%v", err)
@@ -152,7 +152,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 	usr, usrValid := ctx.Value(utils.UserKey).(*mongo.User)
 	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != mongo.UserRankAdmin && usr.Rank != mongo.UserRankModerator) && user.Reports == nil {
 		user.Reports = &[]*mongo.Report{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:reports", userID.Hex()), bson.M{
+		if err := cache.Find("users", fmt.Sprintf("user:%s:reports", user.ID.Hex()), bson.M{
 			"target.id":   user.ID,
 			"target.type": "users",
 		}, user.EditorIn); err != nil {
