@@ -2,8 +2,12 @@ package cache
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache/decoder"
@@ -235,4 +239,56 @@ func GetCollectionSize(collection string, q interface{}, opts ...*options.CountO
 		return count, nil
 	}
 
+}
+
+// Send a GET request to an endpoint and cache the result
+func CacheGetRequest(uri string, cacheDuration time.Duration) (*cachedGetRequest, error) {
+	encodedURI := base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(uri)))
+	h := sha1.New()
+	h.Write(utils.S2B(encodedURI))
+	sha1 := hex.EncodeToString(h.Sum(nil))
+
+	key := "cached:http-get:" + sha1
+
+	// Try to find the cached result of this request
+	cachedBody := redis.Client.Get(redis.Ctx, key).Val()
+	if cachedBody != "" {
+		return &cachedGetRequest{
+			Status:     "OK",
+			StatusCode: 200,
+			Body:       utils.S2B(cachedBody),
+			FromCache:  true,
+		}, nil
+	}
+
+	// If not cached let's make the request
+	resp, err := http.Get(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the body as byte slice
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	// Cache the request body
+	redis.Client.Set(redis.Ctx, key, body, cacheDuration)
+
+	// Return request
+	return &cachedGetRequest{
+		Status:     resp.Status,
+		StatusCode: resp.StatusCode,
+		Header:     resp.Header,
+		Body:       body,
+		FromCache:  false,
+	}, nil
+}
+
+type cachedGetRequest struct {
+	Status     string
+	StatusCode int
+	Header     map[string][]string
+	Body       []byte
+	FromCache  bool
 }
