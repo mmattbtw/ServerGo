@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	webp "github.com/chai2010/webp"
+
 	"github.com/SevenTV/ServerGo/src/aws"
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/discord"
@@ -248,11 +250,15 @@ func CreateRoute(router fiber.Router) {
 				// Scale the image according to our defined bounds
 				// calculated by GetSizeRatio() method
 				scale.Scale(dst, rect, *f, (*f).Bounds(), draw.Over, nil)
-				filePath := scopedFolderPath + fmt.Sprintf("/%v.png", i)
+				filePath := scopedFolderPath + fmt.Sprintf("/%v.webp", i)
 
 				// Write frames to file
 				writer, _ := os.Create(filePath)
-				_ = png.Encode(writer, dst)
+				webp.Encode(writer, dst, &webp.Options{
+					Lossless: false,
+					Quality:  100.0,
+					Exact:    false,
+				})
 
 				// Append argument
 				cmdArgs = append(cmdArgs, []string{

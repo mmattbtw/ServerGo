@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -47,7 +48,7 @@ func New() *Server {
 	}
 
 	server.app.Use(cors.New(cors.Config{
-		AllowOrigins:  "*",
+		AllowOrigins:  fmt.Sprintf("%v,%v", configure.Config.GetString("website_url"), "chrome-extension://*"),
 		ExposeHeaders: "X-Collection-Size",
 		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
 	}))
