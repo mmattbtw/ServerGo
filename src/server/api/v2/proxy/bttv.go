@@ -3,8 +3,9 @@ package api_proxy
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"time"
 
+	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -16,41 +17,27 @@ func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrl)
 	fmt.Println(uri)
 
-	// Send request to BTTV
-	resp, err := http.Get(uri)
+	// Get global bttv emotes
+	resp, err := cache.CacheGetRequest(uri, time.Hour*4, time.Minute*15) // This request is cached for 4 hours as global emotes rarely change
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode response into json
 	var emotes []emoteBTTV
-	err = json.NewDecoder(resp.Body).Decode(&emotes)
+	err = json.Unmarshal(resp.Body, &emotes)
 	if err != nil {
 		return nil, err
 	}
 
+	// Convert these bttv emotes into a 7TV emote object
 	result := make([]*mongo.Emote, len(emotes))
 	for i, e := range emotes {
-		if !primitive.IsValidObjectID(e.ID) {
+		emote, err := bttvTo7TV([]emoteBTTV{e})
+		if err != nil {
 			continue
 		}
-		id, _ := primitive.ObjectIDFromHex(e.ID)
-
-		if e.User == nil {
-			e.User = &userBTTV{}
-		}
-		result[i] = &mongo.Emote{
-			ID:         id,
-			Name:       e.Code,
-			Visibility: 0,
-			Mime:       "image/" + e.ImageType,
-			Status:     mongo.EmoteStatusLive,
-			Owner: &mongo.User{
-				DisplayName: e.User.DisplayName,
-				Login:       e.User.Name,
-				TwitchID:    e.User.ProviderID,
-			},
-		}
+		result[i] = emote[0]
 	}
 
 	return result, nil
@@ -60,21 +47,68 @@ func GetChannelEmotesBTTV(userID string) ([]*mongo.Emote, error) {
 	// Set Requesst URI
 	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrl, userID)
 
-	// Send request to BTTV
-	resp, err := http.Get(uri)
+	// Get bttv user response
+	resp, err := cache.CacheGetRequest(uri, time.Minute*2, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}
 
+	// Decode response into json
 	var userResponse userResponseBTTV
-	err = json.NewDecoder(resp.Body).Decode(&userResponse)
+	err = json.Unmarshal(resp.Body, &userResponse)
 	if err != nil {
 		return nil, err
 	}
 
-	// result := make([]*mongo.Emote, len(userResponse.Emotes) + len(userResponse.SharedEmotes))
+	// Add these emotes to the final result
+	// Merging "channel" and "shared" emotes, as 7TV sees no distinction.
+	result := make([]*mongo.Emote, len(userResponse.Emotes)+len(userResponse.SharedEmotes))
 
-	return nil, nil
+	// Convert emotes to 7TV
+	channel, _ := bttvTo7TV(userResponse.Emotes)
+	shared, _ := bttvTo7TV(userResponse.SharedEmotes)
+
+	for i, e := range channel {
+		result[i] = e
+	}
+	for i, e := range shared {
+		result[i+len(channel)] = e
+	}
+
+	return result, nil
+}
+
+// Convert a BTTV emote object into 7TV
+func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
+	result := make([]*mongo.Emote, len(emotes))
+
+	for i, emote := range emotes {
+		if emote.User == nil { // Add empty user if missing
+			emote.User = &userBTTV{}
+		}
+
+		if !primitive.IsValidObjectID(emote.ID) { // Verify the object ID
+			return nil, fmt.Errorf("bttvTo7TV, err=invalid object iD")
+		}
+		id, _ := primitive.ObjectIDFromHex(emote.ID)
+
+		provider := mongo.EmoteProvider("BTTV") // Define the provider
+		result[i] = &mongo.Emote{
+			ID:         id,
+			Name:       emote.Code,
+			Visibility: 0,
+			Mime:       "image/" + emote.ImageType,
+			Status:     mongo.EmoteStatusLive,
+			Owner: &mongo.User{
+				DisplayName: emote.User.DisplayName,
+				Login:       emote.User.Name,
+				TwitchID:    emote.User.ProviderID,
+			},
+			Provider: &provider,
+		}
+	}
+
+	return result, nil
 }
 
 type emoteBTTV struct {
@@ -82,6 +116,7 @@ type emoteBTTV struct {
 	Code      string    `json:"code"`
 	ImageType string    `json:"imageType"`
 	User      *userBTTV `json:"user"`
+	UserID    *string   `json:"userId"`
 }
 
 type userBTTV struct {

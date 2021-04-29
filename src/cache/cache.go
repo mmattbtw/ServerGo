@@ -242,7 +242,7 @@ func GetCollectionSize(collection string, q interface{}, opts ...*options.CountO
 }
 
 // Send a GET request to an endpoint and cache the result
-func CacheGetRequest(uri string, cacheDuration time.Duration) (*cachedGetRequest, error) {
+func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration time.Duration) (*cachedGetRequest, error) {
 	encodedURI := base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(uri)))
 	h := sha1.New()
 	h.Write(utils.S2B(encodedURI))
@@ -273,7 +273,11 @@ func CacheGetRequest(uri string, cacheDuration time.Duration) (*cachedGetRequest
 		return nil, err
 	}
 	// Cache the request body
-	redis.Client.Set(redis.Ctx, key, body, cacheDuration)
+	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+		redis.Client.Set(redis.Ctx, key, body, cacheDuration)
+	} else if errorCacheDuration > 0 { // Cache as errored for specified amount of time?
+		redis.Client.Set(redis.Ctx, key, fmt.Sprintf("err=%v", resp.StatusCode), errorCacheDuration)
+	}
 
 	// Return request
 	return &cachedGetRequest{

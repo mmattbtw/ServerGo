@@ -25,11 +25,14 @@ type Emote struct {
 	ChannelCount          *int32     `json:"channel_count" bson:"channel_count"`
 	LastChannelCountCheck *time.Time `json:"channel_count_checked_at" bson:"channel_count_checked_at"`
 
-	Owner        *User        `json:"owner" bson:"-"`
-	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
-	Channels     *[]*User     `json:"channels" bson:"-"`
-	Reports      *[]*Report   `json:"reports" bson:"-"`
+	Owner        *User          `json:"owner" bson:"-"`
+	AuditEntries *[]*AuditLog   `json:"audit_entries" bson:"-"`
+	Channels     *[]*User       `json:"channels" bson:"-"`
+	Reports      *[]*Report     `json:"reports" bson:"-"`
+	Provider     *EmoteProvider `json:"provider" bson:"-"`
 }
+
+type EmoteProvider string
 
 const (
 	EmoteVisibilityPrivate int32 = 1 << iota
