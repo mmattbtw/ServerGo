@@ -6,7 +6,6 @@ require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/bwmarrin/discordgo v0.23.2
-	github.com/chai2010/webp v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis/v8 v8.7.1

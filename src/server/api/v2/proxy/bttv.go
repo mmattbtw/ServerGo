@@ -68,9 +68,7 @@ func GetChannelEmotesBTTV(userID string) ([]*mongo.Emote, error) {
 	channel, _ := bttvTo7TV(userResponse.Emotes)
 	shared, _ := bttvTo7TV(userResponse.SharedEmotes)
 
-	for i, e := range channel {
-		result[i] = e
-	}
+	copy(result, channel)
 	for i, e := range shared {
 		result[i+len(channel)] = e
 	}
