@@ -10,6 +10,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/graph-gophers/graphql-go"
@@ -203,15 +204,16 @@ func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (
 }
 
 func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
-	Query       string
-	Page        *int32
-	PageSize    *int32
-	Limit       *int32
-	GlobalState *string
-	SortBy      *string
-	SortOrder   *int32
-	Channel     *string
-	SubmittedBy *string
+	Query             string
+	Page              *int32
+	PageSize          *int32
+	Limit             *int32
+	GlobalState       *string
+	SortBy            *string
+	SortOrder         *int32
+	Channel           *string
+	SubmittedBy       *string
+	ThirdPartyOptions *thirdPartyEmoteOptions
 }) ([]*emoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
 	if failed {
@@ -419,6 +421,19 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
+	// Get third party emotes?
+	if args.ThirdPartyOptions != nil && args.ThirdPartyOptions.Providers != nil {
+		providers := args.ThirdPartyOptions.Providers
+		if utils.Contains(providers, "bttv") {
+			fmt.Println("GET BTTVs")
+			bttv, _ := api_proxy.GetChannelEmotesBTTV(args.ThirdPartyOptions.TwitchID)
+			emotes = append(emotes, bttv...)
+		}
+		if utils.Contains(providers, "ffz") {
+			fmt.Println("GET FFZs")
+		}
+	}
+
 	// Resolve emotes
 	resolvers := make([]*emoteResolver, len(emotes))
 	for i, e := range emotes {
@@ -428,6 +443,12 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		}
 	}
 	return resolvers, nil
+}
+
+type thirdPartyEmoteOptions struct {
+	Providers []string `json:"providers"`
+	TwitchID  string   `json:"twitch_id"`
+	Global    *bool    `json:"global"`
 }
 
 func (*RootResolver) SearchUsers(ctx context.Context, args struct {

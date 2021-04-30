@@ -213,3 +213,12 @@ func (r *emoteResolver) Reports() (*[]*reportResolver, error) {
 	}
 	return &reports, nil
 }
+
+func (r *emoteResolver) Provider() (*string, error) {
+	firstParty := "7TV"
+	if r.v.Provider != nil {
+		return r.v.Provider, nil
+	} else {
+		return &firstParty, nil
+	}
+}

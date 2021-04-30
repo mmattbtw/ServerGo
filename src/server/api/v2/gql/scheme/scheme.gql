@@ -45,7 +45,8 @@ type Query {
     query: String!, limit: Int,
     page: Int, pageSize: Int,
     globalState: String, sortBy: String, sortOrder: Int,
-    channel: String, submitted_by: String
+    channel: String, submitted_by: String,
+    third_party_options: ThirdPartyEmoteOptions
   ): [Emote]!
   # Get a user by id, login or current authenticated user (@me).
   user(id: String!): User
@@ -53,6 +54,12 @@ type Query {
   role(id: String!): Role
   # Search for users.
   search_users(query: String!, page: Int, limit: Int): [UserPartial]!
+}
+
+input ThirdPartyEmoteOptions {
+  providers: [String!]!
+  twitch_id: String!
+  global: Boolean
 }
 
 input EmoteInput {
@@ -93,6 +100,8 @@ type Emote {
   owner: User
   # Get the reports on emote. Requries Permission.
   reports: [Report]
+  # The third party provider of this emote, if any
+  provider: String
 }
 
 type User {
@@ -124,8 +133,6 @@ type User {
   created_at: String!
   # Get the emotes added to this users channel.
   emotes: [Emote!]!
-  # Third Party Emotes
-  third_party_emotes: [Emote!]
   # Get the emotes this user has uploaded.
   owned_emotes: [Emote!]!
   # Get the editors of this user.

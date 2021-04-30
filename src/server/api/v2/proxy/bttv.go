@@ -90,7 +90,7 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 		}
 		id, _ := primitive.ObjectIDFromHex(emote.ID)
 
-		provider := mongo.EmoteProvider("BTTV") // Define the provider
+		provider := "BTTV" // Define the provider
 		result[i] = &mongo.Emote{
 			ID:         id,
 			Name:       emote.Code,

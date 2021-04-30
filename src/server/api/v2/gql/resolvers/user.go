@@ -306,10 +306,6 @@ func (r *userResolver) Emotes() ([]*emoteResolver, error) {
 	return resolvers, nil
 }
 
-func (r *userResolver) ThirdPartyEmotes() (*[]*emoteResolver, error) {
-	return nil, nil
-}
-
 func (r *userResolver) OwnedEmotes() ([]*emoteResolver, error) {
 	emotes := *r.v.OwnedEmotes
 	resolvers := []*emoteResolver{}
