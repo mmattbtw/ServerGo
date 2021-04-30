@@ -138,7 +138,20 @@ func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emot
 		return nil, errDepth
 	}
 
-	return GenerateEmoteResolver(ctx, nil, &id, field.children)
+	resolver, err := GenerateEmoteResolver(ctx, nil, &id, field.children)
+	if err != nil {
+		return nil, err
+	}
+	// Get actor user
+	usr, _ := ctx.Value(utils.UserKey).(*mongo.User)
+	// Verify actor permissions
+	if utils.HasBits(int64(resolver.v.Visibility), int64(mongo.EmoteVisibilityPrivate)) {
+		if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+			return nil, errUnknownEmote
+		}
+	}
+
+	return resolver, nil
 }
 
 func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (*[]*emoteResolver, error) {
@@ -230,11 +243,17 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		pageSize = int64(*args.PageSize)
 	}
 
+	// Get actor user
+	usr, _ := ctx.Value(utils.UserKey).(*mongo.User)
+
 	// Create aggregation
 	opts := options.Aggregate()
 	emotes := []*mongo.Emote{}
 	match := bson.M{
 		"status": mongo.EmoteStatusLive,
+	}
+	if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+		match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityPrivate)}
 	}
 
 	// Define aggregation pipeline

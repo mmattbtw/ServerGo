@@ -124,6 +124,8 @@ type User {
   created_at: String!
   # Get the emotes added to this users channel.
   emotes: [Emote!]!
+  # Third Party Emotes
+  third_party_emotes: [Emote!]
   # Get the emotes this user has uploaded.
   owned_emotes: [Emote!]!
   # Get the editors of this user.
