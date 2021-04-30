@@ -145,7 +145,7 @@ func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emot
 	// Get actor user
 	usr, _ := ctx.Value(utils.UserKey).(*mongo.User)
 	// Verify actor permissions
-	if utils.HasBits(int64(resolver.v.Visibility), int64(mongo.EmoteVisibilityPrivate)) {
+	if utils.HasBits(int64(resolver.v.Visibility), int64(mongo.EmoteVisibilityPrivate)) && usr.ID != resolver.v.OwnerID {
 		if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
 			return nil, errUnknownEmote
 		}
@@ -253,7 +253,17 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		"status": mongo.EmoteStatusLive,
 	}
 	if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
-		match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityPrivate)}
+		var usrID primitive.ObjectID
+		if usr != nil {
+			usrID = usr.ID
+		}
+
+		match["$and"] = bson.A{
+			bson.M{"$or": bson.A{
+				bson.M{"visibility": bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityPrivate)}},
+				bson.M{"owner": usrID},
+			}},
+		}
 	}
 
 	// Define aggregation pipeline
