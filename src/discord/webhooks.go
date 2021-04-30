@@ -3,10 +3,12 @@ package discord
 import (
 	"fmt"
 
+	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/utils"
 	dgo "github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func SendEmoteCreate(emote mongo.Emote, actor mongo.User) {
@@ -51,6 +53,10 @@ func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogCh
 			Value: *reason,
 		})
 	}
+
+	_ = cache.FindOne("users", "", bson.M{
+		"_id": emote.OwnerID,
+	}, &emote.Owner)
 
 	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: fmt.Sprintf("**[activity]** ✏️ emote [%s](%v) edited by [%s](%v)", emote.Name, utils.GetEmotePageURL(emote.ID.Hex()), actor.DisplayName, utils.GetUserPageURL(actor.ID.Hex())),
