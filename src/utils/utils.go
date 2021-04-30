@@ -134,6 +134,10 @@ func IsPointer(v interface{}) bool {
 	return reflect.TypeOf(v).Kind() == reflect.Ptr
 }
 
+func StringPointer(s string) *string {
+	return &s
+}
+
 // Obtain the size ratio of width and height values
 // For image resizing
 func GetSizeRatio(og []float64, nw []float64) (int32, int32) {

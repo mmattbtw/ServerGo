@@ -242,7 +242,10 @@ func GetCollectionSize(collection string, q interface{}, opts ...*options.CountO
 }
 
 // Send a GET request to an endpoint and cache the result
-func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration time.Duration) (*cachedGetRequest, error) {
+func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration time.Duration, headers ...struct {
+	Key   string
+	Value string
+}) (*cachedGetRequest, error) {
 	encodedURI := base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(uri)))
 	h := sha1.New()
 	h.Write(utils.S2B(encodedURI))
@@ -262,7 +265,12 @@ func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration
 	}
 
 	// If not cached let's make the request
-	resp, err := http.Get(uri)
+	req, _ := http.NewRequest("GET", uri, nil)
+	for _, header := range headers { // Add custom headers
+		req.Header.Add(header.Key, header.Value)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
