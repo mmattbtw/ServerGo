@@ -101,11 +101,11 @@ type Emote {
   # Get the reports on emote. Requries Permission.
   reports: [Report]
   # The provider of this emote
-  provider: String
+  provider: String!
   # The third party provider's ID definition of this emote, if the provider is not 7TV
   provider_id: String
   # CDN URLs to this emote
-  urls: String
+  urls: [[String]]
 }
 
 type User {

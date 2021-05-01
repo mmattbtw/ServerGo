@@ -17,3 +17,7 @@ func GetEmotePageURL(emoteID string) string {
 func GetUserPageURL(userID string) string {
 	return configure.Config.GetString("website_url") + fmt.Sprintf("/users/%s", userID)
 }
+
+func GetCdnURL(emoteID string, size int8) string {
+	return fmt.Sprintf("%v/emote/%v/%dx", configure.Config.GetString("cdn_url"), emoteID, size)
+}

@@ -93,6 +93,16 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 			emote.User = &userBTTV{}
 		}
 
+		// Generate URLs list
+		urls := make([]*[]*string, 3)
+		for i := 1; i <= 3; i++ {
+			a := make([]*string, 2)
+			a[0] = utils.StringPointer(fmt.Sprintf("%dx", i))
+			a[1] = utils.StringPointer(getCdnURL_BTTV(emote.ID, int8(i)))
+
+			urls[i-1] = &a
+		}
+
 		result[i] = &mongo.Emote{
 			Name:       emote.Code,
 			Visibility: 0,
@@ -104,12 +114,17 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 				TwitchID:    emote.User.ProviderID,
 			},
 
-			Provider:   utils.StringPointer("BTTV"),
+			Provider:   "BTTV",
 			ProviderID: &emote.ID,
+			URLs:       &urls,
 		}
 	}
 
 	return result, nil
+}
+
+func getCdnURL_BTTV(emoteID string, size int8) string {
+	return fmt.Sprintf("https://cdn.betterttv.net/emote/%v/%dx", emoteID, size)
 }
 
 type emoteBTTV struct {

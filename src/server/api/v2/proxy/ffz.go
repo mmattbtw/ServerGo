@@ -65,6 +65,17 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
 	result := make([]*mongo.Emote, len(emotes))
 
 	for i, emote := range emotes {
+		// Generate URLs list
+		urls := make([]*[]*string, 3)
+		for i, s := range []int8{1, 2, 4} {
+			fmt.Println("hi:", i)
+			a := make([]*string, 2)
+			a[0] = utils.StringPointer(fmt.Sprintf("%dx", s))
+			a[1] = utils.StringPointer(getCdnURL_FFZ(emote.ID, int8(s)))
+
+			urls[i] = &a
+		}
+
 		result[i] = &mongo.Emote{
 			Name:       emote.Name,
 			Visibility: 0,
@@ -76,12 +87,17 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
 				TwitchID:    fmt.Sprint(emote.Owner.ID),
 			},
 
-			Provider:   utils.StringPointer("FFZ"),
+			Provider:   "FFZ",
 			ProviderID: utils.StringPointer(fmt.Sprint(emote.ID)),
+			URLs:       &urls,
 		}
 	}
 
 	return result, nil
+}
+
+func getCdnURL_FFZ(emoteID int32, size int8) string {
+	return fmt.Sprintf("https://cdn.frankerfacez.com/emoticon/%d/%d", emoteID, size)
 }
 
 type emoteFFZ struct {

@@ -110,6 +110,10 @@ func GenerateEmoteResolver(ctx context.Context, emote *mongo.Emote, emoteID *pri
 		}
 	}
 
+	if _, ok := fields["provider"]; ok && emote.Provider == "" {
+		emote.Provider = "7TV"
+	}
+
 	r := &emoteResolver{
 		ctx:    ctx,
 		v:      emote,
@@ -218,18 +222,30 @@ func (r *emoteResolver) Reports() (*[]*reportResolver, error) {
 	return &reports, nil
 }
 
-func (r *emoteResolver) Provider() *string {
-	if r.v.Provider != nil {
-		return r.v.Provider
-	} else {
-		return utils.StringPointer("7TV")
-	}
+func (r *emoteResolver) Provider() string {
+	return r.v.Provider
 }
 
 func (r *emoteResolver) ProviderID() *string {
-	if r.v.Provider != nil {
-		return r.v.ProviderID
+	return r.v.ProviderID
+}
+
+func (r *emoteResolver) URLs() *[]*[]*string {
+	result := make([]*[]*string, 4) // 4 length because there are 4 CDN sizes supported (1x, 2x, 3x, 4x)
+
+	if r.v.Provider == "7TV" { // Provider is 7TV: append URLs
+		for i := 1; i <= 4; i++ {
+			a := make([]*string, 2)
+			a[0] = utils.StringPointer(fmt.Sprintf("%dx", i))
+			a[1] = utils.StringPointer(utils.GetCdnURL(r.v.ID.Hex(), int8(i)))
+
+			result[i-1] = &a
+		}
+
+		r.v.URLs = &result
+	} else if r.v.URLs == nil { // Provider is null: send empty array
+		return &[]*[]*string{}
 	}
 
-	return nil
+	return r.v.URLs
 }
