@@ -254,6 +254,12 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	match := bson.M{
 		"status": mongo.EmoteStatusLive,
 	}
+	if args.Channel != nil {
+		if channelID, err := primitive.ObjectIDFromHex(*args.Channel); err == nil {
+			match["owner"] = channelID
+		}
+	}
+
 	if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
 		var usrID primitive.ObjectID
 		if usr != nil {
@@ -456,6 +462,53 @@ type thirdPartyEmoteOptions struct {
 	Providers []string `json:"providers"`
 	Channel   string   `json:"channel"`
 	Global    *bool    `json:"global"`
+}
+
+func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
+	Providers []string
+	Channel   string
+	Global    *bool
+}) (*[]*emoteResolver, error) {
+	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	if failed {
+		return nil, errDepth
+	}
+
+	// Query foreign APIs for requested third party emotes
+	var emotes []*mongo.Emote
+	if utils.Contains(args.Providers, "BTTV") {
+		if bttv, err := api_proxy.GetChannelEmotesBTTV(args.Channel); err == nil { // Find channel bttv emotes
+			emotes = append(emotes, bttv...)
+		}
+		if args.Global != nil && *args.Global {
+			if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil { // Find global bttv emotes
+				emotes = append(emotes, bttvG...)
+			}
+		}
+	}
+
+	if utils.Contains(args.Providers, "FFZ") {
+		if ffz, err := api_proxy.GetChannelEmotesFFZ(args.Channel); err == nil { // Find channel FFZ emotes
+			emotes = append(emotes, ffz...)
+		}
+		if args.Global != nil && *args.Global {
+			if ffzG, err := api_proxy.GetGlobalEmotesFFZ(); err == nil {
+				emotes = append(emotes, ffzG...)
+			}
+		}
+	}
+
+	result := make([]*emoteResolver, len(emotes))
+	for i, emote := range emotes {
+		resolver, _ := GenerateEmoteResolver(ctx, emote, nil, field.children)
+		if resolver == nil {
+			continue
+		}
+
+		result[i] = resolver
+	}
+
+	return &result, nil
 }
 
 func (*RootResolver) SearchUsers(ctx context.Context, args struct {
