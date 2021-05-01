@@ -24,7 +24,7 @@ func getEmotesUsage() ([]*mongo.Emote, error) {
 	}
 
 	var emotes []*mongo.Emote
-	cur.All(mongo.Ctx, &emotes)
+	_ = cur.All(mongo.Ctx, &emotes)
 
 	return emotes, nil
 }
