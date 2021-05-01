@@ -138,6 +138,10 @@ func StringPointer(s string) *string {
 	return &s
 }
 
+func Int64Pointer(i int64) *int64 {
+	return &i
+}
+
 // Obtain the size ratio of width and height values
 // For image resizing
 func GetSizeRatio(og []float64, nw []float64) (int32, int32) {
