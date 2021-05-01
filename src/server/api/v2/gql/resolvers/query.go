@@ -429,7 +429,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 				emotes = append(emotes, bttv...)
 			}
 			if args.ThirdPartyOptions.Global != nil && *args.ThirdPartyOptions.Global {
-				if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil && *args.ThirdPartyOptions.Global == true { // Find global bttv emotes
+				if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil && *args.ThirdPartyOptions.Global { // Find global bttv emotes
 					emotes = append(emotes, bttvG...)
 				}
 			}
