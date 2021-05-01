@@ -18,7 +18,7 @@ func GetChannelEmotesFFZ(login string) ([]*mongo.Emote, error) {
 	uri := fmt.Sprintf("%v/emotes?owner=%v&sensitive=%v", baseUrlFFZ, login, "true")
 
 	// Send the request
-	resp, err := cache.CacheGetRequest(uri, time.Minute*2, time.Minute*15)
+	resp, err := cache.CacheGetRequest(uri, time.Minute*5, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}

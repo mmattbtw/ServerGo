@@ -428,8 +428,10 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 			if bttv, err := api_proxy.GetChannelEmotesBTTV(args.ThirdPartyOptions.Channel); err == nil { // Find channel bttv emotes
 				emotes = append(emotes, bttv...)
 			}
-			if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil && *args.ThirdPartyOptions.Global { // Find global bttv emotes
-				emotes = append(emotes, bttvG...)
+			if args.ThirdPartyOptions.Global != nil && *args.ThirdPartyOptions.Global {
+				if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil && *args.ThirdPartyOptions.Global == true { // Find global bttv emotes
+					emotes = append(emotes, bttvG...)
+				}
 			}
 		}
 		if utils.Contains(providers, "ffz") {

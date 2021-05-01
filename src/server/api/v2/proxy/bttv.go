@@ -44,18 +44,16 @@ func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 
 func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
 	// Get Twitch User from ID
-	var userID string
-	if usr, err := GetTwitchUser(login); err != nil {
+	usr, err := GetTwitchUser(login)
+	if err != nil {
 		return nil, err
-	} else {
-		userID = usr.ID
 	}
 
 	// Set Requesst URI
-	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrlBTTV, userID)
+	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrlBTTV, usr.ID)
 
 	// Get bttv user response
-	resp, err := cache.CacheGetRequest(uri, time.Minute*2, time.Minute*15)
+	resp, err := cache.CacheGetRequest(uri, time.Minute*5, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +69,22 @@ func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
 	// Merging "channel" and "shared" emotes, as 7TV sees no distinction.
 	result := make([]*mongo.Emote, len(userResponse.Emotes)+len(userResponse.SharedEmotes))
 
+	// Add user data to non-shared emotes
+	for i := range userResponse.Emotes {
+		userResponse.Emotes[i].User = &userBTTV{
+			Name:        usr.Login,
+			DisplayName: usr.DisplayName,
+			ProviderID:  usr.ID,
+		}
+	}
+
 	// Convert emotes to 7TV
 	channel, _ := bttvTo7TV(userResponse.Emotes)
 	shared, _ := bttvTo7TV(userResponse.SharedEmotes)
 
-	copy(result, channel)
+	for i, e := range channel {
+		result[i] = e
+	}
 	for i, e := range shared {
 		result[i+len(channel)] = e
 	}
@@ -114,7 +123,7 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 			},
 
 			Provider:   "BTTV",
-			ProviderID: &emote.ID,
+			ProviderID: utils.StringPointer(emote.ID),
 			URLs:       &urls,
 		}
 	}
