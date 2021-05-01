@@ -29,7 +29,8 @@ type Emote struct {
 	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
 	Channels     *[]*User     `json:"channels" bson:"-"`
 	Reports      *[]*Report   `json:"reports" bson:"-"`
-	Provider     *string      `json:"provider" bson:"-"`
+	Provider     *string      `json:"provider" bson:"-"`    // The service provider for the emote
+	ProviderID   *string      `json:"provider_id" bson:"-"` // The emote ID as defined by the foreign provider. Nil if 7TV
 }
 
 const (

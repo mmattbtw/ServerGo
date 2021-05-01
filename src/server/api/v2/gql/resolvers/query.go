@@ -425,11 +425,17 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	if args.ThirdPartyOptions != nil && args.ThirdPartyOptions.Providers != nil {
 		providers := args.ThirdPartyOptions.Providers
 		if utils.Contains(providers, "bttv") {
-			fmt.Println("GET BTTVs")
-			bttv, _ := api_proxy.GetChannelEmotesBTTV(args.ThirdPartyOptions.TwitchID)
-			emotes = append(emotes, bttv...)
+			if bttv, err := api_proxy.GetChannelEmotesBTTV(args.ThirdPartyOptions.Channel); err == nil { // Find channel bttv emotes
+				emotes = append(emotes, bttv...)
+			}
+			if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil && *args.ThirdPartyOptions.Global { // Find global bttv emotes
+				emotes = append(emotes, bttvG...)
+			}
 		}
 		if utils.Contains(providers, "ffz") {
+			if ffz, err := api_proxy.GetChannelEmotesFFZ(args.ThirdPartyOptions.Channel); err == nil { // Find channel FFZ emotes
+				emotes = append(emotes, ffz...)
+			}
 			fmt.Println("GET FFZs")
 		}
 	}
@@ -447,7 +453,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 
 type thirdPartyEmoteOptions struct {
 	Providers []string `json:"providers"`
-	TwitchID  string   `json:"twitch_id"`
+	Channel   string   `json:"channel"`
 	Global    *bool    `json:"global"`
 }
 

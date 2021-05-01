@@ -7,14 +7,14 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/SevenTV/ServerGo/src/utils"
 )
 
-const baseUrl = "https://api.betterttv.net/3"
+const baseUrlBTTV = "https://api.betterttv.net/3"
 
 func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 	// Set Request URI
-	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrl)
+	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrlBTTV)
 	fmt.Println(uri)
 
 	// Get global bttv emotes
@@ -43,9 +43,17 @@ func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 	return result, nil
 }
 
-func GetChannelEmotesBTTV(userID string) ([]*mongo.Emote, error) {
+func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
+	// Get Twitch User from ID
+	var userID string
+	if usr, err := GetTwitchUser(login); err != nil {
+		return nil, err
+	} else {
+		userID = usr.ID
+	}
+
 	// Set Requesst URI
-	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrl, userID)
+	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrlBTTV, userID)
 
 	// Get bttv user response
 	resp, err := cache.CacheGetRequest(uri, time.Minute*2, time.Minute*15)
@@ -85,14 +93,7 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 			emote.User = &userBTTV{}
 		}
 
-		if !primitive.IsValidObjectID(emote.ID) { // Verify the object ID
-			return nil, fmt.Errorf("bttvTo7TV, err=invalid object iD")
-		}
-		id, _ := primitive.ObjectIDFromHex(emote.ID)
-
-		provider := "BTTV" // Define the provider
 		result[i] = &mongo.Emote{
-			ID:         id,
 			Name:       emote.Code,
 			Visibility: 0,
 			Mime:       "image/" + emote.ImageType,
@@ -102,7 +103,9 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 				Login:       emote.User.Name,
 				TwitchID:    emote.User.ProviderID,
 			},
-			Provider: &provider,
+
+			Provider:   utils.StringPointer("BTTV"),
+			ProviderID: &emote.ID,
 		}
 	}
 

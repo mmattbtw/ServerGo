@@ -58,7 +58,7 @@ type Query {
 
 input ThirdPartyEmoteOptions {
   providers: [String!]!
-  twitch_id: String!
+  channel: String!
   global: Boolean
 }
 
@@ -100,8 +100,12 @@ type Emote {
   owner: User
   # Get the reports on emote. Requries Permission.
   reports: [Report]
-  # The third party provider of this emote, if any
+  # The provider of this emote
   provider: String
+  # The third party provider's ID definition of this emote, if the provider is not 7TV
+  provider_id: String
+  # CDN URLs to this emote
+  urls: String
 }
 
 type User {

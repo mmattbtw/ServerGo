@@ -202,6 +202,10 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 }
 
 func (r *userResolver) ID() string {
+	if r.v.ID.IsZero() {
+		return ""
+	}
+
 	return r.v.ID.Hex()
 }
 

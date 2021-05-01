@@ -119,6 +119,10 @@ func GenerateEmoteResolver(ctx context.Context, emote *mongo.Emote, emoteID *pri
 }
 
 func (r *emoteResolver) ID() string {
+	if r.v.ID.IsZero() {
+		return utils.Ternary(r.v.ProviderID != nil, *r.v.ProviderID, "").(string)
+	}
+
 	return r.v.ID.Hex()
 }
 func (r *emoteResolver) Name() string {
@@ -214,11 +218,18 @@ func (r *emoteResolver) Reports() (*[]*reportResolver, error) {
 	return &reports, nil
 }
 
-func (r *emoteResolver) Provider() (*string, error) {
-	firstParty := "7TV"
+func (r *emoteResolver) Provider() *string {
 	if r.v.Provider != nil {
-		return r.v.Provider, nil
+		return r.v.Provider
 	} else {
-		return &firstParty, nil
+		return utils.StringPointer("7TV")
 	}
+}
+
+func (r *emoteResolver) ProviderID() *string {
+	if r.v.Provider != nil {
+		return r.v.ProviderID
+	}
+
+	return nil
 }
