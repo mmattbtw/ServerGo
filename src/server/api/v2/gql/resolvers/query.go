@@ -436,7 +436,6 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 			if ffz, err := api_proxy.GetChannelEmotesFFZ(args.ThirdPartyOptions.Channel); err == nil { // Find channel FFZ emotes
 				emotes = append(emotes, ffz...)
 			}
-			fmt.Println("GET FFZs")
 		}
 	}
 

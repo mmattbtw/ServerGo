@@ -7,6 +7,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -324,6 +325,28 @@ func (r *userResolver) OwnedEmotes() ([]*emoteResolver, error) {
 		}
 	}
 	return resolvers, nil
+}
+
+func (r *userResolver) ThirdPartyEmotes() ([]*emoteResolver, error) {
+	var emotes []*mongo.Emote
+	if bttv, err := api_proxy.GetChannelEmotesBTTV(r.v.Login); err == nil { // Find channel bttv emotes
+		emotes = append(emotes, bttv...)
+	}
+	if ffz, err := api_proxy.GetChannelEmotesFFZ(r.v.Login); err == nil { // Find channel FFZ emotes
+		emotes = append(emotes, ffz...)
+	}
+
+	result := make([]*emoteResolver, len(emotes))
+	for i, emote := range emotes {
+		resolver, _ := GenerateEmoteResolver(r.ctx, emote, nil, r.fields["third_party_emotes"].children)
+		if resolver == nil {
+			continue
+		}
+
+		result[i] = resolver
+	}
+
+	return result, nil
 }
 
 func (r *userResolver) TwitchID() string {

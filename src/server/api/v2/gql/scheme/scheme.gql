@@ -139,6 +139,8 @@ type User {
   emotes: [Emote!]!
   # Get the emotes this user has uploaded.
   owned_emotes: [Emote!]!
+  # Get the third party emotes of this users channel. (BTTV/FFZ)
+  third_party_emotes: [Emote!]!
   # Get the editors of this user.
   editors: [UserPartial!]!
   # Get where this user is an editor.

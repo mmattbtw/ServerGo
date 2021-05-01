@@ -16,7 +16,6 @@ const baseUrlFFZ = "https://api.frankerfacez.com/v1"
 func GetChannelEmotesFFZ(login string) ([]*mongo.Emote, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/emotes?owner=%v&sensitive=%v", baseUrlFFZ, login, "true")
-	fmt.Println("FFZ URI", uri)
 
 	// Send the request
 	resp, err := cache.CacheGetRequest(uri, time.Minute*2, time.Minute*15)
@@ -68,7 +67,6 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
 		// Generate URLs list
 		urls := make([]*[]*string, 3)
 		for i, s := range []int8{1, 2, 4} {
-			fmt.Println("hi:", i)
 			a := make([]*string, 2)
 			a[0] = utils.StringPointer(fmt.Sprintf("%dx", s))
 			a[1] = utils.StringPointer(getCdnURL_FFZ(emote.ID, int8(s)))

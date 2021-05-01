@@ -15,7 +15,6 @@ const baseUrlBTTV = "https://api.betterttv.net/3"
 func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrlBTTV)
-	fmt.Println(uri)
 
 	// Get global bttv emotes
 	resp, err := cache.CacheGetRequest(uri, time.Hour*4, time.Minute*15) // This request is cached for 4 hours as global emotes rarely change
