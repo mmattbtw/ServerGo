@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/SevenTV/ServerGo/src/configure"
@@ -8,7 +9,7 @@ import (
 )
 
 // An empty Discord session for executing webhooks
-var d, _ = dgo.New()
+var d, _ = dgo.New(fmt.Sprintf("Bot %v", configure.Config.GetString("discord.bot_token")))
 var webhookID *string
 var webhookToken *string
 
@@ -17,6 +18,20 @@ func init() {
 	if len(s) == 2 {
 		webhookID = &s[0]
 		webhookToken = &s[1]
+	}
+
+	emotes, err := getEmotesUsage()
+	if err != nil {
+		fmt.Println("You're shit", err)
+	} else {
+		for _, emote := range emotes {
+			fmt.Println("", *emote.ChannelCount, emote.Name)
+			/* Spam the fuck out of general poggers
+			if _, err := d.ChannelMessageSend("817075418640678964", emote.Name); err != nil {
+				fmt.Println("You're more shit", err)
+			}
+			*/
+		}
 	}
 }
 
