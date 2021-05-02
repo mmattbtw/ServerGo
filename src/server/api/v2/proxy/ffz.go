@@ -68,7 +68,7 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
 		urls := make([]*[]*string, 3)
 		for i, s := range []int8{1, 2, 4} {
 			a := make([]*string, 2)
-			a[0] = utils.StringPointer(fmt.Sprintf("%dx", s))
+			a[0] = utils.StringPointer(fmt.Sprintf("%d", s))
 			a[1] = utils.StringPointer(getCdnURL_FFZ(emote.ID, int8(s)))
 
 			urls[i] = &a
@@ -82,7 +82,7 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
 			Owner: &mongo.User{
 				Login:       emote.Owner.Name,
 				DisplayName: emote.Owner.DisplayName,
-				TwitchID:    fmt.Sprint(emote.Owner.ID),
+				TwitchID:    "",
 			},
 
 			Provider:   "FFZ",

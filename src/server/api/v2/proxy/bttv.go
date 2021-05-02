@@ -36,6 +36,7 @@ func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 		if err != nil {
 			continue
 		}
+
 		result[i] = emote[0]
 	}
 
@@ -103,7 +104,7 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 		urls := make([]*[]*string, 3)
 		for i := 1; i <= 3; i++ {
 			a := make([]*string, 2)
-			a[0] = utils.StringPointer(fmt.Sprintf("%dx", i))
+			a[0] = utils.StringPointer(fmt.Sprintf("%d", i))
 			a[1] = utils.StringPointer(getCdnURL_BTTV(emote.ID, int8(i)))
 
 			urls[i-1] = &a

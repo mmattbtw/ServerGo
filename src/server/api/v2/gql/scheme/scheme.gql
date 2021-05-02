@@ -45,8 +45,7 @@ type Query {
     query: String!, limit: Int,
     page: Int, pageSize: Int,
     globalState: String, sortBy: String, sortOrder: Int,
-    channel: String, submitted_by: String,
-    third_party_options: ThirdPartyEmoteOptions
+    channel: String, submitted_by: String
   ): [Emote]!
   #
   third_party_emotes(
