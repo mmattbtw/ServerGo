@@ -154,7 +154,7 @@ func (r *emoteResolver) CreatedAt() string {
 }
 
 func (r *emoteResolver) Owner() (*userResolver, error) {
-	resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, &r.v.OwnerID, r.fields["owner"].children)
+	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.OwnerID, r.fields["owner"].children)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (r *emoteResolver) URLs() *[]*[]*string {
 	if r.v.Provider == "7TV" { // Provider is 7TV: append URLs
 		for i := 1; i <= 4; i++ {
 			a := make([]*string, 2)
-			a[0] = utils.StringPointer(fmt.Sprintf("%dx", i))
+			a[0] = utils.StringPointer(fmt.Sprintf("%d", i))
 			a[1] = utils.StringPointer(utils.GetCdnURL(r.v.ID.Hex(), int8(i)))
 
 			result[i-1] = &a

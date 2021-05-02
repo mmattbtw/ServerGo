@@ -24,7 +24,7 @@ type userResolver struct {
 }
 
 func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primitive.ObjectID, fields map[string]*SelectedField) (*userResolver, error) {
-	if user == nil {
+	if user == nil || user.ID.IsZero() {
 		user = &mongo.User{
 			Role: mongo.DefaultRole,
 		}
