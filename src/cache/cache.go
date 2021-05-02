@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache/decoder"
@@ -28,6 +29,8 @@ var json = jsoniter.Config{
 	SortMapKeys:            true,
 	ValidateJsonRawMessage: true,
 }.Froze()
+
+var mutex sync.Mutex
 
 func genSha(prefix, collection string, q interface{}, opts interface{}) (string, error) {
 	h := sha1.New()
@@ -246,6 +249,9 @@ func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration
 	Key   string
 	Value string
 }) (*cachedGetRequest, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	encodedURI := base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(uri)))
 	h := sha1.New()
 	h.Write(utils.S2B(encodedURI))

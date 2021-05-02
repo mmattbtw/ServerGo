@@ -15,10 +15,10 @@ const baseUrlFFZ = "https://api.frankerfacez.com/v1"
 // Get channel emotes from the FFZ provider
 func GetChannelEmotesFFZ(login string) ([]*mongo.Emote, error) {
 	// Set Request URI
-	uri := fmt.Sprintf("%v/emotes?owner=%v&sensitive=%v", baseUrlFFZ, login, "true")
+	uri := fmt.Sprintf("%v/rooms/%v", baseUrlFFZ, login)
 
 	// Send the request
-	resp, err := cache.CacheGetRequest(uri, time.Minute*5, time.Minute*15)
+	resp, err := cache.CacheGetRequest(uri, time.Minute*10, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}
@@ -99,16 +99,16 @@ func getCdnURL_FFZ(emoteID int32, size int8) string {
 }
 
 type emoteFFZ struct {
-	ID          int32             `json:"id"`
-	Name        string            `json:"name"`
-	Public      bool              `json:"public"`
-	Hidden      bool              `json:"hidden"`
-	Owner       userFFZ           `json:"owner"`
-	Status      int32             `json:"status"`
-	UsageCount  int32             `json:"usage_count"`
-	CreatedAt   time.Time         `json:"created_at"`
-	Urls        map[string]string `json:"urls"`
-	LastUpdated time.Time         `json:"last_updated"`
+	ID          int32     `json:"id"`
+	Name        string    `json:"name"`
+	Public      bool      `json:"public"`
+	Hidden      bool      `json:"hidden"`
+	Owner       userFFZ   `json:"owner"`
+	Status      int32     `json:"status"`
+	UsageCount  int32     `json:"usage_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	Sizes       []int8    `json:"sizes"`
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 type userFFZ struct {
@@ -118,9 +118,7 @@ type userFFZ struct {
 }
 
 type getEmotesResponseFFZ struct {
-	Pages  int32      `json:"_pages"`
-	Total  int32      `json:"_total"`
-	Emotes []emoteFFZ `json:"emoticons"`
+	Emotes []emoteFFZ `json:"emotes"`
 }
 
 type getEmoteSetResponseFFZ struct {
