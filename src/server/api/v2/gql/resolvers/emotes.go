@@ -154,6 +154,13 @@ func (r *emoteResolver) CreatedAt() string {
 }
 
 func (r *emoteResolver) Owner() (*userResolver, error) {
+	if r.v.Owner != nil {
+		resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, nil, r.fields["owner"].children)
+		if err != nil {
+			return nil, err
+		}
+		return resolver, nil
+	}
 	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.OwnerID, r.fields["owner"].children)
 	if err != nil {
 		return nil, err

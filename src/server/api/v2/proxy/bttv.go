@@ -73,6 +73,7 @@ func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
 	// Add user data to non-shared emotes
 	for i := range userResponse.Emotes {
 		userResponse.Emotes[i].User = &userBTTV{
+			ID:          usr.ID,
 			Name:        usr.Login,
 			DisplayName: usr.DisplayName,
 			ProviderID:  usr.ID,
