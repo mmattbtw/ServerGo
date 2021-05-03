@@ -437,12 +437,6 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	return resolvers, nil
 }
 
-type thirdPartyEmoteOptions struct {
-	Providers []string `json:"providers"`
-	Channel   string   `json:"channel"`
-	Global    *bool    `json:"global"`
-}
-
 func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 	Providers []string
 	Channel   string
