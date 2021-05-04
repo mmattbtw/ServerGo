@@ -48,7 +48,7 @@ func New() *Server {
 	}
 
 	server.app.Use(cors.New(cors.Config{
-		AllowOrigins:  fmt.Sprintf("%v,%v", configure.Config.GetString("website_url"), "chrome-extension://*"),
+		AllowOrigins:  fmt.Sprintf("%v,%v,%v", configure.Config.GetString("website_url"), "chrome-extension://*", "moz-extension://*"),
 		ExposeHeaders: "X-Collection-Size",
 		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
 	}))
