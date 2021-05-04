@@ -38,7 +38,7 @@ func GetChannelEmotesFFZ(login string) ([]*mongo.Emote, error) {
 }
 
 func GetGlobalEmotesFFZ() ([]*mongo.Emote, error) {
-	uri := fmt.Sprintf("%v/set/3", baseUrlFFZ)
+	uri := fmt.Sprintf("%v/set/global", baseUrlFFZ)
 
 	// Send request
 	resp, err := cache.CacheGetRequest(uri, time.Hour*4, time.Minute*15)
@@ -46,12 +46,17 @@ func GetGlobalEmotesFFZ() ([]*mongo.Emote, error) {
 		return nil, err
 	}
 
-	var emoteResponse getEmoteSetResponseFFZ
+	var emoteResponse getEmoteSetsResponseFFZ
 	if err := json.Unmarshal(resp.Body, &emoteResponse); err != nil {
 		return nil, err
 	}
 
-	emotes, err := ffzTo7TV(emoteResponse.Set.Emotes)
+	var allEmotes []emoteFFZ
+	for _, s := range emoteResponse.Sets {
+		allEmotes = append(allEmotes, s.Emotes...)
+	}
+
+	emotes, err := ffzTo7TV(allEmotes)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +126,8 @@ type getEmotesResponseFFZ struct {
 	Emotes []emoteFFZ `json:"emotes"`
 }
 
-type getEmoteSetResponseFFZ struct {
-	Set emoteSetFFZ `json:"set"`
+type getEmoteSetsResponseFFZ struct {
+	Sets map[string]emoteSetFFZ `json:"sets"`
 }
 
 type emoteSetFFZ struct {
