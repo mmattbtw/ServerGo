@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobuffalo/packr/v2"
 )
@@ -77,6 +78,10 @@ func init() {
 }
 
 var Client *redis.Client
+
+func GetLocker() *redislock.Client {
+	return redislock.New(Client)
+}
 
 type Message = redis.Message
 
