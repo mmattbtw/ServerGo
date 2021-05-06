@@ -79,8 +79,14 @@ func init() {
 
 var Client *redis.Client
 
+var lockerClient *redislock.Client
+
 func GetLocker() *redislock.Client {
-	return redislock.New(Client)
+	if lockerClient == nil {
+		lockerClient = redislock.New(Client)
+	}
+
+	return lockerClient
 }
 
 type Message = redis.Message

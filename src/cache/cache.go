@@ -247,13 +247,16 @@ func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration
 	Key   string
 	Value string
 }) (*cachedGetRequest, error) {
+	//
 	encodedURI := base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(uri)))
 	h := sha1.New()
 	h.Write(utils.S2B(encodedURI))
 	sha1 := hex.EncodeToString(h.Sum(nil))
 	key := "cached:http-get:" + sha1
 
-	lock, err := redis.GetLocker().Obtain(redis.Ctx, "lock:http-get", 10*time.Second, &redislock.Options{
+	// Establish distributed lock
+	// This prevents the same request from being executed multiple times simultaneously
+	lock, err := redis.GetLocker().Obtain(redis.Ctx, "lock:http-get"+sha1, 10*time.Second, &redislock.Options{
 		RetryStrategy: redislock.ExponentialBackoff(4, 750),
 	})
 	if err != nil {
