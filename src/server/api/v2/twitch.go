@@ -12,6 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/api"
 	"github.com/SevenTV/ServerGo/src/jwt"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -224,17 +225,17 @@ func Twitch(app fiber.Router) fiber.Router {
 			ReturnDocument: &after,
 		})
 
-		mongoUser := &mongo.User{}
+		mongoUser := &datastructure.User{}
 		if doc.Err() != nil {
 			fmt.Println(doc.Err())
 			if doc.Err() == mongo.ErrNoDocuments {
-				mongoUser = &mongo.User{
+				mongoUser = &datastructure.User{
 					TwitchID:        user.ID,
 					DisplayName:     user.DisplayName,
 					Login:           user.Login,
 					ProfileImageURL: user.ProfileImageURL,
 					Email:           user.Email,
-					Rank:            mongo.UserRankDefault,
+					Rank:            datastructure.UserRankDefault,
 					Description:     user.Description,
 					CreatedAt:       user.CreatedAt,
 					OfflineImageURL: user.OfflineImageURL,

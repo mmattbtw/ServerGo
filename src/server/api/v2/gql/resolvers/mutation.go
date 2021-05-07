@@ -10,6 +10,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ func (*RootResolver) ReportEmote(ctx context.Context, args struct {
 	EmoteID string
 	Reason  *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -65,10 +66,10 @@ func (*RootResolver) ReportEmote(ctx context.Context, args struct {
 
 	res := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
 		"_id":    id,
-		"status": mongo.EmoteStatusLive,
+		"status": datastructure.EmoteStatusLive,
 	})
 
-	emote := &mongo.Emote{}
+	emote := &datastructure.Emote{}
 
 	err = res.Err()
 
@@ -104,10 +105,10 @@ func (*RootResolver) ReportEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeReport,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeReport,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &id, Type: "emotes"},
+		Target:    &datastructure.Target{ID: &id, Type: "emotes"},
 		Changes:   nil,
 		Reason:    args.Reason,
 	})
@@ -125,7 +126,7 @@ func (*RootResolver) ReportUser(ctx context.Context, args struct {
 	UserID string
 	Reason *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -153,7 +154,7 @@ func (*RootResolver) ReportUser(ctx context.Context, args struct {
 		"_id": id,
 	})
 
-	user := &mongo.User{}
+	user := &datastructure.User{}
 
 	err = res.Err()
 
@@ -190,10 +191,10 @@ func (*RootResolver) ReportUser(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeReport,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeReport,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &id, Type: "emotes"},
+		Target:    &datastructure.Target{ID: &id, Type: "emotes"},
 		Changes:   nil,
 		Reason:    args.Reason,
 	})
@@ -211,12 +212,12 @@ func (*RootResolver) BanUser(ctx context.Context, args struct {
 	UserID string
 	Reason *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionBanUsers) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionBanUsers) {
 		return nil, errAccessDenied
 	}
 
@@ -243,7 +244,7 @@ func (*RootResolver) BanUser(ctx context.Context, args struct {
 		"_id": id,
 	})
 
-	user := &mongo.User{}
+	user := &datastructure.User{}
 
 	err = res.Err()
 
@@ -268,7 +269,7 @@ func (*RootResolver) BanUser(ctx context.Context, args struct {
 		reasonN = *args.Reason
 	}
 
-	ban := &mongo.Ban{
+	ban := &datastructure.Ban{
 		UserID:     &user.ID,
 		Active:     true,
 		Reason:     reasonN,
@@ -287,10 +288,10 @@ func (*RootResolver) BanUser(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeUserBan,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeUserBan,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &id, Type: "users"},
+		Target:    &datastructure.Target{ID: &id, Type: "users"},
 		Changes:   nil,
 		Reason:    args.Reason,
 	})
@@ -309,12 +310,12 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 	UserID string
 	Reason *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionBanUsers) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionBanUsers) {
 		return nil, errAccessDenied
 	}
 
@@ -340,7 +341,7 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 		"_id": id,
 	})
 
-	user := &mongo.User{}
+	user := &datastructure.User{}
 
 	err = res.Err()
 
@@ -379,10 +380,10 @@ func (*RootResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeUserUnban,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeUserUnban,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &id, Type: "users"},
+		Target:    &datastructure.Target{ID: &id, Type: "users"},
 		Changes:   nil,
 		Reason:    args.Reason,
 	})
@@ -407,7 +408,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 
 	var success bool
 
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -420,11 +421,11 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 	res := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
 		"_id": id,
 		"status": bson.M{
-			"$ne": mongo.EmoteStatusDeleted,
+			"$ne": datastructure.EmoteStatusDeleted,
 		},
 	})
 
-	emote := &mongo.Emote{}
+	emote := &datastructure.Emote{}
 
 	err = res.Err()
 
@@ -439,7 +440,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,
@@ -458,7 +459,7 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 		"_id": id,
 	}, bson.M{
 		"$set": bson.M{
-			"status":             mongo.EmoteStatusDeleted,
+			"status":             datastructure.EmoteStatusDeleted,
 			"last_modified_date": time.Now(),
 		},
 	})
@@ -468,12 +469,12 @@ func (*RootResolver) DeleteEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeEmoteDelete,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeEmoteDelete,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &id, Type: "emotes"},
-		Changes: []*mongo.AuditLogChange{
-			{Key: "status", OldValue: emote.Status, NewValue: mongo.EmoteStatusDeleted},
+		Target:    &datastructure.Target{ID: &id, Type: "emotes"},
+		Changes: []*datastructure.AuditLogChange{
+			{Key: "status", OldValue: emote.Status, NewValue: datastructure.EmoteStatusDeleted},
 		},
 		Reason: &args.Reason,
 	})
@@ -517,7 +518,7 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 	ID     string
 	Reason *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -529,10 +530,10 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 
 	res := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
 		"_id":    id,
-		"status": mongo.EmoteStatusDeleted,
+		"status": datastructure.EmoteStatusDeleted,
 	})
 
-	emote := &mongo.Emote{}
+	emote := &datastructure.Emote{}
 
 	err = res.Err()
 
@@ -547,7 +548,7 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,
@@ -566,7 +567,7 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 		"_id": id,
 	}, bson.M{
 		"$set": bson.M{
-			"status":             mongo.EmoteStatusProcessing,
+			"status":             datastructure.EmoteStatusProcessing,
 			"last_modified_date": time.Now(),
 		},
 	})
@@ -596,7 +597,7 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 		"_id": id,
 	}, bson.M{
 		"$set": bson.M{
-			"status":             mongo.EmoteStatusLive,
+			"status":             datastructure.EmoteStatusLive,
 			"last_modified_date": time.Now(),
 		},
 	})
@@ -605,12 +606,12 @@ func (*RootResolver) RestoreEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeEmoteUndoDelete,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeEmoteUndoDelete,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &id, Type: "emotes"},
-		Changes: []*mongo.AuditLogChange{
-			{Key: "status", OldValue: emote.Status, NewValue: mongo.EmoteStatusLive},
+		Target:    &datastructure.Target{ID: &id, Type: "emotes"},
+		Changes: []*datastructure.AuditLogChange{
+			{Key: "status", OldValue: emote.Status, NewValue: datastructure.EmoteStatusLive},
 		},
 		Reason: args.Reason,
 	})
@@ -629,7 +630,7 @@ func (*RootResolver) AddChannelEditor(ctx context.Context, args struct {
 	EditorID  string
 	Reason    *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -668,7 +669,7 @@ func (*RootResolver) AddChannelEditor(ctx context.Context, args struct {
 		"_id": channelID,
 	})
 
-	channel := &mongo.User{}
+	channel := &datastructure.User{}
 
 	err = res.Err()
 
@@ -683,7 +684,7 @@ func (*RootResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			return nil, errAccessDenied
 		}
@@ -711,11 +712,11 @@ func (*RootResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeUserChannelEditorAdd,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeUserChannelEditorAdd,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &channelID, Type: "users"},
-		Changes: []*mongo.AuditLogChange{
+		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
+		Changes: []*datastructure.AuditLogChange{
 			{Key: "editors", OldValue: channel.EditorIDs, NewValue: editorIDs},
 		},
 		Reason: args.Reason,
@@ -735,7 +736,7 @@ func (*RootResolver) RemoveChannelEditor(ctx context.Context, args struct {
 	EditorID  string
 	Reason    *string
 }) (*response, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -764,7 +765,7 @@ func (*RootResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		"_id": channelID,
 	})
 
-	channel := &mongo.User{}
+	channel := &datastructure.User{}
 
 	err = res.Err()
 
@@ -779,7 +780,7 @@ func (*RootResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			return nil, errAccessDenied
 		}
@@ -817,11 +818,11 @@ func (*RootResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeUserChannelEditorRemove,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeUserChannelEditorRemove,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &channelID, Type: "users"},
-		Changes: []*mongo.AuditLogChange{
+		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
+		Changes: []*datastructure.AuditLogChange{
 			{Key: "editors", OldValue: channel.EditorIDs, NewValue: newIds},
 		},
 		Reason: args.Reason,

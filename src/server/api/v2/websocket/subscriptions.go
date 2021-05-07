@@ -6,6 +6,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/websocket/v2"
@@ -15,7 +16,7 @@ import (
 
 func createChannelEmoteSubscription(ctx context.Context, channel string) {
 	// Get current user's channel emotes
-	var user *mongo.User
+	var user *datastructure.User
 	if err := cache.FindOne("users", "", bson.M{
 		"login": channel,
 	}, &user, &options.FindOneOptions{
@@ -65,6 +66,9 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 			for _, id := range currentEmoteList {
 				if utils.Contains(newEmoteList, id) {
 					index := utils.SliceIndexOf(currentEmoteList, id)
+					if index >= len(added) {
+						continue
+					}
 					added[index] = ""
 
 					continue
@@ -94,7 +98,7 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 			sendOpDispatch(ctx, emoteSubscriptionResult{
 				Added:   added,
 				Removed: removed,
-			}, seq)
+			}, "CHANNEL_EMOTES_UPDATE", seq)
 		case <-ctx.Done():
 			_ = topic.Unsubscribe(redis.Ctx, channelName)
 			return

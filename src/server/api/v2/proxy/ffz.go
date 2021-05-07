@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache"
-	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 )
 
 const baseUrlFFZ = "https://api.frankerfacez.com/v1"
 
 // Get channel emotes from the FFZ provider
-func GetChannelEmotesFFZ(login string) ([]*mongo.Emote, error) {
+func GetChannelEmotesFFZ(login string) ([]*datastructure.Emote, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/rooms/%v", baseUrlFFZ, login)
 
@@ -37,7 +37,7 @@ func GetChannelEmotesFFZ(login string) ([]*mongo.Emote, error) {
 	return emotes, nil
 }
 
-func GetGlobalEmotesFFZ() ([]*mongo.Emote, error) {
+func GetGlobalEmotesFFZ() ([]*datastructure.Emote, error) {
 	uri := fmt.Sprintf("%v/set/global", baseUrlFFZ)
 
 	// Send request
@@ -65,8 +65,8 @@ func GetGlobalEmotesFFZ() ([]*mongo.Emote, error) {
 }
 
 // Convert a FFZ emote object into 7TV
-func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
-	result := make([]*mongo.Emote, len(emotes))
+func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
+	result := make([]*datastructure.Emote, len(emotes))
 
 	for i, emote := range emotes {
 		// Generate URLs list
@@ -79,12 +79,12 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*mongo.Emote, error) {
 			urls[i] = &a
 		}
 
-		result[i] = &mongo.Emote{
+		result[i] = &datastructure.Emote{
 			Name:       emote.Name,
 			Visibility: 0,
 			Mime:       "image/png",
-			Status:     mongo.EmoteStatusLive,
-			Owner: &mongo.User{
+			Status:     datastructure.EmoteStatusLive,
+			Owner: &datastructure.User{
 				Login:       emote.Owner.Name,
 				DisplayName: emote.Owner.DisplayName,
 				TwitchID:    "",

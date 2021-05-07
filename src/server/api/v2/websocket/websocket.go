@@ -104,13 +104,14 @@ func WebSocket(app fiber.Router) {
 	}))
 }
 
-func sendOpDispatch(ctx context.Context, data interface{}, seq int32) {
+func sendOpDispatch(ctx context.Context, data interface{}, t string, seq int32) {
 	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
 	_ = conn.WriteJSON(WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
 		Sequence: &seq,
+		Type:     &t,
 	})
 }
 
@@ -156,6 +157,7 @@ type WebSocketMessageOutbound struct {
 	Op       int         `json:"op"` // The message operation code
 	Data     interface{} `json:"d"`
 	Sequence *int32      `json:"seq"`
+	Type     *string     `json:"t"`
 }
 
 type WebSocketMessageInbound struct {

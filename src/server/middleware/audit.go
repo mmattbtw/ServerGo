@@ -2,11 +2,12 @@ package middleware
 
 import (
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 )
 
-type AuditedRoute func(*fiber.Ctx) (int, []byte, *mongo.AuditLog)
+type AuditedRoute func(*fiber.Ctx) (int, []byte, *datastructure.AuditLog)
 
 func AuditRoute(r AuditedRoute) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {

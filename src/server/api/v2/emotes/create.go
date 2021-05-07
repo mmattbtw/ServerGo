@@ -23,6 +23,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
@@ -36,13 +37,13 @@ import (
 const MAX_FRAME_COUNT int = 1024
 
 func CreateRoute(router fiber.Router) {
-	router.Post("/", middleware.UserAuthMiddleware(true), middleware.AuditRoute(func(c *fiber.Ctx) (int, []byte, *mongo.AuditLog) {
+	router.Post("/", middleware.UserAuthMiddleware(true), middleware.AuditRoute(func(c *fiber.Ctx) (int, []byte, *datastructure.AuditLog) {
 		c.Set("Content-Type", "application/json")
-		usr, ok := c.Locals("user").(*mongo.User)
+		usr, ok := c.Locals("user").(*datastructure.User)
 		if !ok {
 			return 500, errInternalServer, nil
 		}
-		if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteCreate) {
+		if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteCreate) {
 			return 403, utils.S2B(fmt.Sprintf(errAccessDenied, "You don't have permission to do that.")), nil
 		}
 
@@ -55,7 +56,7 @@ func CreateRoute(router fiber.Router) {
 		// Get file stream
 		file := fctx.RequestBodyStream()
 		mr := multipart.NewReader(file, utils.B2S(req.Header.MultipartFormBoundary()))
-		var emote *mongo.Emote
+		var emote *datastructure.Emote
 		var emoteName string              // The name of the emote
 		var channelID *primitive.ObjectID // The channel creating this emote
 		var ogFileStream bytes.Buffer     // The original file, being streamed in
@@ -146,7 +147,7 @@ func CreateRoute(router fiber.Router) {
 			return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The fields were not provided.")), nil
 		}
 
-		if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
+		if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
 			if channelID.Hex() != usr.ID.Hex() {
 				if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 					"_id":     channelID,
@@ -299,12 +300,12 @@ func CreateRoute(router fiber.Router) {
 		wg.Add(len(files))
 
 		mime := "image/webp"
-		emote = &mongo.Emote{
+		emote = &datastructure.Emote{
 			Name:             emoteName,
 			Mime:             mime,
-			Status:           mongo.EmoteStatusProcessing,
+			Status:           datastructure.EmoteStatusProcessing,
 			Tags:             []string{},
-			Visibility:       mongo.EmoteVisibilityPrivate,
+			Visibility:       datastructure.EmoteVisibilityPrivate,
 			OwnerID:          *channelID,
 			LastModifiedDate: time.Now(),
 		}
@@ -362,7 +363,7 @@ func CreateRoute(router fiber.Router) {
 			"_id": _id,
 		}, bson.M{
 			"$set": bson.M{
-				"status": mongo.EmoteStatusLive,
+				"status": datastructure.EmoteStatusLive,
 			},
 		})
 		if err != nil {
@@ -370,17 +371,17 @@ func CreateRoute(router fiber.Router) {
 		}
 
 		go discord.SendEmoteCreate(*emote, *usr)
-		return 201, utils.S2B(fmt.Sprintf(`{"status":201,"id":"%s"}`, _id.Hex())), &mongo.AuditLog{
-			Type: mongo.AuditLogTypeEmoteCreate,
-			Changes: []*mongo.AuditLogChange{
+		return 201, utils.S2B(fmt.Sprintf(`{"status":201,"id":"%s"}`, _id.Hex())), &datastructure.AuditLog{
+			Type: datastructure.AuditLogTypeEmoteCreate,
+			Changes: []*datastructure.AuditLogChange{
 				{Key: "name", OldValue: nil, NewValue: emoteName},
 				{Key: "tags", OldValue: nil, NewValue: []string{}},
 				{Key: "owner", OldValue: nil, NewValue: usr.ID},
-				{Key: "visibility", OldValue: nil, NewValue: mongo.EmoteVisibilityPrivate},
+				{Key: "visibility", OldValue: nil, NewValue: datastructure.EmoteVisibilityPrivate},
 				{Key: "mime", OldValue: nil, NewValue: mime},
-				{Key: "status", OldValue: nil, NewValue: mongo.EmoteStatusProcessing},
+				{Key: "status", OldValue: nil, NewValue: datastructure.EmoteStatusProcessing},
 			},
-			Target:    &mongo.Target{ID: &_id, Type: "emotes"},
+			Target:    &datastructure.Target{ID: &_id, Type: "emotes"},
 			CreatedBy: usr.ID,
 		}
 	}))

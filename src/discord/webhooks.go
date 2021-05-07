@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/cache"
-	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 	dgo "github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func SendEmoteCreate(emote mongo.Emote, actor mongo.User) {
+func SendEmoteCreate(emote datastructure.Emote, actor datastructure.User) {
 	if webhookID == nil || webhookToken == nil {
 		return
 	}
@@ -34,7 +34,7 @@ func SendEmoteCreate(emote mongo.Emote, actor mongo.User) {
 	}
 }
 
-func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogChange, reason *string) {
+func SendEmoteEdit(emote datastructure.Emote, actor datastructure.User, logs []*datastructure.AuditLogChange, reason *string) {
 	if webhookID == nil || webhookToken == nil {
 		return
 	}
@@ -78,7 +78,7 @@ func SendEmoteEdit(emote mongo.Emote, actor mongo.User, logs []*mongo.AuditLogCh
 	}
 }
 
-func SendEmoteDelete(emote mongo.Emote, actor mongo.User, reason string) {
+func SendEmoteDelete(emote datastructure.Emote, actor datastructure.User, reason string) {
 	if webhookID == nil || webhookToken == nil {
 		return
 	}

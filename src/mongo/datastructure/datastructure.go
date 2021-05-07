@@ -1,6 +1,7 @@
-package mongo
+package datastructure
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -114,19 +115,19 @@ type Role struct {
 }
 
 // Get cached roles
-func GetRoles() []Role {
-	return Ctx.Value(utils.AllRolesKey).([]Role)
+func GetRoles(ctx context.Context) []Role {
+	return ctx.Value(utils.AllRolesKey).([]Role)
 }
 
 // Get a cached role by ID
-func GetRole(id *primitive.ObjectID) Role {
+func GetRole(ctx context.Context, id *primitive.ObjectID) Role {
 	if id == nil {
 		return *DefaultRole
 	}
 
 	var found bool
 	var role Role
-	roles := GetRoles()
+	roles := GetRoles(ctx)
 
 	for _, r := range roles {
 		if r.ID.Hex() != id.Hex() {

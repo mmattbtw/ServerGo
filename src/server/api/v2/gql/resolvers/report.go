@@ -3,17 +3,17 @@ package resolvers
 import (
 	"context"
 
-	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 )
 
 type reportResolver struct {
 	ctx context.Context
-	v   *mongo.Report
+	v   *datastructure.Report
 
 	fields map[string]*SelectedField
 }
 
-func GenerateReportResolver(ctx context.Context, report *mongo.Report, fields map[string]*SelectedField) (*reportResolver, error) {
+func GenerateReportResolver(ctx context.Context, report *datastructure.Report, fields map[string]*SelectedField) (*reportResolver, error) {
 	return &reportResolver{
 		ctx:    ctx,
 		v:      report,

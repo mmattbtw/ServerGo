@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
@@ -21,7 +22,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	EmoteID   string
 	Reason    *string
 }) (*userResolver, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -50,7 +51,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 		"_id": channelID,
 	})
 
-	channel := &mongo.User{}
+	channel := &datastructure.User{}
 
 	err = res.Err()
 
@@ -65,7 +66,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			found := false
 			for _, e := range channel.EditorIDs {
@@ -93,10 +94,10 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 
 	emoteRes := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
 		"_id":    emoteID,
-		"status": mongo.EmoteStatusLive,
+		"status": datastructure.EmoteStatusLive,
 	})
 
-	emote := &mongo.Emote{}
+	emote := &datastructure.Emote{}
 	err = emoteRes.Err()
 	if err == nil {
 		err = emoteRes.Decode(emote)
@@ -113,7 +114,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	for _, v := range emote.SharedWith {
 		sharedWith = append(sharedWith, v.Hex())
 	}
-	if utils.HasBits(int64(emote.Visibility), int64(mongo.EmoteVisibilityPrivate)) {
+	if utils.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityPrivate)) {
 		if emote.OwnerID.Hex() != channelID.Hex() || !utils.Contains(sharedWith, emoteID.Hex()) {
 			return nil, errUnknownEmote
 		}
@@ -139,11 +140,11 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeUserChannelEmoteAdd,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeUserChannelEmoteAdd,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &channelID, Type: "users"},
-		Changes: []*mongo.AuditLogChange{
+		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
+		Changes: []*datastructure.AuditLogChange{
 			{Key: "emotes", OldValue: channel.EmoteIDs, NewValue: emoteIDs},
 		},
 		Reason: args.Reason,
@@ -159,7 +160,10 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
+		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), redis.UserEmotes{
+			List:  ids,
+			Actor: usr,
+		})
 	}
 	return GenerateUserResolver(ctx, channel, &channelID, field.children)
 }
@@ -172,7 +176,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 	EmoteID   string
 	Reason    *string
 }) (*userResolver, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
@@ -201,7 +205,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		"_id": channelID,
 	})
 
-	channel := &mongo.User{}
+	channel := &datastructure.User{}
 
 	err = res.Err()
 
@@ -216,7 +220,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionManageUsers) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			found := false
 			for _, e := range channel.EditorIDs {
@@ -278,11 +282,11 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-		Type:      mongo.AuditLogTypeUserChannelEmoteRemove,
+	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+		Type:      datastructure.AuditLogTypeUserChannelEmoteRemove,
 		CreatedBy: usr.ID,
-		Target:    &mongo.Target{ID: &channelID, Type: "users"},
-		Changes: []*mongo.AuditLogChange{
+		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
+		Changes: []*datastructure.AuditLogChange{
 			{Key: "emotes", OldValue: channel.EmoteIDs, NewValue: newIds},
 		},
 		Reason: args.Reason,
@@ -298,7 +302,10 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
+		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), redis.UserEmotes{
+			List:  ids,
+			Actor: usr,
+		})
 	}
 	return GenerateUserResolver(ctx, channel, &channelID, field.children)
 }

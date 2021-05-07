@@ -1,4 +1,4 @@
-package mongo
+package datastructure
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 

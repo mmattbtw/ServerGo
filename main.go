@@ -15,6 +15,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	_ "github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -82,14 +83,14 @@ func main() {
 }
 
 // Get all roles available and cache into the mongo context
-func GetAllRoles() ([]mongo.Role, error) {
-	roles := []mongo.Role{}
+func GetAllRoles() ([]datastructure.Role, error) {
+	roles := []datastructure.Role{}
 	cur, err := mongo.Database.Collection("roles").Find(mongo.Ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 
-	roles = append(roles, *mongo.DefaultRole)          // Add default role
+	roles = append(roles, *datastructure.DefaultRole)  // Add default role
 	if err := cur.All(mongo.Ctx, &roles); err != nil { // Fetch roles
 		if err == mongo.ErrNoDocuments {
 			return roles, nil

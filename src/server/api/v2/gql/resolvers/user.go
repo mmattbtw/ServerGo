@@ -7,6 +7,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,15 +19,15 @@ import (
 
 type userResolver struct {
 	ctx context.Context
-	v   *mongo.User
+	v   *datastructure.User
 
 	fields map[string]*SelectedField
 }
 
-func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primitive.ObjectID, fields map[string]*SelectedField) (*userResolver, error) {
+func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID *primitive.ObjectID, fields map[string]*SelectedField) (*userResolver, error) {
 	if user == nil || user.Login == "" {
-		user = &mongo.User{
-			Role: mongo.DefaultRole,
+		user = &datastructure.User{
+			Role: datastructure.DefaultRole,
 		}
 		if err := cache.FindOne("users", "", bson.M{
 			"_id": userID,
@@ -44,7 +45,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 	}
 
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
-		user.OwnedEmotes = &[]*mongo.Emote{}
+		user.OwnedEmotes = &[]*datastructure.Emote{}
 		if err := cache.Find("emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
 			"owner": user.ID,
 		}, user.OwnedEmotes); err != nil {
@@ -53,14 +54,14 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		}
 		ems := *user.OwnedEmotes
 		ids := make([]primitive.ObjectID, len(ems))
-		emotes := make(map[primitive.ObjectID]*mongo.Emote, len(ems))
+		emotes := make(map[primitive.ObjectID]*datastructure.Emote, len(ems))
 		for i, e := range ems {
 			e.Owner = user
 			ids[i] = e.ID
 			emotes[e.ID] = e
 		}
 		if _, ok := v.children["audit_entries"]; ok {
-			logs := []*mongo.AuditLog{}
+			logs := []*datastructure.AuditLog{}
 			if err := cache.Find("audit", fmt.Sprintf("user:%s:owned_emotes", user.ID.Hex()), bson.M{
 				"target.id": bson.M{
 					"$in": ids,
@@ -73,7 +74,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 
 			for _, l := range logs {
 				e := emotes[*l.Target.ID]
-				var d []*mongo.AuditLog
+				var d []*datastructure.AuditLog
 				if e.AuditEntries != nil {
 					d = *e.AuditEntries
 				}
@@ -85,9 +86,9 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 
 	if v, ok := fields["emotes"]; ok && user.Emotes == nil {
 		if len(user.EmoteIDs) == 0 {
-			user.Emotes = &[]*mongo.Emote{}
+			user.Emotes = &[]*datastructure.Emote{}
 		} else {
-			user.Emotes = &[]*mongo.Emote{}
+			user.Emotes = &[]*datastructure.Emote{}
 			if err := cache.Find("emotes", fmt.Sprintf("user:%s:emotes", user.ID.Hex()), bson.M{
 				"_id": bson.M{
 					"$in": user.EmoteIDs,
@@ -98,14 +99,14 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 			}
 			ems := *user.Emotes
 			ids := make([]primitive.ObjectID, len(ems))
-			emotes := make(map[primitive.ObjectID]*mongo.Emote, len(ems))
+			emotes := make(map[primitive.ObjectID]*datastructure.Emote, len(ems))
 			for i, e := range ems {
 				e.Owner = user
 				ids[i] = e.ID
 				emotes[e.ID] = e
 			}
 			if _, ok := v.children["audit_entries"]; ok {
-				logs := []*mongo.AuditLog{}
+				logs := []*datastructure.AuditLog{}
 				if err := cache.Find("audit", "", bson.M{
 					"target.id": bson.M{
 						"$in": ids,
@@ -117,7 +118,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 				}
 				for _, l := range logs {
 					e := emotes[*l.Target.ID]
-					var d []*mongo.AuditLog
+					var d []*datastructure.AuditLog
 					if e.AuditEntries != nil {
 						d = *e.AuditEntries
 					}
@@ -129,7 +130,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 	}
 
 	if _, ok := fields["editors"]; ok && user.Editors == nil {
-		user.Editors = &[]*mongo.User{}
+		user.Editors = &[]*datastructure.User{}
 		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", user.ID.Hex()), bson.M{
 			"_id": bson.M{
 				"$in": utils.Ternary(len(user.EditorIDs) > 0, user.EditorIDs, []primitive.ObjectID{}).([]primitive.ObjectID),
@@ -141,7 +142,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 	}
 
 	if _, ok := fields["editor_in"]; ok && user.EditorIn == nil {
-		user.EditorIn = &[]*mongo.User{}
+		user.EditorIn = &[]*datastructure.User{}
 		if err := cache.Find("users", fmt.Sprintf("user:%s:editor_in", user.ID.Hex()), bson.M{
 			"editors": user.ID,
 		}, user.EditorIn); err != nil {
@@ -150,9 +151,9 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		}
 	}
 
-	usr, usrValid := ctx.Value(utils.UserKey).(*mongo.User)
-	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != mongo.UserRankAdmin && usr.Rank != mongo.UserRankModerator) && user.Reports == nil {
-		user.Reports = &[]*mongo.Report{}
+	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
+	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != datastructure.UserRankAdmin && usr.Rank != datastructure.UserRankModerator) && user.Reports == nil {
+		user.Reports = &[]*datastructure.Report{}
 		if err := cache.Find("users", fmt.Sprintf("user:%s:reports", user.ID.Hex()), bson.M{
 			"target.id":   user.ID,
 			"target.type": "users",
@@ -164,7 +165,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 		_, query := v.children["reporter"]
 
 		reports := *user.Reports
-		reportMap := map[primitive.ObjectID][]*mongo.Report{}
+		reportMap := map[primitive.ObjectID][]*datastructure.Report{}
 		for _, r := range reports {
 			r.UTarget = user
 			if r.ReporterID != nil && query {
@@ -176,7 +177,7 @@ func GenerateUserResolver(ctx context.Context, user *mongo.User, userID *primiti
 			for k := range reportMap {
 				ids = append(ids, k)
 			}
-			reporters := []*mongo.User{}
+			reporters := []*datastructure.User{}
 
 			if err := cache.Find("users", "", bson.M{
 				"_id": bson.M{
@@ -211,7 +212,7 @@ func (r *userResolver) ID() string {
 }
 
 func (r *userResolver) Email() *string {
-	if u, ok := r.ctx.Value(utils.UserKey).(*mongo.User); ok && (r.v.ID == u.ID || mongo.UserHasPermission(u, mongo.RolePermissionManageUsers)) {
+	if u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User); ok && (r.v.ID == u.ID || datastructure.UserHasPermission(u, datastructure.RolePermissionManageUsers)) {
 		return &r.v.Email
 	} else { // Hide the email address if
 		s := "<hidden>"
@@ -225,7 +226,7 @@ func (r *userResolver) Rank() int32 {
 
 func (r *userResolver) Role() (*roleResolver, error) {
 	roleID := r.v.RoleID
-	role := mongo.GetRole(roleID)
+	role := datastructure.GetRole(mongo.Ctx, roleID)
 
 	res, err := GenerateRoleResolver(r.ctx, &role, roleID, nil)
 	if err != nil {
@@ -234,7 +235,7 @@ func (r *userResolver) Role() (*roleResolver, error) {
 	}
 
 	if res == nil {
-		return GenerateRoleResolver(r.ctx, mongo.DefaultRole, nil, r.fields["role"].children)
+		return GenerateRoleResolver(r.ctx, datastructure.DefaultRole, nil, r.fields["role"].children)
 	}
 
 	return res, nil
@@ -328,7 +329,7 @@ func (r *userResolver) OwnedEmotes() ([]*emoteResolver, error) {
 }
 
 func (r *userResolver) ThirdPartyEmotes() ([]*emoteResolver, error) {
-	var emotes []*mongo.Emote
+	var emotes []*datastructure.Emote
 	if bttv, err := api_proxy.GetChannelEmotesBTTV(r.v.Login); err == nil { // Find channel bttv emotes
 		emotes = append(emotes, bttv...)
 	}
@@ -370,8 +371,8 @@ func (r *userResolver) ProfileImageURL() string {
 }
 
 func (r *userResolver) Reports() (*[]*reportResolver, error) {
-	u, ok := r.ctx.Value(utils.UserKey).(*mongo.User)
-	if !ok || (u.Rank != mongo.UserRankAdmin && u.Rank != mongo.UserRankModerator) {
+	u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
+	if !ok || (u.Rank != datastructure.UserRankAdmin && u.Rank != datastructure.UserRankModerator) {
 		return nil, errAccessDenied
 	}
 
@@ -392,8 +393,8 @@ func (r *userResolver) Reports() (*[]*reportResolver, error) {
 }
 
 func (r *userResolver) Bans() (*[]*banResolver, error) {
-	u, ok := r.ctx.Value(utils.UserKey).(*mongo.User)
-	if !ok || (u.Rank != mongo.UserRankAdmin && u.Rank != mongo.UserRankModerator) {
+	u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
+	if !ok || (u.Rank != datastructure.UserRankAdmin && u.Rank != datastructure.UserRankModerator) {
 		return nil, errAccessDenied
 	}
 
@@ -414,8 +415,8 @@ func (r *userResolver) Bans() (*[]*banResolver, error) {
 }
 
 func (r *userResolver) AuditEntries() (*[]string, error) {
-	u, ok := r.ctx.Value(utils.UserKey).(*mongo.User)
-	if !ok || (u.Rank != mongo.UserRankAdmin && u.Rank != mongo.UserRankModerator) {
+	u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
+	if !ok || (u.Rank != datastructure.UserRankAdmin && u.Rank != datastructure.UserRankModerator) {
 		return nil, errAccessDenied
 	}
 

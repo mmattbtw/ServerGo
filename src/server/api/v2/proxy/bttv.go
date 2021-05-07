@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache"
-	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 )
 
 const baseUrlBTTV = "https://api.betterttv.net/3"
 
-func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
+func GetGlobalEmotesBTTV() ([]*datastructure.Emote, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrlBTTV)
 
@@ -30,7 +30,7 @@ func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 	}
 
 	// Convert these bttv emotes into a 7TV emote object
-	result := make([]*mongo.Emote, len(emotes))
+	result := make([]*datastructure.Emote, len(emotes))
 	for i, e := range emotes {
 		emote, err := bttvTo7TV([]emoteBTTV{e})
 		if err != nil {
@@ -43,7 +43,7 @@ func GetGlobalEmotesBTTV() ([]*mongo.Emote, error) {
 	return result, nil
 }
 
-func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
+func GetChannelEmotesBTTV(login string) ([]*datastructure.Emote, error) {
 	// Get Twitch User from ID
 	usr, err := GetTwitchUser(login)
 	if err != nil {
@@ -68,7 +68,7 @@ func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
 
 	// Add these emotes to the final result
 	// Merging "channel" and "shared" emotes, as 7TV sees no distinction.
-	result := make([]*mongo.Emote, len(userResponse.Emotes)+len(userResponse.SharedEmotes))
+	result := make([]*datastructure.Emote, len(userResponse.Emotes)+len(userResponse.SharedEmotes))
 
 	// Add user data to non-shared emotes
 	for i := range userResponse.Emotes {
@@ -93,8 +93,8 @@ func GetChannelEmotesBTTV(login string) ([]*mongo.Emote, error) {
 }
 
 // Convert a BTTV emote object into 7TV
-func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
-	result := make([]*mongo.Emote, len(emotes))
+func bttvTo7TV(emotes []emoteBTTV) ([]*datastructure.Emote, error) {
+	result := make([]*datastructure.Emote, len(emotes))
 
 	for i, emote := range emotes {
 		if emote.User == nil { // Add empty user if missing
@@ -111,12 +111,12 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*mongo.Emote, error) {
 			urls[i-1] = &a
 		}
 
-		result[i] = &mongo.Emote{
+		result[i] = &datastructure.Emote{
 			Name:       emote.Code,
 			Visibility: 0,
 			Mime:       "image/" + emote.ImageType,
-			Status:     mongo.EmoteStatusLive,
-			Owner: &mongo.User{
+			Status:     datastructure.EmoteStatusLive,
+			Owner: &datastructure.User{
 				DisplayName: emote.User.DisplayName,
 				Login:       emote.User.Name,
 				TwitchID:    emote.User.ProviderID,

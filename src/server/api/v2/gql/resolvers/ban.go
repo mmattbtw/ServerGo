@@ -3,17 +3,17 @@ package resolvers
 import (
 	"context"
 
-	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 )
 
 type banResolver struct {
 	ctx context.Context
-	v   *mongo.Ban
+	v   *datastructure.Ban
 
 	fields map[string]*SelectedField
 }
 
-func GenerateBanResolver(ctx context.Context, ban *mongo.Ban, fields map[string]*SelectedField) (*banResolver, error) {
+func GenerateBanResolver(ctx context.Context, ban *datastructure.Ban, fields map[string]*SelectedField) (*banResolver, error) {
 	return &banResolver{
 		ctx:    ctx,
 		v:      ban,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
@@ -76,11 +77,11 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 
 func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userResolver, error) {
 	isMe := args.ID == "@me" // Handle @me (current authenticated user)
-	user := &mongo.User{}
+	user := &datastructure.User{}
 	var id *primitive.ObjectID
 	if isMe {
 		// Get current user from context if @me
-		if u, ok := ctx.Value(utils.UserKey).(*mongo.User); isMe && u != nil && ok {
+		if u, ok := ctx.Value(utils.UserKey).(*datastructure.User); isMe && u != nil && ok {
 			user = u
 			id = &u.ID
 		}
@@ -144,10 +145,10 @@ func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emot
 		return nil, err
 	}
 	// Get actor user
-	usr, _ := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, _ := ctx.Value(utils.UserKey).(*datastructure.User)
 	// Verify actor permissions
-	if utils.HasBits(int64(resolver.v.Visibility), int64(mongo.EmoteVisibilityPrivate)) && usr.ID != resolver.v.OwnerID {
-		if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+	if utils.HasBits(int64(resolver.v.Visibility), int64(datastructure.EmoteVisibilityPrivate)) && usr.ID != resolver.v.OwnerID {
+		if usr == nil || !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
 			return nil, errUnknownEmote
 		}
 	}
@@ -166,7 +167,7 @@ func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (
 		return nil, errDepth
 	}
 
-	user := &mongo.User{}
+	user := &datastructure.User{}
 
 	if err = cache.FindOne("users", "", bson.M{
 		"_id": objID,
@@ -178,7 +179,7 @@ func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (
 		return nil, errInternalServer
 	}
 
-	emotes := []*mongo.Emote{}
+	emotes := []*datastructure.Emote{}
 
 	if len(user.EmoteIDs) > 0 {
 		if err = cache.Find("emotes", "", bson.M{
@@ -245,13 +246,13 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 
 	// Get actor user
-	usr, _ := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, _ := ctx.Value(utils.UserKey).(*datastructure.User)
 
 	// Create aggregation
 	opts := options.Aggregate()
-	emotes := []*mongo.Emote{}
+	emotes := []*datastructure.Emote{}
 	match := bson.M{
-		"status": mongo.EmoteStatusLive,
+		"status": datastructure.EmoteStatusLive,
 	}
 	if args.Channel != nil {
 		if channelID, err := primitive.ObjectIDFromHex(*args.Channel); err == nil {
@@ -259,7 +260,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		}
 	}
 
-	if usr == nil || !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+	if usr == nil || !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
 		var usrID primitive.ObjectID
 		if usr != nil {
 			usrID = usr.ID
@@ -267,7 +268,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 
 		match["$and"] = bson.A{
 			bson.M{"$or": bson.A{
-				bson.M{"visibility": bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityPrivate)}},
+				bson.M{"visibility": bson.M{"$bitsAllClear": int32(datastructure.EmoteVisibilityPrivate)}},
 				bson.M{"owner": usrID},
 			}},
 		}
@@ -325,7 +326,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 				fmt.Println(err)
 			}
 
-			countedEmotes := []*mongo.Emote{}
+			countedEmotes := []*datastructure.Emote{}
 			if err := cur.All(mongo.Ctx, &countedEmotes); err == nil && len(countedEmotes) > 0 {
 				if err == nil { // Get the unchecked emotes, add them to a slice
 					ops := make([]mongo.WriteModel, len(countedEmotes))
@@ -396,9 +397,9 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		globalState := *args.GlobalState
 		switch globalState {
 		case "only": // Only: query only global emotes
-			match["visibility"] = bson.M{"$bitsAllSet": int32(mongo.EmoteVisibilityGlobal)}
+			match["visibility"] = bson.M{"$bitsAllSet": int32(datastructure.EmoteVisibilityGlobal)}
 		case "hide": // Hide: omit global emotes from query
-			match["visibility"] = bson.M{"$bitsAllClear": int32(mongo.EmoteVisibilityGlobal)}
+			match["visibility"] = bson.M{"$bitsAllClear": int32(datastructure.EmoteVisibilityGlobal)}
 		}
 	}
 
@@ -448,8 +449,8 @@ func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 	}
 
 	// Query foreign APIs for requested third party emotes
-	var emotes []*mongo.Emote
-	var globalEmotes []*mongo.Emote
+	var emotes []*datastructure.Emote
+	var globalEmotes []*datastructure.Emote
 	for _, p := range args.Providers {
 		switch p {
 		case "BTTV": // Handle BTTV Provider
@@ -477,7 +478,7 @@ func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 		}
 	}
 	for _, e := range globalEmotes {
-		e.Visibility = mongo.EmoteVisibilityGlobal
+		e.Visibility = datastructure.EmoteVisibilityGlobal
 	}
 	emotes = append(emotes, globalEmotes...)
 
@@ -526,7 +527,7 @@ func (*RootResolver) SearchUsers(ctx context.Context, args struct {
 		"login": 1,
 	}).SetLimit(limit).SetSkip((page - 1) * limit)
 
-	users := []*mongo.User{}
+	users := []*datastructure.User{}
 
 	cur, err := mongo.Database.Collection("users").Find(mongo.Ctx, bson.M{
 		"login": bson.M{

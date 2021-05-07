@@ -6,6 +6,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/SevenTV/ServerGo/src/validation"
 	log "github.com/sirupsen/logrus"
@@ -21,13 +22,13 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	Emote  emoteInput
 	Reason *string
 }) (*emoteResolver, error) {
-	usr, ok := ctx.Value(utils.UserKey).(*mongo.User)
+	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, errLoginRequired
 	}
 
 	update := bson.M{}
-	logChanges := []*mongo.AuditLogChange{}
+	logChanges := []*datastructure.AuditLogChange{}
 	req := args.Emote
 
 	if req.Name != nil {
@@ -74,7 +75,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		"_id": id,
 	})
 
-	emote := &mongo.Emote{}
+	emote := &datastructure.Emote{}
 
 	err = res.Err()
 
@@ -89,7 +90,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		return nil, errInternalServer
 	}
 
-	if !mongo.UserHasPermission(usr, mongo.RolePermissionEmoteEditAll) {
+	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,
@@ -106,7 +107,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 
 	if req.Name != nil {
 		if emote.Name != update["name"] {
-			logChanges = append(logChanges, &mongo.AuditLogChange{
+			logChanges = append(logChanges, &datastructure.AuditLogChange{
 				Key:      "name",
 				OldValue: emote.Name,
 				NewValue: update["name"],
@@ -115,7 +116,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	}
 	if req.OwnerID != nil {
 		if emote.OwnerID != update["owner"] {
-			logChanges = append(logChanges, &mongo.AuditLogChange{
+			logChanges = append(logChanges, &datastructure.AuditLogChange{
 				Key:      "owner",
 				OldValue: emote.OwnerID,
 				NewValue: update["owner"],
@@ -124,7 +125,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	}
 	if req.Tags != nil {
 		if utils.DifferentArray(emote.Tags, update["tags"].([]string)) {
-			logChanges = append(logChanges, &mongo.AuditLogChange{
+			logChanges = append(logChanges, &datastructure.AuditLogChange{
 				Key:      "tags",
 				OldValue: emote.Tags,
 				NewValue: update["tags"],
@@ -133,7 +134,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	}
 	if req.Visibility != nil {
 		if emote.Visibility != update["visibility"] {
-			logChanges = append(logChanges, &mongo.AuditLogChange{
+			logChanges = append(logChanges, &datastructure.AuditLogChange{
 				Key:      "visibility",
 				OldValue: emote.Visibility,
 				NewValue: update["visibility"],
@@ -166,10 +167,10 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 			return nil, errInternalServer
 		}
 
-		_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &mongo.AuditLog{
-			Type:      mongo.AuditLogTypeEmoteEdit,
+		_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+			Type:      datastructure.AuditLogTypeEmoteEdit,
 			CreatedBy: usr.ID,
-			Target:    &mongo.Target{ID: &id, Type: "emotes"},
+			Target:    &datastructure.Target{ID: &id, Type: "emotes"},
 			Changes:   logChanges,
 			Reason:    args.Reason,
 		})

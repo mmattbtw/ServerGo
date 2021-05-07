@@ -19,6 +19,8 @@ type GQLRequest struct {
 	OperationName string                 `json:"operation_name"`
 }
 
+var Ctx = context.Background()
+
 func GQL(app fiber.Router) fiber.Router {
 	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))
 
@@ -51,7 +53,7 @@ func GQL(app fiber.Router) fiber.Router {
 			})
 		}
 
-		rCtx := context.WithValue(context.Background(), utils.RequestCtxKey, c)
+		rCtx := context.WithValue(Ctx, utils.RequestCtxKey, c)
 		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))
 		result := schema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
 

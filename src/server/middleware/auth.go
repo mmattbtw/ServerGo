@@ -6,6 +6,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/jwt"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
@@ -104,7 +105,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			})
 		}
 
-		user := &mongo.User{}
+		user := &datastructure.User{}
 
 		err = res.Decode(user)
 		if err != nil {
@@ -143,10 +144,10 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		// Assign role to user
 		if user.RoleID != nil {
-			role := mongo.GetRole(user.RoleID)                                                  // Try to get the cached role
-			user.Role = utils.Ternary(role.ID.IsZero(), mongo.DefaultRole, &role).(*mongo.Role) // Assign cached role if available, otherwise set default role
+			role := datastructure.GetRole(mongo.Ctx, user.RoleID)                                               // Try to get the cached role
+			user.Role = utils.Ternary(role.ID.IsZero(), datastructure.DefaultRole, &role).(*datastructure.Role) // Assign cached role if available, otherwise set default role
 		} else {
-			user.Role = mongo.DefaultRole // If no role assign default role
+			user.Role = datastructure.DefaultRole // If no role assign default role
 		}
 
 		c.Locals("user", user)

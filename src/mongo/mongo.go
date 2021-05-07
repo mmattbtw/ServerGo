@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -62,7 +63,7 @@ func init() {
 		{Keys: bson.M{"tags": 1}},
 		{Keys: bson.M{"status": 1}},
 		{Keys: bson.M{"last_modified_date": 1}, Options: options.Index().SetExpireAfterSeconds(int32(time.Hour * 24 * 21 / time.Second)).SetPartialFilterExpression(bson.M{
-			"status": EmoteStatusDeleted,
+			"status": datastructure.EmoteStatusDeleted,
 		})},
 		{Keys: bson.M{"channel_count_checked_at": 1}},
 	})
@@ -133,6 +134,17 @@ func init() {
 		}(v)
 	}
 
+}
+
+func HexIDSliceToObjectID(arr []string) []primitive.ObjectID {
+	r := make([]primitive.ObjectID, len(arr))
+	for i, s := range arr {
+		if id, err := primitive.ObjectIDFromHex(s); err == nil {
+			r[i] = id
+		}
+	}
+
+	return r
 }
 
 func changeStream(collection string, data bson.M) {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/configure"
-	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 )
@@ -29,8 +29,8 @@ func Emotes(app fiber.Router) fiber.Router {
 		pageTitle := c.Query("page-title", "7TV")
 
 		// Get the emote's data from DB
-		var emote *mongo.Emote
-		var owner *mongo.User
+		var emote *datastructure.Emote
+		var owner *datastructure.User
 		if id, err := primitive.ObjectIDFromHex(emoteID); err == nil {
 			if err := cache.FindOne("emotes", "", bson.M{
 				"_id": id,
@@ -40,7 +40,7 @@ func Emotes(app fiber.Router) fiber.Router {
 			if err := cache.FindOne("users", "", bson.M{
 				"_id": emote.OwnerID,
 			}, &owner); err != nil {
-				owner = &mongo.User{}
+				owner = &datastructure.User{}
 			}
 
 			c.Set("Content-Type", "application/json")
