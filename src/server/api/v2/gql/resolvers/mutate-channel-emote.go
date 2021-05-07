@@ -159,7 +159,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
+		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
 	}
 	return GenerateUserResolver(ctx, channel, &channelID, field.children)
 }
@@ -298,7 +298,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
+		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
 	}
 	return GenerateUserResolver(ctx, channel, &channelID, field.children)
 }

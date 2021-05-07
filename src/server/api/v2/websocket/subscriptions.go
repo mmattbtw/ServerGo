@@ -47,7 +47,7 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 			// Send dispatch
 			sendOpDispatch(ctx, ev.Data, seq)
 		case <-ctx.Done():
-			topic.Unsubscribe(redis.Ctx, channelName)
+			_ = topic.Unsubscribe(redis.Ctx, channelName)
 			return
 		}
 	}

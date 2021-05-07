@@ -9,6 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 const heartbeatInterval int32 = 90 // Heartbeat interval in seconds
@@ -29,6 +30,8 @@ func WebSocket(app fiber.Router) {
 	// WebSocket Endpoint:
 	// Subscribe to changes of db collection/document
 	ws.Get("/", websocket.New(func(c *websocket.Conn) {
+		log.Infof("<WS> Connect: %v", c.RemoteAddr().String())
+
 		// Event channels
 		chIdentified := make(chan bool)
 		chHeartbeat := make(chan WebSocketMessageInbound)
@@ -56,13 +59,16 @@ func WebSocket(app fiber.Router) {
 				}
 
 				switch msg.Op {
-				case WebSocketMessageOpHeartbeat: // Opcode: HEARTBEAT (Client signals the server that the connection is alive)
+				// Opcode: HEARTBEAT (Client signals the server that the connection is alive)
+				case WebSocketMessageOpHeartbeat:
 					chHeartbeat <- msg
 					go awaitHeartbeat(ctx, chHeartbeat) // Start waiting for the next heartbeat
-				case WebSocketMessageOpIdentify: // Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
+				// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
+				case WebSocketMessageOpIdentify:
 					chIdentified <- true
 
-				case WebSocketMessageOpSubscribe: // Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
+					// Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
+				case WebSocketMessageOpSubscribe:
 					var data WebSocketMessageDataSubscribe
 					decodeMessageData(ctx, msg, &data) // Decode message data
 
@@ -92,6 +98,8 @@ func WebSocket(app fiber.Router) {
 		}
 
 		cancel()
+
+		log.Infof("<WS> Disconnect: %v", c.RemoteAddr().String())
 		<-ctx.Done()
 	}))
 }
