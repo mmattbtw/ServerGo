@@ -97,9 +97,4 @@ type StringCmd = redis.StringCmd
 
 type StringStringMapCmd = redis.StringStringMapCmd
 
-type PubSubMessage struct {
-	ID   int64       `json:"id"`
-	Data interface{} `json:"data"`
-}
-
 const ErrNil = redis.Nil

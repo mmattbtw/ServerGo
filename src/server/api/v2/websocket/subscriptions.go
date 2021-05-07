@@ -2,6 +2,7 @@ package api_websocket
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/cache"
@@ -10,6 +11,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/websocket/v2"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -35,7 +37,7 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 	}
 
 	// Subscribe to these events with Redis
-	ch := make(chan *redis.PubSubMessage)
+	ch := make(chan []byte)
 	channelName := fmt.Sprintf("users:%v:emotes", user.ID.Hex())
 	topic := redis.Subscribe(ch, channelName)
 
@@ -45,16 +47,16 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 	}
 	for {
 		select {
-		case ev := <-ch: // Listen for changes
-			if !utils.IsSliceArray(ev.Data) {
+		case b := <-ch: // Listen for changes
+			// Get new emote list
+			var d redis.PubSubPayloadUserEmotes
+			if err := json.Unmarshal(b, &d); err != nil {
+				log.Errorf("websocket, err=%v", err)
 				continue
 			}
-
-			// Get new emote list
-			d := ev.Data.([]interface{})
-			newEmoteList := make([]string, (len(d)))
-			for i, id := range d {
-				newEmoteList[i] = id.(string)
+			newEmoteList := make([]string, (len(d.List)))
+			for i, id := range d.List {
+				newEmoteList[i] = id
 			}
 
 			// Copy new emote list to a slice
@@ -98,6 +100,7 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 			sendOpDispatch(ctx, emoteSubscriptionResult{
 				Added:   added,
 				Removed: removed,
+				Actor:   d.Actor,
 			}, "CHANNEL_EMOTES_UPDATE", seq)
 		case <-ctx.Done():
 			_ = topic.Unsubscribe(redis.Ctx, channelName)
@@ -109,6 +112,5 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 type emoteSubscriptionResult struct {
 	Added   []string `json:"added"`
 	Removed []string `json:"removed"`
+	Actor   string   `json:"actor"`
 }
-
-// {"op":6,"d":{"type":1,"params":{"channel":"anatoleam"}}}
