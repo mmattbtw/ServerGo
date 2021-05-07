@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 
@@ -31,6 +32,8 @@ var ErrNoDocuments = mongo.ErrNoDocuments
 
 type Pipeline = mongo.Pipeline
 type WriteModel = mongo.WriteModel
+
+var ChangeStreamChan = make(chan ChangeStreamEvent)
 
 func NewUpdateOneModel() *mongo.UpdateOneModel {
 	return mongo.NewUpdateOneModel()
@@ -139,6 +142,25 @@ func changeStream(collection string, data bson.M) {
 		}
 	}()
 	// spew.Dump(data)
+
+	// Send to channel
+	var event ChangeStreamEvent
+	if b, err := bson.Marshal(data); err == nil {
+		bson.Unmarshal(b, &event)
+
+		// Send to subscribers
+		for i := range changeSubscribers {
+			subscriber := changeSubscribers[i]
+			if subscriber.Collection != collection {
+				continue
+			}
+
+			subscriber.Channel <- event
+		}
+	} else {
+		fmt.Println(err)
+	}
+
 	var commonIndex string
 	var ojson string
 	eventType := data["operationType"].(string)
@@ -162,4 +184,38 @@ func changeStream(collection string, data bson.M) {
 	if err != nil {
 		log.Errorf("redis, err=%s", err)
 	}
+}
+
+var changeSubscribers = make(map[uuid.UUID]changeStreamSubscription)
+
+func Subscribe(collection string, id uuid.UUID, ch chan ChangeStreamEvent) {
+	changeSubscribers[id] = changeStreamSubscription{
+		Collection: collection,
+		Channel:    ch,
+	}
+}
+
+func Unsubscribe(id uuid.UUID) {
+	delete(changeSubscribers, id)
+}
+
+type changeStreamSubscription struct {
+	Collection string
+	Channel    chan ChangeStreamEvent
+}
+
+type ChangeStreamEvent struct {
+	FullDocument  bson.M                       `bson:"fullDocument"`
+	Namespace     changeStreamEventNamespace   `bson:"ns"`
+	OperationType string                       `bson:"operationType"`
+	DocumentKey   changeStreamEventDocumentKey `bson:"documentKey"`
+}
+
+type changeStreamEventDocumentKey struct {
+	ID string `bson:"_id"`
+}
+
+type changeStreamEventNamespace struct {
+	Collection string `bson:"coll"`
+	Database   string `bson:"db"`
 }

@@ -9,9 +9,11 @@ require (
 	github.com/bwmarrin/discordgo v0.23.2
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/fasthttp/websocket v1.4.3-beta.1 // indirect
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/gofiber/fiber/v2 v2.7.1
+	github.com/gofiber/websocket/v2 v2.0.3
 	github.com/google/uuid v1.2.0
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
 	github.com/json-iterator/go v1.1.10
