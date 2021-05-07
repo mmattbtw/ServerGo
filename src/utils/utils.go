@@ -120,6 +120,16 @@ func IsSliceArrayPointer(v interface{}) bool {
 	return false
 }
 
+func SliceIndexOf(s []string, val string) int {
+	for i, v := range s {
+		if v == val {
+			return i
+		}
+	}
+
+	return -1
+}
+
 func Contains(s []string, compare string) bool {
 	for _, v := range s {
 		if v == compare {

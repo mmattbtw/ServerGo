@@ -45,7 +45,7 @@ func WebSocket(app fiber.Router) {
 
 		// Wait for the client to send their first heartbeat
 		// Failure to do so in time will disconnect the socket
-		go awaitHeartbeat(ctx, chHeartbeat)
+		go awaitHeartbeat(ctx, chHeartbeat, 0)
 
 		subscriptions := make(map[int32]bool)
 		for { // Listen to client messages
@@ -62,7 +62,7 @@ func WebSocket(app fiber.Router) {
 				// Opcode: HEARTBEAT (Client signals the server that the connection is alive)
 				case WebSocketMessageOpHeartbeat:
 					chHeartbeat <- msg
-					go awaitHeartbeat(ctx, chHeartbeat) // Start waiting for the next heartbeat
+					go awaitHeartbeat(ctx, chHeartbeat, time.Second*time.Duration(heartbeatInterval)) // Start waiting for the next heartbeat
 				// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
 				case WebSocketMessageOpIdentify:
 					chIdentified <- true
