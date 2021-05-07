@@ -156,35 +156,18 @@ func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emot
 	return resolver, nil
 }
 
-func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (*[]*emoteResolver, error) {
-	objID, err := primitive.ObjectIDFromHex(args.UserID)
-	if err != nil {
-		return nil, nil
-	}
-
+func (*RootResolver) Emotes(ctx context.Context, args struct{ List []string }) (*[]*emoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
 	if failed {
 		return nil, errDepth
 	}
 
-	user := &datastructure.User{}
-
-	if err = cache.FindOne("users", "", bson.M{
-		"_id": objID,
-	}, user); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, nil
-		}
-		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
-	}
-
+	ids := mongo.HexIDSliceToObjectID(args.List)
 	emotes := []*datastructure.Emote{}
-
-	if len(user.EmoteIDs) > 0 {
-		if err = cache.Find("emotes", "", bson.M{
+	if len(args.List) > 0 {
+		if err := cache.Find("emotes", "", bson.M{
 			"_id": bson.M{
-				"$in": user.EmoteIDs,
+				"$in": ids,
 			},
 		}, &emotes); err != nil {
 			log.Errorf("mongo, err=%v", err)
@@ -193,10 +176,8 @@ func (*RootResolver) Emotes(ctx context.Context, args struct{ UserID string }) (
 	}
 
 	resolvers := make([]*emoteResolver, len(emotes))
-
 	if len(emotes) > 0 {
 		for i, e := range emotes {
-			e.Owner = user
 			resolvers[i], _ = GenerateEmoteResolver(ctx, e, nil, field.children)
 		}
 	}

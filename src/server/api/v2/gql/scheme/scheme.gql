@@ -39,7 +39,7 @@ type Query {
   # Get emote by id.
   emote(id: String!): Emote
   # Get emotes by user id.
-  emotes(user_id: String!): [Emote]
+  emotes(list: [String!]!): [Emote]
   # Search for emotes.
   search_emotes(
     query: String!, limit: Int,
