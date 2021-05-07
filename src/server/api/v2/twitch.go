@@ -108,7 +108,6 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		u := fmt.Sprintf("https://id.twitch.tv/oauth2/authorize?%s", params)
 
-		fmt.Println(u)
 		return c.Redirect(u)
 	})
 

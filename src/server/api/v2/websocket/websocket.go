@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -35,8 +36,8 @@ func WebSocket(app fiber.Router) {
 		sendOpGreet(c) // Send an hello payload to the user
 
 		// Create context
-		ctx := context.WithValue(context.Background(), "conn", c) // Add connection to context
-		ctx = context.WithValue(ctx, "seq", int32(0))
+		ctx := context.WithValue(context.Background(), WebSocketConnKey, c) // Add connection to context
+		ctx = context.WithValue(ctx, WebSocketSeqKey, int32(0))
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -53,10 +54,8 @@ func WebSocket(app fiber.Router) {
 		switch int(subscription) {
 		case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
 			go createEmoteSubscription(ctx)
-			break
 		default: // Unknown Subscription
 			sendClosure(ctx, 1003, "Unknown Subscription ID")
-			break
 		}
 
 		for { // Listen to client messages
@@ -73,13 +72,10 @@ func WebSocket(app fiber.Router) {
 				case WebSocketMessageOpHeartbeat: // Opcode: HEARTBEAT (Client signals the server that the connection is alive)
 					chHeartbeat <- msg
 					go awaitHeartbeat(ctx, chHeartbeat) // Start waiting for the next heartbeat
-					break
 				case WebSocketMessageOpIdentify: // Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
 					chIdentified <- true
-					break
 				default:
 					sendClosure(ctx, 1003, "Invalid Opcode")
-					break
 				}
 			} else {
 				break
@@ -92,9 +88,9 @@ func WebSocket(app fiber.Router) {
 }
 
 func sendOpDispatch(ctx context.Context, data interface{}, seq int32) {
-	conn := ctx.Value("conn").(*websocket.Conn)
+	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
-	conn.WriteJSON(WebSocketMessage{
+	_ = conn.WriteJSON(WebSocketMessage{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
 		Sequence: &seq,
@@ -102,7 +98,7 @@ func sendOpDispatch(ctx context.Context, data interface{}, seq int32) {
 }
 
 func sendOpGreet(c *websocket.Conn) {
-	c.WriteJSON(WebSocketMessage{
+	_ = c.WriteJSON(WebSocketMessage{
 		Op: WebSocketMessageOpHello,
 		Data: WebSocketMessageDataHello{
 			Timestamp:         time.Now(),
@@ -112,29 +108,25 @@ func sendOpGreet(c *websocket.Conn) {
 }
 
 func sendOpHeartbeatAck(c *websocket.Conn) {
-	c.WriteJSON(WebSocketMessage{
+	_ = c.WriteJSON(WebSocketMessage{
 		Op:   WebSocketMessageOpHeartbeatAck,
 		Data: struct{}{},
 	})
 }
 
 func sendClosure(ctx context.Context, code int, message string) {
-	conn := ctx.Value("conn").(*websocket.Conn)
+	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
 	b := websocket.FormatCloseMessage(code, message)
-	conn.WriteJSON(WebSocketMessage{
+	_ = conn.WriteJSON(WebSocketMessage{
 		Op: WebSocketMessageOpServerClosure,
 		Data: WebSocketMessageDataServerClosure{
 			Code:    code,
 			Message: message,
 		},
 	})
-	conn.WriteMessage(websocket.CloseMessage, b)
+	_ = conn.WriteMessage(websocket.CloseMessage, b)
 	conn.Close()
-}
-
-func identify(c *websocket.Conn, token string) error {
-	return nil
 }
 
 type WebSocketMessage struct {
@@ -165,3 +157,6 @@ const (
 const (
 	WebSocketSubscriptionChannelEmotes int = 1 + iota
 )
+
+const WebSocketConnKey = utils.Key("conn")
+const WebSocketSeqKey = utils.Key("seq")

@@ -2,7 +2,6 @@ package emotes
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -28,7 +27,6 @@ func Emotes(app fiber.Router) fiber.Router {
 	emotes.Get("/oembed/:emote.json", func(c *fiber.Ctx) error {
 		emoteID := c.Params("emote") // Get the emote ID parameter
 		pageTitle := c.Query("page-title", "7TV")
-		fmt.Println("emoteid", emoteID)
 
 		// Get the emote's data from DB
 		var emote *mongo.Emote

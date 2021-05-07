@@ -146,7 +146,7 @@ func changeStream(collection string, data bson.M) {
 	// Send to channel
 	var event ChangeStreamEvent
 	if b, err := bson.Marshal(data); err == nil {
-		bson.Unmarshal(b, &event)
+		_ = bson.Unmarshal(b, &event)
 
 		// Send to subscribers
 		for i := range changeSubscribers {

@@ -27,9 +27,9 @@ func createEmoteSubscription(ctx context.Context) {
 			}
 
 			// Increase sequence
-			seq := ctx.Value("seq").(int32)
+			seq := ctx.Value(WebSocketSeqKey).(int32)
 			seq++
-			ctx = context.WithValue(ctx, "seq", seq)
+			ctx = context.WithValue(ctx, WebSocketSeqKey, seq)
 
 			// Send dispatch
 			sendOpDispatch(ctx, ev.FullDocument, seq)

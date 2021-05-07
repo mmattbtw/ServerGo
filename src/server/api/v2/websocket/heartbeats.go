@@ -8,7 +8,7 @@ import (
 )
 
 func awaitHeartbeat(ctx context.Context, waiter chan WebSocketMessage) {
-	conn := ctx.Value("conn").(*websocket.Conn)
+	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
 	dur := time.Second * time.Duration(heartbeatInterval)
 	ticker := time.NewTicker(dur + time.Second*30)
@@ -19,15 +19,13 @@ func awaitHeartbeat(ctx context.Context, waiter chan WebSocketMessage) {
 		select {
 		case <-ticker.C: // Client does not send heartbeat: timeout
 			sendClosure(ctx, 1000, "Client failed to send heartbeat")
-			break
+			return
 		case <-waiter: // Client sends a heartbeat: OK
 			// Acknowledge it
 			sendOpHeartbeatAck(conn)
-			break
+			return
 		case <-ctx.Done(): // Connection ends
-			break
+			return
 		}
-		ticker.Stop()
-		break
 	}
 }
