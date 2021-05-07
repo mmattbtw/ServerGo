@@ -205,7 +205,7 @@ type changeStreamSubscription struct {
 }
 
 type ChangeStreamEvent struct {
-	FullDocument  bson.M                       `bson:"fullDocument"`
+	FullDocument  []byte                       `bson:"fullDocument"`
 	Namespace     changeStreamEventNamespace   `bson:"ns"`
 	OperationType string                       `bson:"operationType"`
 	DocumentKey   changeStreamEventDocumentKey `bson:"documentKey"`
