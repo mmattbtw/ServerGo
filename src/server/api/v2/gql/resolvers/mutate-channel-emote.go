@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/redis"
@@ -151,6 +152,15 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 		log.Errorf("mongo, err=%v", err)
 	}
 
+	// Push event to redis
+	{
+		ids := make([]string, len(channel.EmoteIDs))
+		for i, id := range channel.EmoteIDs {
+			ids[i] = id.Hex()
+		}
+
+		redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
+	}
 	return GenerateUserResolver(ctx, channel, &channelID, field.children)
 }
 
@@ -281,5 +291,14 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		log.Errorf("mongo, err=%v", err)
 	}
 
+	// Push event to redis
+	{
+		ids := make([]string, len(channel.EmoteIDs))
+		for i, id := range channel.EmoteIDs {
+			ids[i] = id.Hex()
+		}
+
+		redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), ids)
+	}
 	return GenerateUserResolver(ctx, channel, &channelID, field.children)
 }

@@ -2,39 +2,52 @@ package api_websocket
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/gofiber/websocket/v2"
-	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func createEmoteSubscription(ctx context.Context) {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		sendClosure(ctx, websocket.CloseInternalServerErr, "")
+func createChannelEmoteSubscription(ctx context.Context, channel string) {
+	// Get current user's channel emotes
+	var user *mongo.User
+	if err := cache.FindOne("users", "", bson.M{
+		"login": channel,
+	}, &user, &options.FindOneOptions{
+		Projection: bson.M{
+			"_id": 1,
+		},
+	}); err != nil {
+		if err == mongo.ErrNoDocuments {
+			sendClosure(ctx, websocket.CloseInvalidFramePayloadData, "Unknown User")
+		} else {
+			sendClosure(ctx, websocket.CloseInternalServerErr, err.Error())
+		}
+
+		return
 	}
 
-	// Subscribe to mongo changestream for users
-	ch := make(chan mongo.ChangeStreamEvent)
-	mongo.Subscribe("users", id, ch)
+	// Subscribe to these events with Redis
+	ch := make(chan *redis.PubSubMessage)
+	channelName := fmt.Sprintf("users:%v:emotes", user.ID.Hex())
+	topic := redis.Subscribe(ch, channelName)
 
 	for {
 		select {
 		case ev := <-ch: // Listen for changes
-			// Filter to update operations
-			if ev.OperationType != "update" {
-				continue
-			}
-
 			// Increase sequence
 			seq := ctx.Value(WebSocketSeqKey).(int32)
 			seq++
 			ctx = context.WithValue(ctx, WebSocketSeqKey, seq)
 
 			// Send dispatch
-			sendOpDispatch(ctx, ev.FullDocument, seq)
+			sendOpDispatch(ctx, ev.Data, seq)
 		case <-ctx.Done():
-			mongo.Unsubscribe(id)
+			topic.Unsubscribe(redis.Ctx, channelName)
 			return
 		}
 	}

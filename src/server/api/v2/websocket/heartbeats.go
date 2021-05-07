@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-func awaitHeartbeat(ctx context.Context, waiter chan WebSocketMessage) {
+func awaitHeartbeat(ctx context.Context, waiter chan WebSocketMessageInbound) {
 	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
 	dur := time.Second * time.Duration(heartbeatInterval)

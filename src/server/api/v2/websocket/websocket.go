@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -32,7 +31,7 @@ func WebSocket(app fiber.Router) {
 	ws.Get("/", websocket.New(func(c *websocket.Conn) {
 		// Event channels
 		chIdentified := make(chan bool)
-		chHeartbeat := make(chan WebSocketMessage)
+		chHeartbeat := make(chan WebSocketMessageInbound)
 		sendOpGreet(c) // Send an hello payload to the user
 
 		// Create context
@@ -45,26 +44,14 @@ func WebSocket(app fiber.Router) {
 		// Failure to do so in time will disconnect the socket
 		go awaitHeartbeat(ctx, chHeartbeat)
 
-		// Get requested subscription
-		subscription, err := strconv.ParseInt(c.Query("subscription"), 10, 2)
-		if err != nil {
-			sendClosure(ctx, 1003, "Missing Subscription Query")
-			return
-		}
-		switch int(subscription) {
-		case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
-			go createEmoteSubscription(ctx)
-		default: // Unknown Subscription
-			sendClosure(ctx, 1003, "Unknown Subscription ID")
-		}
-
+		subscriptions := make(map[int32]bool)
 		for { // Listen to client messages
 			if _, b, err := c.ReadMessage(); err == nil {
-				var msg WebSocketMessage
+				var msg WebSocketMessageInbound
 
 				// Handle invalid payload
 				if err = json.Unmarshal(b, &msg); err != nil {
-					sendClosure(ctx, 1007, fmt.Sprintf("Invalid JSON: %v", err))
+					sendClosure(ctx, websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
 					return
 				}
 
@@ -74,6 +61,28 @@ func WebSocket(app fiber.Router) {
 					go awaitHeartbeat(ctx, chHeartbeat) // Start waiting for the next heartbeat
 				case WebSocketMessageOpIdentify: // Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
 					chIdentified <- true
+
+				case WebSocketMessageOpSubscribe: // Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
+					var data WebSocketMessageDataSubscribe
+					decodeMessageData(ctx, msg, &data) // Decode message data
+
+					subscription := data.Type // The subscription that the client wants to create
+					// Verify that the user is not already subscribed
+					if subscriptions[subscription] {
+						sendClosure(ctx, websocket.ClosePolicyViolation, "Subscription Already Active")
+						break
+					}
+					subscriptions[subscription] = true // Set subscription as active
+
+					switch int(subscription) {
+					case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
+						channel := data.Params["channel"]
+						go createChannelEmoteSubscription(ctx, channel)
+
+					default: // Unknown Subscription
+						sendClosure(ctx, 1003, "Unknown Subscription ID")
+					}
+
 				default:
 					sendClosure(ctx, 1003, "Invalid Opcode")
 				}
@@ -90,7 +99,7 @@ func WebSocket(app fiber.Router) {
 func sendOpDispatch(ctx context.Context, data interface{}, seq int32) {
 	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
-	_ = conn.WriteJSON(WebSocketMessage{
+	_ = conn.WriteJSON(WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
 		Sequence: &seq,
@@ -98,7 +107,7 @@ func sendOpDispatch(ctx context.Context, data interface{}, seq int32) {
 }
 
 func sendOpGreet(c *websocket.Conn) {
-	_ = c.WriteJSON(WebSocketMessage{
+	_ = c.WriteJSON(WebSocketMessageOutbound{
 		Op: WebSocketMessageOpHello,
 		Data: WebSocketMessageDataHello{
 			Timestamp:         time.Now(),
@@ -108,7 +117,7 @@ func sendOpGreet(c *websocket.Conn) {
 }
 
 func sendOpHeartbeatAck(c *websocket.Conn) {
-	_ = c.WriteJSON(WebSocketMessage{
+	_ = c.WriteJSON(WebSocketMessageOutbound{
 		Op:   WebSocketMessageOpHeartbeatAck,
 		Data: struct{}{},
 	})
@@ -118,7 +127,7 @@ func sendClosure(ctx context.Context, code int, message string) {
 	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
 
 	b := websocket.FormatCloseMessage(code, message)
-	_ = conn.WriteJSON(WebSocketMessage{
+	_ = conn.WriteJSON(WebSocketMessageOutbound{
 		Op: WebSocketMessageOpServerClosure,
 		Data: WebSocketMessageDataServerClosure{
 			Code:    code,
@@ -129,10 +138,21 @@ func sendClosure(ctx context.Context, code int, message string) {
 	conn.Close()
 }
 
-type WebSocketMessage struct {
+func decodeMessageData(ctx context.Context, msg WebSocketMessageInbound, v interface{}) {
+	if err := json.Unmarshal(msg.Data, &v); err != nil {
+		sendClosure(ctx, websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
+	}
+}
+
+type WebSocketMessageOutbound struct {
 	Op       int         `json:"op"` // The message operation code
 	Data     interface{} `json:"d"`
 	Sequence *int32      `json:"seq"`
+}
+
+type WebSocketMessageInbound struct {
+	Op   int             `json:"op"`
+	Data json.RawMessage `json:"d"`
 }
 
 type WebSocketMessageDataHello struct {
@@ -145,6 +165,11 @@ type WebSocketMessageDataServerClosure struct {
 	Message string `json:"message"`
 }
 
+type WebSocketMessageDataSubscribe struct {
+	Type   int32 `json:"type"`
+	Params map[string]string
+}
+
 const (
 	WebSocketMessageOpDispatch int = iota
 	WebSocketMessageOpHello
@@ -152,6 +177,7 @@ const (
 	WebSocketMessageOpHeartbeatAck
 	WebSocketMessageOpIdentify
 	WebSocketMessageOpServerClosure
+	WebSocketMessageOpSubscribe
 )
 
 const (
