@@ -18,7 +18,7 @@ type WebSocketHelpers struct {
 }
 
 var subscriberChannelsUserEmotes = make(map[string]chan emoteSubscriptionResult)
-var subscriberCallersUserEmotes = make(map[uuid.UUID]func(emoteSubscriptionResult))
+var subscriberCallersUserEmotes = make(map[string]map[uuid.UUID]func(emoteSubscriptionResult))
 
 /*
 * SUBSCRIBER CHANNEL: User Emotes
@@ -27,7 +27,8 @@ var subscriberCallersUserEmotes = make(map[uuid.UUID]func(emoteSubscriptionResul
  */
 func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, userID string, cb func(emoteSubscriptionResult)) {
 	c := ctx.Value(WebSocketConnKey).(*Conn)
-	subscriberCallersUserEmotes[c.stat.UUID] = cb
+	subscriberCallersUserEmotes[userID] = make(map[uuid.UUID]func(emoteSubscriptionResult))
+	subscriberCallersUserEmotes[userID][c.stat.UUID] = cb
 
 	// Subscribe to these events with Redis
 	ch := subscriberChannelsUserEmotes[userID] // Try to find an existing channel made for the selected user
@@ -56,7 +57,7 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 				}
 
 				if err := cache.FindOne("emotes", "", bson.M{"_id": id}, &emote); err != nil {
-					fmt.Println("err", err)
+					continue
 				}
 				urls := datastructure.GetEmoteURLs(*emote)
 				emote.URLs = urls
@@ -79,7 +80,7 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 
 		go func() {
 			for result := range ch {
-				for _, fn := range subscriberCallersUserEmotes {
+				for _, fn := range subscriberCallersUserEmotes[userID] {
 					fn(result)
 				}
 			}
@@ -91,7 +92,7 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 	for {
 		select {
 		case <-ctx.Done():
-			delete(subscriberCallersUserEmotes, c.stat.UUID)
+			delete(subscriberCallersUserEmotes[userID], c.stat.UUID)
 			return
 		}
 	}
