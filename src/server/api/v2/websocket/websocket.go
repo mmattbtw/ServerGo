@@ -14,6 +14,12 @@ import (
 
 const heartbeatInterval int32 = 90 // Heartbeat interval in seconds
 
+type WebSocketStat struct {
+	Sequence      int32
+	CreatedAt     time.Time
+	Subscriptions []int8
+}
+
 func WebSocket(app fiber.Router) {
 	ws := app.Group("/ws")
 
@@ -40,6 +46,9 @@ func WebSocket(app fiber.Router) {
 		// Create context
 		ctx := context.WithValue(context.Background(), WebSocketConnKey, c) // Add connection to context
 		ctx = context.WithValue(ctx, WebSocketSeqKey, int32(0))
+		ctx = context.WithValue(ctx, WebSocketStatKey, &WebSocketStat{
+			CreatedAt: time.Now(),
+		})
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -47,7 +56,7 @@ func WebSocket(app fiber.Router) {
 		// Failure to do so in time will disconnect the socket
 		go awaitHeartbeat(ctx, chHeartbeat, 0)
 
-		subscriptions := make(map[int32]bool)
+		subscriptions := make(map[int8]bool)
 		for { // Listen to client messages
 			if _, b, err := c.ReadMessage(); err == nil {
 				var msg WebSocketMessageInbound
@@ -80,7 +89,7 @@ func WebSocket(app fiber.Router) {
 					}
 					subscriptions[subscription] = true // Set subscription as active
 
-					switch int(subscription) {
+					switch subscription {
 					case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
 						channel := data.Params["channel"]
 						go createChannelEmoteSubscription(ctx, channel)
@@ -104,13 +113,17 @@ func WebSocket(app fiber.Router) {
 	}))
 }
 
-func sendOpDispatch(ctx context.Context, data interface{}, t string, seq int32) {
+func sendOpDispatch(ctx context.Context, data interface{}, t string) {
 	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
+
+	// Increase sequence
+	stat := ctx.Value(WebSocketStatKey).(*WebSocketStat)
+	stat.Sequence++
 
 	_ = conn.WriteJSON(WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
-		Sequence: &seq,
+		Sequence: &stat.Sequence,
 		Type:     &t,
 	})
 }
@@ -176,7 +189,7 @@ type WebSocketMessageDataServerClosure struct {
 }
 
 type WebSocketMessageDataSubscribe struct {
-	Type   int32 `json:"type"`
+	Type   int8 `json:"type"`
 	Params map[string]string
 }
 
@@ -191,8 +204,9 @@ const (
 )
 
 const (
-	WebSocketSubscriptionChannelEmotes int = 1 + iota
+	WebSocketSubscriptionChannelEmotes int8 = 1 + iota
 )
 
 const WebSocketConnKey = utils.Key("conn")
 const WebSocketSeqKey = utils.Key("seq")
+const WebSocketStatKey = utils.Key("stat")

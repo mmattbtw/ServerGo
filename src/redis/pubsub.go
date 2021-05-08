@@ -40,6 +40,7 @@ func Subscribe(ch chan []byte, subscribeTo ...string) *redis.PubSub {
 }
 
 type PubSubPayloadUserEmotes struct {
-	List  []string `json:"list"`
-	Actor string   `json:"actor"`
+	Removed bool   `json:"removed"`
+	ID      string `json:"id"`
+	Actor   string `json:"actor"`
 }

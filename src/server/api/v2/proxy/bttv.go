@@ -102,13 +102,13 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*datastructure.Emote, error) {
 		}
 
 		// Generate URLs list
-		urls := make([]*[]*string, 3)
+		urls := make([][]string, 3)
 		for i := 1; i <= 3; i++ {
-			a := make([]*string, 2)
-			a[0] = utils.StringPointer(fmt.Sprintf("%d", i))
-			a[1] = utils.StringPointer(getCdnURL_BTTV(emote.ID, int8(i)))
+			a := make([]string, 2)
+			a[0] = fmt.Sprintf("%d", i)
+			a[1] = getCdnURL_BTTV(emote.ID, int8(i))
 
-			urls[i-1] = &a
+			urls[i-1] = a
 		}
 
 		result[i] = &datastructure.Emote{
@@ -124,7 +124,7 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*datastructure.Emote, error) {
 
 			Provider:   "BTTV",
 			ProviderID: utils.StringPointer(emote.ID),
-			URLs:       &urls,
+			URLs:       urls,
 		}
 	}
 

@@ -70,13 +70,13 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
 
 	for i, emote := range emotes {
 		// Generate URLs list
-		urls := make([]*[]*string, 3)
+		urls := make([][]string, 3)
 		for i, s := range []int8{1, 2, 4} {
-			a := make([]*string, 2)
-			a[0] = utils.StringPointer(fmt.Sprintf("%d", s))
-			a[1] = utils.StringPointer(getCdnURL_FFZ(emote.ID, int8(s)))
+			a := make([]string, 2)
+			a[0] = fmt.Sprintf("%d", s)
+			a[1] = getCdnURL_FFZ(emote.ID, int8(s))
 
-			urls[i] = &a
+			urls[i] = a
 		}
 
 		result[i] = &datastructure.Emote{
@@ -92,7 +92,7 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
 
 			Provider:   "FFZ",
 			ProviderID: utils.StringPointer(fmt.Sprint(emote.ID)),
-			URLs:       &urls,
+			URLs:       urls,
 		}
 	}
 

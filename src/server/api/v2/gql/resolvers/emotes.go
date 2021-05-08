@@ -238,21 +238,21 @@ func (r *emoteResolver) ProviderID() *string {
 	return r.v.ProviderID
 }
 
-func (r *emoteResolver) URLs() *[]*[]*string {
-	result := make([]*[]*string, 4) // 4 length because there are 4 CDN sizes supported (1x, 2x, 3x, 4x)
+func (r *emoteResolver) URLs() [][]string {
+	result := make([][]string, 4) // 4 length because there are 4 CDN sizes supported (1x, 2x, 3x, 4x)
 
 	if r.v.Provider == "7TV" { // Provider is 7TV: append URLs
 		for i := 1; i <= 4; i++ {
-			a := make([]*string, 2)
-			a[0] = utils.StringPointer(fmt.Sprintf("%d", i))
-			a[1] = utils.StringPointer(utils.GetCdnURL(r.v.ID.Hex(), int8(i)))
+			a := make([]string, 2)
+			a[0] = fmt.Sprintf("%d", i)
+			a[1] = utils.GetCdnURL(r.v.ID.Hex(), int8(i))
 
-			result[i-1] = &a
+			result[i-1] = a
 		}
 
-		r.v.URLs = &result
+		r.v.URLs = result
 	} else if r.v.URLs == nil { // Provider is null: send empty array
-		return &[]*[]*string{}
+		return [][]string{}
 	}
 
 	return r.v.URLs

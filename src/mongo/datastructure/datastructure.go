@@ -26,13 +26,27 @@ type Emote struct {
 	ChannelCount          *int32     `json:"channel_count" bson:"channel_count"`
 	LastChannelCountCheck *time.Time `json:"channel_count_checked_at" bson:"channel_count_checked_at"`
 
-	Owner        *User         `json:"owner" bson:"-"`
-	AuditEntries *[]*AuditLog  `json:"audit_entries" bson:"-"`
-	Channels     *[]*User      `json:"channels" bson:"-"`
-	Reports      *[]*Report    `json:"reports" bson:"-"`
-	Provider     string        `json:"provider" bson:"-"`    // The service provider for the emote
-	ProviderID   *string       `json:"provider_id" bson:"-"` // The emote ID as defined by the foreign provider. Nil if 7TV
-	URLs         *[]*[]*string `json:"urls" bson:"-"`        // Synthesized URLs to CDN for the emote
+	Owner        *User        `json:"owner" bson:"-"`
+	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
+	Channels     *[]*User     `json:"channels" bson:"-"`
+	Reports      *[]*Report   `json:"reports" bson:"-"`
+	Provider     string       `json:"provider" bson:"-"`    // The service provider for the emote
+	ProviderID   *string      `json:"provider_id" bson:"-"` // The emote ID as defined by the foreign provider. Nil if 7TV
+	URLs         [][]string   `json:"urls" bson:"-"`        // Synthesized URLs to CDN for the emote
+}
+
+func GetEmoteURLs(emote Emote) [][]string {
+	result := make([][]string, 4)
+
+	for i := 1; i <= 4; i++ {
+		a := make([]string, 2)
+		a[0] = fmt.Sprintf("%d", i)
+		a[1] = utils.GetCdnURL(emote.ID.Hex(), int8(i))
+
+		result[i-1] = a
+	}
+
+	return result
 }
 
 const (
