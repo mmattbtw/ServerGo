@@ -7,9 +7,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-func awaitHeartbeat(ctx context.Context, waiter chan WebSocketMessageInbound, duration time.Duration) {
-	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
-
+func awaitHeartbeat(ctx context.Context, c *Conn, waiter chan WebSocketMessageInbound, duration time.Duration) {
 	ticker := time.NewTicker(duration + time.Second*30)
 	defer ticker.Stop()
 
@@ -17,11 +15,11 @@ func awaitHeartbeat(ctx context.Context, waiter chan WebSocketMessageInbound, du
 	for {
 		select {
 		case <-ticker.C: // Client does not send heartbeat: timeout
-			sendClosure(ctx, websocket.ClosePolicyViolation, "Client failed to send heartbeat")
+			c.SendClosure(websocket.ClosePolicyViolation, "Client failed to send heartbeat")
 			return
 		case <-waiter: // Client sends a heartbeat: OK
 			// Acknowledge it
-			sendOpHeartbeatAck(conn)
+			c.SendOpHeartbeatAck()
 			return
 		case <-ctx.Done(): // Connection ends
 			return

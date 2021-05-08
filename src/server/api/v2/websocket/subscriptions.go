@@ -16,7 +16,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func createChannelEmoteSubscription(ctx context.Context, channel string) {
+func main() {
+}
+
+func createChannelEmoteSubscription(ctx context.Context, c *Conn, channel string) {
 	// Get current user's channel emotes
 	var user *datastructure.User
 	var lock sync.Mutex
@@ -24,9 +27,9 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 		"login": channel,
 	}, &user); err != nil {
 		if err == mongo.ErrNoDocuments {
-			sendClosure(ctx, websocket.CloseInvalidFramePayloadData, "Unknown User")
+			c.SendClosure(websocket.CloseInvalidFramePayloadData, "Unknown User")
 		} else {
-			sendClosure(ctx, websocket.CloseInternalServerErr, err.Error())
+			c.SendClosure(websocket.CloseInternalServerErr, err.Error())
 		}
 
 		return
@@ -64,7 +67,7 @@ func createChannelEmoteSubscription(ctx context.Context, channel string) {
 			emote.Provider = "7TV"
 
 			// Send dispatch
-			sendOpDispatch(ctx, emoteSubscriptionResult{
+			c.SendOpDispatch(emoteSubscriptionResult{
 				Emote: &datastructure.Emote{
 					ID:         emote.ID,
 					Provider:   emote.Provider,

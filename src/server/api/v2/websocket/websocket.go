@@ -14,7 +14,7 @@ import (
 
 const heartbeatInterval int32 = 90 // Heartbeat interval in seconds
 
-type WebSocketStat struct {
+type Stat struct {
 	Sequence      int32
 	CreatedAt     time.Time
 	Subscriptions []int8
@@ -35,35 +35,33 @@ func WebSocket(app fiber.Router) {
 
 	// WebSocket Endpoint:
 	// Subscribe to changes of db collection/document
-	ws.Get("/", websocket.New(func(c *websocket.Conn) {
+	ws.Get("/", websocket.New(func(conn *websocket.Conn) {
+		c := transform(conn)
+		c.SendOpGreet() // Send an hello payload to the user
+
 		log.Infof("<WS> Connect: %v", c.RemoteAddr().String())
 
 		// Event channels
 		chIdentified := make(chan bool)
 		chHeartbeat := make(chan WebSocketMessageInbound)
-		sendOpGreet(c) // Send an hello payload to the user
 
 		// Create context
 		ctx := context.WithValue(context.Background(), WebSocketConnKey, c) // Add connection to context
-		ctx = context.WithValue(ctx, WebSocketSeqKey, int32(0))
-		ctx = context.WithValue(ctx, WebSocketStatKey, &WebSocketStat{
-			CreatedAt: time.Now(),
-		})
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
 		// Wait for the client to send their first heartbeat
 		// Failure to do so in time will disconnect the socket
-		go awaitHeartbeat(ctx, chHeartbeat, 0)
+		go awaitHeartbeat(ctx, c, chHeartbeat, 0)
 
-		subscriptions := make(map[int8]bool)
+		active := make(map[int8]bool)
 		for { // Listen to client messages
 			if _, b, err := c.ReadMessage(); err == nil {
 				var msg WebSocketMessageInbound
 
 				// Handle invalid payload
 				if err = json.Unmarshal(b, &msg); err != nil {
-					sendClosure(ctx, websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
+					c.SendClosure(websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
 					return
 				}
 
@@ -71,64 +69,75 @@ func WebSocket(app fiber.Router) {
 				// Opcode: HEARTBEAT (Client signals the server that the connection is alive)
 				case WebSocketMessageOpHeartbeat:
 					chHeartbeat <- msg
-					go awaitHeartbeat(ctx, chHeartbeat, time.Second*time.Duration(heartbeatInterval)) // Start waiting for the next heartbeat
+					go awaitHeartbeat(ctx, c, chHeartbeat, time.Second*time.Duration(heartbeatInterval)) // Start waiting for the next heartbeat
 				// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
 				case WebSocketMessageOpIdentify:
 					chIdentified <- true
 
-					// Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
+				// Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
 				case WebSocketMessageOpSubscribe:
 					var data WebSocketMessageDataSubscribe
-					decodeMessageData(ctx, msg, &data) // Decode message data
+					c.decodeMessageData(ctx, msg, &data) // Decode message data
 
 					subscription := data.Type // The subscription that the client wants to create
 					// Verify that the user is not already subscribed
-					if subscriptions[subscription] {
-						sendClosure(ctx, websocket.ClosePolicyViolation, "Subscription Already Active")
+					if active[subscription] {
+						c.SendClosure(websocket.ClosePolicyViolation, "Already Subscribed")
 						break
 					}
-					subscriptions[subscription] = true // Set subscription as active
+					active[subscription] = true // Set subscription as active
 
 					switch subscription {
 					case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
 						channel := data.Params["channel"]
-						go createChannelEmoteSubscription(ctx, channel)
+						go createChannelEmoteSubscription(ctx, c, channel)
 
 					default: // Unknown Subscription
-						sendClosure(ctx, 1003, "Unknown Subscription ID")
+						c.SendClosure(1003, "Unknown Subscription Type")
 					}
 
 				default:
-					sendClosure(ctx, 1003, "Invalid Opcode")
+					c.SendClosure(1003, "Invalid Opcode")
 				}
 			} else {
 				break
 			}
 		}
 
-		cancel()
+		cancel() // Cancel the context so everything closes up
 
 		log.Infof("<WS> Disconnect: %v", c.RemoteAddr().String())
 		<-ctx.Done()
 	}))
 }
 
-func sendOpDispatch(ctx context.Context, data interface{}, t string) {
-	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
+type Conn struct {
+	*websocket.Conn
+	stat Stat
+}
 
+func transform(ws *websocket.Conn) *Conn {
+	return &Conn{
+		ws,
+		Stat{
+			CreatedAt: time.Now(),
+		},
+	}
+}
+
+func (c *Conn) SendOpDispatch(data interface{}, t string) {
 	// Increase sequence
-	stat := ctx.Value(WebSocketStatKey).(*WebSocketStat)
-	stat.Sequence++
+	c.stat.Sequence++
 
-	_ = conn.WriteJSON(WebSocketMessageOutbound{
+	_ = c.WriteJSON(WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
-		Sequence: &stat.Sequence,
+		Sequence: &c.stat.Sequence,
 		Type:     &t,
 	})
 }
 
-func sendOpGreet(c *websocket.Conn) {
+func (c *Conn) SendOpGreet() {
 	_ = c.WriteJSON(WebSocketMessageOutbound{
 		Op: WebSocketMessageOpHello,
 		Data: WebSocketMessageDataHello{
@@ -138,31 +147,29 @@ func sendOpGreet(c *websocket.Conn) {
 	})
 }
 
-func sendOpHeartbeatAck(c *websocket.Conn) {
+func (c *Conn) SendOpHeartbeatAck() {
 	_ = c.WriteJSON(WebSocketMessageOutbound{
 		Op:   WebSocketMessageOpHeartbeatAck,
 		Data: struct{}{},
 	})
 }
 
-func sendClosure(ctx context.Context, code int, message string) {
-	conn := ctx.Value(WebSocketConnKey).(*websocket.Conn)
-
+func (c *Conn) SendClosure(code int, message string) {
 	b := websocket.FormatCloseMessage(code, message)
-	_ = conn.WriteJSON(WebSocketMessageOutbound{
+	_ = c.WriteJSON(WebSocketMessageOutbound{
 		Op: WebSocketMessageOpServerClosure,
 		Data: WebSocketMessageDataServerClosure{
 			Code:    code,
 			Message: message,
 		},
 	})
-	_ = conn.WriteMessage(websocket.CloseMessage, b)
-	conn.Close()
+	_ = c.WriteMessage(websocket.CloseMessage, b)
+	c.Close()
 }
 
-func decodeMessageData(ctx context.Context, msg WebSocketMessageInbound, v interface{}) {
+func (c *Conn) decodeMessageData(ctx context.Context, msg WebSocketMessageInbound, v interface{}) {
 	if err := json.Unmarshal(msg.Data, &v); err != nil {
-		sendClosure(ctx, websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
+		c.SendClosure(websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
 	}
 }
 
