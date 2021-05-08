@@ -9,12 +9,14 @@ import (
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
 const heartbeatInterval int32 = 90 // Heartbeat interval in seconds
 
 type Stat struct {
+	UUID          uuid.UUID
 	Sequence      int32
 	CreatedAt     time.Time
 	Subscriptions []int8
@@ -113,13 +115,16 @@ func WebSocket(app fiber.Router) {
 
 type Conn struct {
 	*websocket.Conn
-	stat Stat
+	helpers WebSocketHelpers
+	stat    Stat
 }
 
 func transform(ws *websocket.Conn) *Conn {
 	return &Conn{
 		ws,
+		WebSocketHelpers{},
 		Stat{
+			UUID:      uuid.New(),
 			CreatedAt: time.Now(),
 		},
 	}
