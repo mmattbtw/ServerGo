@@ -160,7 +160,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), redis.PubSubPayloadUserEmotes{
+		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.Login), redis.PubSubPayloadUserEmotes{
 			Removed: false,
 			ID:      emoteID.Hex(),
 			Actor:   usr.DisplayName,
@@ -303,7 +303,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.ID.Hex()), redis.PubSubPayloadUserEmotes{
+		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.Login), redis.PubSubPayloadUserEmotes{
 			Removed: true,
 			ID:      emoteID.Hex(),
 			Actor:   usr.DisplayName,

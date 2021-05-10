@@ -162,7 +162,9 @@ func (c *Conn) SendOpHeartbeatAck() {
 func (c *Conn) SendClosure(code int, message string) {
 	b := websocket.FormatCloseMessage(code, message)
 
-	_ = c.WriteMessage(websocket.CloseMessage, b)
+	if err := c.WriteMessage(websocket.CloseMessage, b); err != nil {
+		log.Errorf("WebSocket, err=failed to write closure message, %v", err)
+	}
 	c.Close()
 }
 
