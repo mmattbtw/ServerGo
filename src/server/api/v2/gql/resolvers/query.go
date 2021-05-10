@@ -236,8 +236,10 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		"status": datastructure.EmoteStatusLive,
 	}
 	if args.Channel != nil {
-		if channelID, err := primitive.ObjectIDFromHex(*args.Channel); err == nil {
-			match["owner"] = channelID
+		var targetChannel *datastructure.User
+		// Find user and get their emotes
+		if err := cache.FindOne("users", "", bson.M{"login": args.Channel}, &targetChannel); err == nil {
+			match["_id"] = bson.M{"$in": targetChannel.EmoteIDs}
 		}
 	}
 
