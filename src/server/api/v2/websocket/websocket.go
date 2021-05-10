@@ -161,13 +161,7 @@ func (c *Conn) SendOpHeartbeatAck() {
 
 func (c *Conn) SendClosure(code int, message string) {
 	b := websocket.FormatCloseMessage(code, message)
-	_ = c.WriteJSON(WebSocketMessageOutbound{
-		Op: WebSocketMessageOpServerClosure,
-		Data: WebSocketMessageDataServerClosure{
-			Code:    code,
-			Message: message,
-		},
-	})
+
 	_ = c.WriteMessage(websocket.CloseMessage, b)
 	c.Close()
 }
