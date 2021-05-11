@@ -38,11 +38,10 @@ func GQL(app fiber.Router) fiber.Router {
 		panic(err)
 	}
 
-	querySchema := graphql.MustParseSchema(s, &RootResolver{
+	schema := graphql.MustParseSchema(s, &RootResolver{
 		&query_resolvers.QueryResolver{},
 		&mutation_resolvers.MutationResolver{},
 	}, graphql.UseFieldResolvers())
-	// mutationSchema := graphql.MustParseSchema(s, &query_resolvers.QueryResolver{}, graphql.UseFieldResolvers())
 
 	gql.Post("/", func(c *fiber.Ctx) error {
 		req := &GQLRequest{}
@@ -65,7 +64,7 @@ func GQL(app fiber.Router) fiber.Router {
 
 		rCtx := context.WithValue(Ctx, utils.RequestCtxKey, c)
 		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))
-		result := querySchema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
+		result := schema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
 
 		status := 200
 

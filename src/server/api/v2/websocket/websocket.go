@@ -186,7 +186,7 @@ func (c *Conn) SendOpHeartbeatAck() {
 }
 
 func (c *Conn) SendClosure(code int, message string) {
-	if c.Stat.Closed {
+	if c == nil || c.Stat.Closed {
 		return
 	}
 

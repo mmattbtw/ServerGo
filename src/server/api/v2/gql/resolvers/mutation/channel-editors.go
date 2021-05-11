@@ -7,10 +7,12 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
+	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 //
@@ -20,7 +22,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 	ChannelID string
 	EditorID  string
 	Reason    *string
-}) (*response, error) {
+}) (*query_resolvers.UserResolver, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, resolvers.ErrLoginRequired
@@ -81,45 +83,44 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		}
 	}
 
-	for _, eID := range channel.EditorIDs {
-		if eID.Hex() == editorID.Hex() {
-			return &response{
-				Status:  200,
-				Message: "no change",
-			}, nil
-		}
+	field, failed := query_resolvers.GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
+	if failed {
+		return nil, resolvers.ErrDepth
 	}
 
-	editorIDs := append(channel.EditorIDs, editorID)
-	_, err = mongo.Database.Collection("users").UpdateOne(mongo.Ctx, bson.M{
+	var newChannel *datastructure.User
+	after := options.After
+	doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
-		"$set": bson.M{
-			"editors": editorIDs,
+		"$addToSet": bson.M{
+			"editors": editorID,
 		},
+	}, &options.FindOneAndUpdateOptions{
+		ReturnDocument: &after,
 	})
+	if err := doc.Decode(&newChannel); err != nil {
+		return nil, err
+	}
+
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
 	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
-		Type:      datastructure.AuditLogTypeUserChannelEditorAdd,
+		Type:      datastructure.AuditLogTypeUserChannelEditorRemove,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{
-			{Key: "editors", OldValue: channel.EditorIDs, NewValue: editorIDs},
+			{Key: "editors", OldValue: channel.EditorIDs, NewValue: newChannel.EditorIDs},
 		},
 		Reason: args.Reason,
 	})
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
 	}
-
-	return &response{
-		Status:  200,
-		Message: "success",
-	}, nil
+	return query_resolvers.GenerateUserResolver(ctx, newChannel, &newChannel.ID, field.Children)
 }
 
 //
@@ -129,7 +130,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 	ChannelID string
 	EditorID  string
 	Reason    *string
-}) (*response, error) {
+}) (*query_resolvers.UserResolver, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, resolvers.ErrLoginRequired
@@ -180,32 +181,25 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		}
 	}
 
-	found := false
-
-	newIds := []primitive.ObjectID{}
-
-	for _, eID := range channel.EmoteIDs {
-		if eID.Hex() == editorID.Hex() {
-			found = true
-		} else {
-			newIds = append(newIds, eID)
-		}
+	field, failed := query_resolvers.GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
+	if failed {
+		return nil, resolvers.ErrDepth
 	}
 
-	if !found {
-		return &response{
-			Status:  200,
-			Message: "no change",
-		}, nil
-	}
-
-	_, err = mongo.Database.Collection("users").UpdateOne(mongo.Ctx, bson.M{
+	var newChannel *datastructure.User
+	after := options.After
+	doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
-		"$set": bson.M{
-			"editors": newIds,
+		"$pull": bson.M{
+			"editors": editorID,
 		},
+	}, &options.FindOneAndUpdateOptions{
+		ReturnDocument: &after,
 	})
+	if err := doc.Decode(&newChannel); err != nil {
+		return nil, err
+	}
 
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
@@ -217,7 +211,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{
-			{Key: "editors", OldValue: channel.EditorIDs, NewValue: newIds},
+			{Key: "editors", OldValue: channel.EditorIDs, NewValue: newChannel.EditorIDs},
 		},
 		Reason: args.Reason,
 	})
@@ -225,8 +219,5 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		log.Errorf("mongo, err=%v", err)
 	}
 
-	return &response{
-		Status:  200,
-		Message: "success",
-	}, nil
+	return query_resolvers.GenerateUserResolver(ctx, newChannel, &newChannel.ID, field.Children)
 }
