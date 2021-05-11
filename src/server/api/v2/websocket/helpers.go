@@ -27,7 +27,9 @@ var subscriberCallersUserEmotes = make(map[string]map[uuid.UUID]func(emoteSubscr
  */
 func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, userID string, cb func(emoteSubscriptionResult)) {
 	c := ctx.Value(WebSocketConnKey).(*Conn)
-	subscriberCallersUserEmotes[userID] = make(map[uuid.UUID]func(emoteSubscriptionResult))
+	if subscriberCallersUserEmotes[userID] == nil {
+		subscriberCallersUserEmotes[userID] = make(map[uuid.UUID]func(emoteSubscriptionResult))
+	}
 	subscriberCallersUserEmotes[userID][c.stat.UUID] = cb
 
 	// Subscribe to these events with Redis
