@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -15,12 +16,14 @@ import (
 
 const heartbeatInterval int32 = 90 // Heartbeat interval in seconds
 
+var Connections = make(map[uuid.UUID]*Conn)
+
 type Stat struct {
-	UUID          uuid.UUID // The connection's unique ID
-	Sequence      int32     // The amount of events sent by the server to this connection
-	CreatedAt     time.Time // The time at which this connection became active
-	Subscriptions []int8    // A list of active subscription types&
-	Closed        bool      // True if the connection has been closed
+	UUID          uuid.UUID               `json:"id"`     // The connection's unique ID
+	Sequence      int32                   `json:"seq"`    // The amount of events sent by the server to this connection
+	CreatedAt     time.Time               `json:"age"`    // The time at which this connection became active
+	Subscriptions []WebSocketSubscription `json:"subs"`   // A list of active subscription types&
+	Closed        bool                    `json:"closed"` // True if the connection has been closed
 }
 
 func WebSocket(app fiber.Router) {
@@ -42,7 +45,10 @@ func WebSocket(app fiber.Router) {
 		c := transform(conn)
 		c.SendOpGreet() // Send an hello payload to the user
 
+		// This socket has connected
 		log.Infof("<WS> Connect: %v", c.RemoteAddr().String())
+		c.Register()
+		Connections[c.Stat.UUID] = c
 
 		// Event channels
 		chIdentified := make(chan bool)
@@ -79,7 +85,7 @@ func WebSocket(app fiber.Router) {
 
 				// Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
 				case WebSocketMessageOpSubscribe:
-					var data WebSocketMessageDataSubscribe
+					var data WebSocketSubscription
 					c.decodeMessageData(ctx, msg, &data) // Decode message data
 
 					subscription := data.Type // The subscription that the client wants to create
@@ -89,6 +95,8 @@ func WebSocket(app fiber.Router) {
 						break
 					}
 					active[subscription] = true // Set subscription as active
+					c.Stat.Subscriptions = append(c.Stat.Subscriptions, data)
+					c.Register()
 
 					switch subscription {
 					case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
@@ -108,9 +116,14 @@ func WebSocket(app fiber.Router) {
 		}
 
 		cancel() // Cancel the context so everything closes up
-
 		log.Infof("<WS> Disconnect: %v", c.RemoteAddr().String())
-		c.stat.Closed = true
+
+		// Handle connection removal
+		c.Unregister()
+		c.Stat.Closed = true             // Set closed stat to true
+		delete(Connections, c.Stat.UUID) // Remove from connections map
+
+		// END.
 		<-ctx.Done()
 	}))
 }
@@ -118,7 +131,7 @@ func WebSocket(app fiber.Router) {
 type Conn struct {
 	*websocket.Conn
 	helpers WebSocketHelpers
-	stat    Stat
+	Stat    Stat
 }
 
 func transform(ws *websocket.Conn) *Conn {
@@ -126,20 +139,21 @@ func transform(ws *websocket.Conn) *Conn {
 		ws,
 		WebSocketHelpers{},
 		Stat{
-			UUID:      uuid.New(),
-			CreatedAt: time.Now(),
+			UUID:          uuid.New(),
+			Subscriptions: []WebSocketSubscription{},
+			CreatedAt:     time.Now(),
 		},
 	}
 }
 
 func (c *Conn) SendOpDispatch(data interface{}, t string) {
 	// Increase sequence
-	c.stat.Sequence++
+	c.Stat.Sequence++
 
 	c.sendMessage(&WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
-		Sequence: &c.stat.Sequence,
+		Sequence: &c.Stat.Sequence,
 		Type:     &t,
 	})
 }
@@ -162,7 +176,7 @@ func (c *Conn) SendOpHeartbeatAck() {
 }
 
 func (c *Conn) SendClosure(code int, message string) {
-	if c.stat.Closed {
+	if c.Stat.Closed {
 		return
 	}
 
@@ -174,8 +188,35 @@ func (c *Conn) SendClosure(code int, message string) {
 	c.Close()
 }
 
+// Register the connection in the global redis store
+func (c *Conn) Register() {
+	redis.Client.ZAdd(redis.Ctx, "ws:connections", &redis.Z{
+		Score:  0,
+		Member: c.Stat.UUID.String(),
+	}) // Add to ZSET
+
+	// Convert stat to map
+	data := make([]string, 8)
+	data = append(data, "id", c.Stat.UUID.String())
+	data = append(data, "seq", string(c.Stat.Sequence))
+	data = append(data, "age", c.Stat.CreatedAt.String())
+	if j, err := json.Marshal(c.Stat.Subscriptions); err == nil {
+		data = append(data, "subs", string(j))
+	}
+
+	if err := redis.Client.HSet(redis.Ctx, fmt.Sprintf("ws:connections:%v", c.Stat.UUID.String()), data).Err(); err != nil {
+		log.Errorf("WebSocket, err=could not register socket, %v", err)
+	}
+}
+
+// Unregister the connection in the global redis store
+func (c *Conn) Unregister() {
+	redis.Client.ZRem(redis.Ctx, "ws:connections", c.Stat.UUID.String())                // Remove from ZSET
+	redis.Client.Del(redis.Ctx, fmt.Sprintf("ws:connections:%v", c.Stat.UUID.String())) // Remove key
+}
+
 func (c *Conn) sendMessage(message *WebSocketMessageOutbound) {
-	if c.stat.Closed {
+	if c.Stat.Closed {
 		return
 	}
 
@@ -212,9 +253,9 @@ type WebSocketMessageDataServerClosure struct {
 	Message string `json:"message"`
 }
 
-type WebSocketMessageDataSubscribe struct {
-	Type   int8 `json:"type"`
-	Params map[string]string
+type WebSocketSubscription struct {
+	Type   int8              `json:"type"`
+	Params map[string]string `json:"params"`
 }
 
 const (

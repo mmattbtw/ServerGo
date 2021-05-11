@@ -18,6 +18,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	_ "github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server"
+	api_websocket "github.com/SevenTV/ServerGo/src/server/api/v2/websocket"
 	"github.com/SevenTV/ServerGo/src/utils"
 )
 
@@ -42,19 +43,19 @@ func main() {
 		log.Infof("sig=%v, gracefully shutting down...", sig)
 		start := time.Now().UnixNano()
 
+		// Run pre-shutdown cleanup
+		Cleanup()
+
 		wg := sync.WaitGroup{}
 
 		wg.Wait()
-
 		wg.Add(1)
-
 		go func() {
 			defer wg.Done()
 			if err := s.Shutdown(); err != nil {
 				log.Errorf("failed to shutdown server, err=%v", err)
 			}
 		}()
-
 		wg.Wait()
 
 		log.Infof("Shutdown took, %.2fms", float64(time.Now().UnixNano()-start)/10e5)
@@ -80,6 +81,16 @@ func main() {
 	log.Infof("Retrieved %s roles", fmt.Sprint(len(roles)))
 
 	select {}
+}
+
+func Cleanup() error {
+	// Remove websocket connections from Redis
+	log.Infof("<WebSocket> Closing %d connections", len(api_websocket.Connections))
+	for _, conn := range api_websocket.Connections {
+		conn.Unregister()
+	}
+
+	return nil
 }
 
 // Get all roles available and cache into the mongo context

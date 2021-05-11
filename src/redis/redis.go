@@ -97,4 +97,6 @@ type StringCmd = redis.StringCmd
 
 type StringStringMapCmd = redis.StringStringMapCmd
 
+type Z = redis.Z
+
 const ErrNil = redis.Nil

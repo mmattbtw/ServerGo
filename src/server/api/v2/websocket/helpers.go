@@ -30,7 +30,7 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 	if subscriberCallersUserEmotes[userID] == nil {
 		subscriberCallersUserEmotes[userID] = make(map[uuid.UUID]func(emoteSubscriptionResult))
 	}
-	subscriberCallersUserEmotes[userID][c.stat.UUID] = cb
+	subscriberCallersUserEmotes[userID][c.Stat.UUID] = cb
 
 	// Subscribe to these events with Redis
 	ch := subscriberChannelsUserEmotes[userID] // Try to find an existing channel made for the selected user
@@ -94,7 +94,7 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 	for {
 		select {
 		case <-ctx.Done():
-			delete(subscriberCallersUserEmotes[userID], c.stat.UUID)
+			delete(subscriberCallersUserEmotes[userID], c.Stat.UUID)
 			return
 		}
 	}
