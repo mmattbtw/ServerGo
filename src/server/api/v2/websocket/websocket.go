@@ -57,7 +57,6 @@ func WebSocket(app fiber.Router) {
 		// Create context
 		ctx := context.WithValue(context.Background(), WebSocketConnKey, c) // Add connection to context
 		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 
 		// Wait for the client to send their first heartbeat
 		// Failure to do so in time will disconnect the socket
@@ -65,12 +64,11 @@ func WebSocket(app fiber.Router) {
 
 		// We will disconnect clients who don't create a subscription
 		// These connections are considered stale, as they serve no purpose
-		noOpTimeout := time.NewTimer(time.Second * 30)
-		go func() {
-			<-noOpTimeout.C
-			c.SendClosure(websocket.CloseNormalClosure, "Connection is stale")
-			return
-		}()
+		noOpTimeout := time.AfterFunc(time.Second*30, func() {
+			if len(c.Stat.Subscriptions) == 0 {
+				c.SendClosure(websocket.CloseNormalClosure, "Connection is stale")
+			}
+		})
 
 		active := make(map[int8]bool)
 		for { // Listen to client messages
@@ -80,7 +78,7 @@ func WebSocket(app fiber.Router) {
 				// Handle invalid payload
 				if err = json.Unmarshal(b, &msg); err != nil {
 					c.SendClosure(websocket.CloseInvalidFramePayloadData, fmt.Sprintf("Invalid JSON: %v", err))
-					return
+					break
 				}
 
 				switch msg.Op {
@@ -132,9 +130,8 @@ func WebSocket(app fiber.Router) {
 		c.Unregister()
 		c.Stat.Closed = true             // Set closed stat to true
 		delete(Connections, c.Stat.UUID) // Remove from connections map
-
-		// END.
-		<-ctx.Done()
+		close(chIdentified)
+		close(chHeartbeat)
 	}))
 }
 
