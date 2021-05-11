@@ -16,10 +16,11 @@ import (
 const heartbeatInterval int32 = 90 // Heartbeat interval in seconds
 
 type Stat struct {
-	UUID          uuid.UUID
-	Sequence      int32
-	CreatedAt     time.Time
-	Subscriptions []int8
+	UUID          uuid.UUID // The connection's unique ID
+	Sequence      int32     // The amount of events sent by the server to this connection
+	CreatedAt     time.Time // The time at which this connection became active
+	Subscriptions []int8    // A list of active subscription types&
+	Closed        bool      // True if the connection has been closed
 }
 
 func WebSocket(app fiber.Router) {
@@ -109,6 +110,7 @@ func WebSocket(app fiber.Router) {
 		cancel() // Cancel the context so everything closes up
 
 		log.Infof("<WS> Disconnect: %v", c.RemoteAddr().String())
+		c.stat.Closed = true
 		<-ctx.Done()
 	}))
 }
@@ -134,7 +136,7 @@ func (c *Conn) SendOpDispatch(data interface{}, t string) {
 	// Increase sequence
 	c.stat.Sequence++
 
-	_ = c.WriteJSON(WebSocketMessageOutbound{
+	c.sendMessage(&WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
 		Data:     data,
 		Sequence: &c.stat.Sequence,
@@ -143,7 +145,7 @@ func (c *Conn) SendOpDispatch(data interface{}, t string) {
 }
 
 func (c *Conn) SendOpGreet() {
-	_ = c.WriteJSON(WebSocketMessageOutbound{
+	c.sendMessage(&WebSocketMessageOutbound{
 		Op: WebSocketMessageOpHello,
 		Data: WebSocketMessageDataHello{
 			Timestamp:         time.Now(),
@@ -153,19 +155,33 @@ func (c *Conn) SendOpGreet() {
 }
 
 func (c *Conn) SendOpHeartbeatAck() {
-	_ = c.WriteJSON(WebSocketMessageOutbound{
+	c.sendMessage(&WebSocketMessageOutbound{
 		Op:   WebSocketMessageOpHeartbeatAck,
 		Data: struct{}{},
 	})
 }
 
 func (c *Conn) SendClosure(code int, message string) {
+	if c.stat.Closed {
+		return
+	}
+
 	b := websocket.FormatCloseMessage(code, message)
 
 	if err := c.WriteMessage(websocket.CloseMessage, b); err != nil {
 		log.Errorf("WebSocket, err=failed to write closure message, %v", err)
 	}
 	c.Close()
+}
+
+func (c *Conn) sendMessage(message *WebSocketMessageOutbound) {
+	if c.stat.Closed {
+		return
+	}
+
+	if err := c.WriteJSON(message); err != nil {
+		log.Errorf("WebSocket, err=failed to write json message, %v", err)
+	}
 }
 
 func (c *Conn) decodeMessageData(ctx context.Context, msg WebSocketMessageInbound, v interface{}) {
@@ -175,14 +191,14 @@ func (c *Conn) decodeMessageData(ctx context.Context, msg WebSocketMessageInboun
 }
 
 type WebSocketMessageOutbound struct {
-	Op       int         `json:"op"` // The message operation code
+	Op       int8        `json:"op"` // The message operation code
 	Data     interface{} `json:"d"`
 	Sequence *int32      `json:"seq"`
 	Type     *string     `json:"t"`
 }
 
 type WebSocketMessageInbound struct {
-	Op   int             `json:"op"`
+	Op   int8            `json:"op"`
 	Data json.RawMessage `json:"d"`
 }
 
@@ -202,7 +218,7 @@ type WebSocketMessageDataSubscribe struct {
 }
 
 const (
-	WebSocketMessageOpDispatch int = iota
+	WebSocketMessageOpDispatch int8 = iota
 	WebSocketMessageOpHello
 	WebSocketMessageOpHeartbeat
 	WebSocketMessageOpHeartbeatAck
