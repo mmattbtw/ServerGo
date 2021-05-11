@@ -63,6 +63,19 @@ func WebSocket(app fiber.Router) {
 		// Failure to do so in time will disconnect the socket
 		go awaitHeartbeat(ctx, c, chHeartbeat, 0)
 
+		// We will disconnect clients who don't create a subscription
+		// These connections are considered stale, as they serve no purpose
+		noOpTimeout := time.NewTimer(time.Second * 10)
+		go func() {
+			for {
+				select {
+				case <-noOpTimeout.C:
+					c.SendClosure(websocket.CloseNormalClosure, "Connection is stale")
+					return
+				}
+			}
+		}()
+
 		active := make(map[int8]bool)
 		for { // Listen to client messages
 			if _, b, err := c.ReadMessage(); err == nil {
@@ -97,6 +110,7 @@ func WebSocket(app fiber.Router) {
 					active[subscription] = true // Set subscription as active
 					c.Stat.Subscriptions = append(c.Stat.Subscriptions, data)
 					c.Register()
+					noOpTimeout.Stop() // Prevent a no-op timeout from happening: the user has done something
 
 					switch subscription {
 					case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
