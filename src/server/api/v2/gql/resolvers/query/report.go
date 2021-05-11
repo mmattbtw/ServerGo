@@ -1,4 +1,4 @@
-package resolvers
+package query_resolvers
 
 import (
 	"context"
@@ -49,23 +49,23 @@ func (r *reportResolver) Cleared() bool {
 	return r.v.Cleared
 }
 
-func (r *reportResolver) UTarget() (*userResolver, error) {
+func (r *reportResolver) UTarget() (*UserResolver, error) {
 	if r.v.Target.Type == "users" {
-		return GenerateUserResolver(r.ctx, r.v.UTarget, r.v.Target.ID, r.fields["u_target"].children)
+		return GenerateUserResolver(r.ctx, r.v.UTarget, r.v.Target.ID, r.fields["u_target"].Children)
 	}
 	return nil, nil
 }
 
-func (r *reportResolver) ETarget() (*emoteResolver, error) {
+func (r *reportResolver) ETarget() (*EmoteResolver, error) {
 	if r.v.Target.Type == "emotes" {
-		return GenerateEmoteResolver(r.ctx, r.v.ETarget, r.v.Target.ID, r.fields["e_target"].children)
+		return GenerateEmoteResolver(r.ctx, r.v.ETarget, r.v.Target.ID, r.fields["e_target"].Children)
 	}
 	return nil, nil
 }
 
-func (r *reportResolver) Reporter() (*userResolver, error) {
+func (r *reportResolver) Reporter() (*UserResolver, error) {
 	if r.v.ReporterID != nil {
-		return GenerateUserResolver(r.ctx, r.v.Reporter, r.v.ReporterID, r.fields["reporter"].children)
+		return GenerateUserResolver(r.ctx, r.v.Reporter, r.v.ReporterID, r.fields["reporter"].Children)
 	}
 	return nil, nil
 }

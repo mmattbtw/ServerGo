@@ -1,4 +1,4 @@
-package resolvers
+package query_resolvers
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
@@ -23,25 +24,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
+type QueryResolver struct{}
 
-const (
-	maxDepth   = 4
-	queryLimit = 150
-)
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var searchRegex = regexp.MustCompile(`[.*+?^${}()|[\\]\\\\]`)
 
-var (
-	errInternalServer   = fmt.Errorf("an internal server error occured")
-	errDepth            = fmt.Errorf("exceeded max depth of %v", maxDepth)
-	errQueryLimit       = fmt.Errorf("exeeded max query limit of %v", queryLimit)
-	errInvalidSortOrder = fmt.Errorf("SortOrder is either 0 (descending) or 1 (ascending)")
-)
-
 type SelectedField struct {
-	name     string
-	children map[string]*SelectedField
+	Name     string
+	Children map[string]*SelectedField
 }
 
 func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, bool) {
@@ -59,8 +50,8 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 			}
 			children, d := loop(f.SelectedFields, localDepth)
 			m[f.Name] = &SelectedField{
-				name:     f.Name,
-				children: children,
+				Name:     f.Name,
+				Children: children,
 			}
 			if d > maxD {
 				maxD = d
@@ -70,12 +61,12 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 	}
 	children, depth := loop(graphql.SelectedFieldsFromContext(ctx), 0)
 	return &SelectedField{
-		name:     "query",
-		children: children,
+		Name:     "query",
+		Children: children,
 	}, depth > max
 }
 
-func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userResolver, error) {
+func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*UserResolver, error) {
 	isMe := args.ID == "@me" // Handle @me (current authenticated user)
 	user := &datastructure.User{}
 	var id *primitive.ObjectID
@@ -96,7 +87,7 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 				return nil, nil
 			}
 			log.Errorf("mongo, err=%v", err)
-			return nil, errInternalServer
+			return nil, resolvers.ErrInternalServer
 		}
 	} else {
 		if hexId, err := primitive.ObjectIDFromHex(args.ID); err == nil {
@@ -107,40 +98,40 @@ func (*RootResolver) User(ctx context.Context, args struct{ ID string }) (*userR
 		}
 	}
 
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
-	return GenerateUserResolver(ctx, user, id, field.children)
+	return GenerateUserResolver(ctx, user, id, field.Children)
 }
 
-func (*RootResolver) Role(ctx context.Context, args struct{ ID string }) (*roleResolver, error) {
+func (*QueryResolver) Role(ctx context.Context, args struct{ ID string }) (*RoleResolver, error) {
 	id, err := primitive.ObjectIDFromHex(args.ID)
 	if err != nil {
 		return nil, nil
 	}
 
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
-	return GenerateRoleResolver(ctx, nil, &id, field.children)
+	return GenerateRoleResolver(ctx, nil, &id, field.Children)
 }
 
-func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emoteResolver, error) {
+func (*QueryResolver) Emote(ctx context.Context, args struct{ ID string }) (*EmoteResolver, error) {
 	id, err := primitive.ObjectIDFromHex(args.ID)
 	if err != nil {
 		return nil, nil
 	}
 
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
-	resolver, err := GenerateEmoteResolver(ctx, nil, &id, field.children)
+	resolver, err := GenerateEmoteResolver(ctx, nil, &id, field.Children)
 	if err != nil {
 		return nil, err
 	}
@@ -149,17 +140,17 @@ func (*RootResolver) Emote(ctx context.Context, args struct{ ID string }) (*emot
 	// Verify actor permissions
 	if utils.HasBits(int64(resolver.v.Visibility), int64(datastructure.EmoteVisibilityPrivate)) && usr.ID != resolver.v.OwnerID {
 		if usr == nil || !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
-			return nil, errUnknownEmote
+			return nil, resolvers.ErrUnknownEmote
 		}
 	}
 
 	return resolver, nil
 }
 
-func (*RootResolver) Emotes(ctx context.Context, args struct{ List []string }) (*[]*emoteResolver, error) {
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+func (*QueryResolver) Emotes(ctx context.Context, args struct{ List []string }) (*[]*EmoteResolver, error) {
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	ids := mongo.HexIDSliceToObjectID(args.List)
@@ -171,21 +162,21 @@ func (*RootResolver) Emotes(ctx context.Context, args struct{ List []string }) (
 			},
 		}, &emotes); err != nil {
 			log.Errorf("mongo, err=%v", err)
-			return nil, errInternalServer
+			return nil, resolvers.ErrInternalServer
 		}
 	}
 
-	resolvers := make([]*emoteResolver, len(emotes))
+	resolvers := make([]*EmoteResolver, len(emotes))
 	if len(emotes) > 0 {
 		for i, e := range emotes {
-			resolvers[i], _ = GenerateEmoteResolver(ctx, e, nil, field.children)
+			resolvers[i], _ = GenerateEmoteResolver(ctx, e, nil, field.Children)
 		}
 	}
 
 	return &resolvers, nil
 }
 
-func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
+func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	Query       string
 	Page        *int32
 	PageSize    *int32
@@ -195,10 +186,10 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	SortOrder   *int32
 	Channel     *string
 	SubmittedBy *string
-}) ([]*emoteResolver, error) {
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+}) ([]*EmoteResolver, error) {
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	// Define limit
@@ -207,8 +198,8 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	if args.Limit != nil {
 		limit = int64(*args.Limit)
 	}
-	if limit > queryLimit {
-		return nil, errQueryLimit
+	if limit > resolvers.QueryLimit {
+		return nil, resolvers.ErrQueryLimit
 	}
 
 	// Get the query parameter, used to search for specific emote names or tags
@@ -266,7 +257,7 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 		order = *args.SortOrder
 	}
 	if order > 1 {
-		return nil, errInvalidSortOrder
+		return nil, resolvers.ErrInvalidSortOrder
 	}
 	if order == 1 {
 		order = -1
@@ -407,13 +398,13 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	// Resolve emotes
-	resolvers := make([]*emoteResolver, len(emotes))
+	resolvers := make([]*EmoteResolver, len(emotes))
 	for i, e := range emotes {
-		resolvers[i], err = GenerateEmoteResolver(ctx, e, nil, field.children)
+		resolvers[i], err = GenerateEmoteResolver(ctx, e, nil, field.Children)
 		if err != nil {
 			return nil, err
 		}
@@ -421,14 +412,14 @@ func (*RootResolver) SearchEmotes(ctx context.Context, args struct {
 	return resolvers, nil
 }
 
-func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
+func (*QueryResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 	Providers []string
 	Channel   string
 	Global    *bool
-}) (*[]*emoteResolver, error) {
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+}) (*[]*EmoteResolver, error) {
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	// Query foreign APIs for requested third party emotes
@@ -466,9 +457,9 @@ func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 	emotes = append(emotes, globalEmotes...)
 
 	// Create emote resolvers to return
-	result := make([]*emoteResolver, len(emotes))
+	result := make([]*EmoteResolver, len(emotes))
 	for i, emote := range emotes {
-		resolver, _ := GenerateEmoteResolver(ctx, emote, nil, field.children)
+		resolver, _ := GenerateEmoteResolver(ctx, emote, nil, field.Children)
 		if resolver == nil {
 			continue
 		}
@@ -479,22 +470,22 @@ func (*RootResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 	return &result, nil
 }
 
-func (*RootResolver) SearchUsers(ctx context.Context, args struct {
+func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 	Query string
 	Page  *int32
 	Limit *int32
-}) ([]*userResolver, error) {
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+}) ([]*UserResolver, error) {
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	limit := int64(20)
 	if args.Limit != nil {
 		limit = int64(*args.Limit)
 	}
-	if limit > queryLimit {
-		return nil, errQueryLimit
+	if limit > resolvers.QueryLimit {
+		return nil, resolvers.ErrQueryLimit
 	}
 
 	// Pagination
@@ -522,12 +513,12 @@ func (*RootResolver) SearchUsers(ctx context.Context, args struct {
 	}
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
-	resolvers := make([]*userResolver, len(users))
+	resolvers := make([]*UserResolver, len(users))
 	for i, e := range users {
-		resolvers[i], err = GenerateUserResolver(ctx, e, nil, field.children)
+		resolvers[i], err = GenerateUserResolver(ctx, e, nil, field.Children)
 		if err != nil {
 			return nil, err
 		}

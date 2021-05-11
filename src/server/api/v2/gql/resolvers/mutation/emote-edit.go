@@ -1,4 +1,4 @@
-package resolvers
+package mutation_resolvers
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
+	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/SevenTV/ServerGo/src/validation"
 	log "github.com/sirupsen/logrus"
@@ -18,13 +20,13 @@ import (
 //
 // Mutate Emote - Edit
 //
-func (*RootResolver) EditEmote(ctx context.Context, args struct {
+func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 	Emote  emoteInput
 	Reason *string
-}) (*emoteResolver, error) {
+}) (*query_resolvers.EmoteResolver, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
-		return nil, errLoginRequired
+		return nil, resolvers.ErrLoginRequired
 	}
 
 	update := bson.M{}
@@ -33,25 +35,25 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 
 	if req.Name != nil {
 		if !validation.ValidateEmoteName(utils.S2B(*req.Name)) {
-			return nil, errInvalidName
+			return nil, resolvers.ErrInvalidName
 		}
 		update["name"] = *req.Name
 	}
 	if req.OwnerID != nil {
 		id, err := primitive.ObjectIDFromHex(*req.OwnerID)
 		if err != nil {
-			return nil, errInvalidOwner
+			return nil, resolvers.ErrInvalidOwner
 		}
 		update["owner"] = id
 	}
 	if req.Tags != nil {
 		tags := *req.Tags
 		if len(tags) > 10 {
-			return nil, errInvalidTags
+			return nil, resolvers.ErrInvalidTags
 		}
 		for _, t := range tags {
 			if !validation.ValidateEmoteTag(utils.S2B(t)) {
-				return nil, errInvalidTag
+				return nil, resolvers.ErrInvalidTag
 			}
 		}
 		update["tags"] = tags
@@ -63,12 +65,12 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	}
 
 	if len(update) == 0 {
-		return nil, errInvalidUpdate
+		return nil, resolvers.ErrInvalidUpdate
 	}
 
 	id, err := primitive.ObjectIDFromHex(req.ID)
 	if err != nil {
-		return nil, errUnknownEmote
+		return nil, resolvers.ErrUnknownEmote
 	}
 
 	res := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
@@ -84,10 +86,10 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 	}
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, errUnknownEmote
+			return nil, resolvers.ErrUnknownEmote
 		}
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
@@ -97,10 +99,10 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 				"editors": usr.ID,
 			}).Err(); err != nil {
 				if err == mongo.ErrNoDocuments {
-					return nil, errAccessDenied
+					return nil, resolvers.ErrAccessDenied
 				}
 				log.Errorf("mongo, err=%v", err)
-				return nil, errInternalServer
+				return nil, resolvers.ErrInternalServer
 			}
 		}
 	}
@@ -142,9 +144,9 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		}
 	}
 
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	field, failed := query_resolvers.GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	if len(logChanges) > 0 {
@@ -164,7 +166,7 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 
 		if doc.Err() != nil {
 			log.Errorf("mongo, err=%v, id=%s", doc.Err(), id.Hex())
-			return nil, errInternalServer
+			return nil, resolvers.ErrInternalServer
 		}
 
 		_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
@@ -180,8 +182,8 @@ func (*RootResolver) EditEmote(ctx context.Context, args struct {
 		}
 
 		go discord.SendEmoteEdit(*emote, *usr, logChanges, args.Reason)
-		return GenerateEmoteResolver(ctx, emote, &emote.ID, field.children)
+		return query_resolvers.GenerateEmoteResolver(ctx, emote, &emote.ID, field.Children)
 	}
 
-	return GenerateEmoteResolver(ctx, emote, &emote.ID, field.children)
+	return query_resolvers.GenerateEmoteResolver(ctx, emote, &emote.ID, field.Children)
 }

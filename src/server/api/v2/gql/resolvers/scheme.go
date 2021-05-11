@@ -1,3 +1,6 @@
 package resolvers
 
-type RootResolver struct{}
+const (
+	MaxDepth   = 4
+	QueryLimit = 150
+)

@@ -3,7 +3,8 @@ package gql
 import (
 	"context"
 
-	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
+	mutation_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/mutation"
+	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gobuffalo/packr/v2"
@@ -21,6 +22,11 @@ type GQLRequest struct {
 
 var Ctx = context.Background()
 
+type RootResolver struct {
+	*query_resolvers.QueryResolver
+	*mutation_resolvers.MutationResolver
+}
+
 func GQL(app fiber.Router) fiber.Router {
 	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))
 
@@ -32,7 +38,11 @@ func GQL(app fiber.Router) fiber.Router {
 		panic(err)
 	}
 
-	schema := graphql.MustParseSchema(s, &resolvers.RootResolver{}, graphql.UseFieldResolvers())
+	querySchema := graphql.MustParseSchema(s, &RootResolver{
+		&query_resolvers.QueryResolver{},
+		&mutation_resolvers.MutationResolver{},
+	}, graphql.UseFieldResolvers())
+	// mutationSchema := graphql.MustParseSchema(s, &query_resolvers.QueryResolver{}, graphql.UseFieldResolvers())
 
 	gql.Post("/", func(c *fiber.Ctx) error {
 		req := &GQLRequest{}
@@ -55,7 +65,7 @@ func GQL(app fiber.Router) fiber.Router {
 
 		rCtx := context.WithValue(Ctx, utils.RequestCtxKey, c)
 		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))
-		result := schema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
+		result := querySchema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
 
 		status := 200
 

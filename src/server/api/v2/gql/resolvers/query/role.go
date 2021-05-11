@@ -1,4 +1,4 @@
-package resolvers
+package query_resolvers
 
 import (
 	"context"
@@ -9,16 +9,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type roleResolver struct {
+type RoleResolver struct {
 	ctx context.Context
 	v   *datastructure.Role
 
 	fields map[string]*SelectedField
 }
 
-func GenerateRoleResolver(ctx context.Context, pRole *datastructure.Role, roleID *primitive.ObjectID, fields map[string]*SelectedField) (*roleResolver, error) {
+func GenerateRoleResolver(ctx context.Context, pRole *datastructure.Role, roleID *primitive.ObjectID, fields map[string]*SelectedField) (*RoleResolver, error) {
 	if pRole != nil {
-		return &roleResolver{
+		return &RoleResolver{
 			ctx:    ctx,
 			v:      pRole,
 			fields: fields,
@@ -29,7 +29,7 @@ func GenerateRoleResolver(ctx context.Context, pRole *datastructure.Role, roleID
 	}
 
 	role := datastructure.GetRole(mongo.Ctx, roleID)
-	r := &roleResolver{
+	r := &RoleResolver{
 		ctx:    ctx,
 		v:      &role,
 		fields: fields,
@@ -37,26 +37,26 @@ func GenerateRoleResolver(ctx context.Context, pRole *datastructure.Role, roleID
 	return r, nil
 }
 
-func (r *roleResolver) ID() string {
+func (r *RoleResolver) ID() string {
 	return r.v.ID.Hex()
 }
 
-func (r *roleResolver) Name() string {
+func (r *RoleResolver) Name() string {
 	return r.v.Name
 }
 
-func (r *roleResolver) Position() int32 {
+func (r *RoleResolver) Position() int32 {
 	return r.v.Position
 }
 
-func (r *roleResolver) Color() int32 {
+func (r *RoleResolver) Color() int32 {
 	return r.v.Color
 }
 
-func (r *roleResolver) Allowed() string {
+func (r *RoleResolver) Allowed() string {
 	return fmt.Sprint(r.v.Allowed)
 }
 
-func (r *roleResolver) Denied() string {
+func (r *RoleResolver) Denied() string {
 	return fmt.Sprint(r.v.Denied)
 }

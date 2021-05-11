@@ -1,4 +1,4 @@
-package resolvers
+package mutation_resolvers
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
+	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,34 +19,34 @@ import (
 //
 // Mutate Emote - Add to Channel
 //
-func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
+func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 	ChannelID string
 	EmoteID   string
 	Reason    *string
-}) (*userResolver, error) {
+}) (*query_resolvers.UserResolver, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
-		return nil, errLoginRequired
+		return nil, resolvers.ErrLoginRequired
 	}
 
 	emoteID, err := primitive.ObjectIDFromHex(args.EmoteID)
 	if err != nil {
-		return nil, errUnknownEmote
+		return nil, resolvers.ErrUnknownEmote
 	}
 
 	channelID, err := primitive.ObjectIDFromHex(args.ChannelID)
 	if err != nil {
-		return nil, errUnknownChannel
+		return nil, resolvers.ErrUnknownChannel
 	}
 
 	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	if err == nil {
-		return nil, errChannelBanned
+		return nil, resolvers.ErrUserBanned
 	}
 
 	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
@@ -60,10 +62,10 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	}
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, errUnknownChannel
+			return nil, resolvers.ErrUnknownChannel
 		}
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
@@ -76,19 +78,19 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 				}
 			}
 			if !found {
-				return nil, errAccessDenied
+				return nil, resolvers.ErrAccessDenied
 			}
 		}
 	}
 
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	field, failed := query_resolvers.GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	for _, eID := range channel.EmoteIDs {
 		if eID.Hex() == emoteID.Hex() {
-			return GenerateUserResolver(ctx, channel, &channelID, field.children)
+			return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
 		}
 	}
 
@@ -104,10 +106,10 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	}
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, errUnknownEmote
+			return nil, resolvers.ErrUnknownEmote
 		}
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	sharedWith := []string{}
@@ -116,7 +118,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 	}
 	if utils.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityPrivate)) {
 		if emote.OwnerID.Hex() != channelID.Hex() || !utils.Contains(sharedWith, emoteID.Hex()) {
-			return nil, errUnknownEmote
+			return nil, resolvers.ErrUnknownEmote
 		}
 	}
 
@@ -137,7 +139,7 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 
 	if doc.Err() != nil {
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
@@ -166,40 +168,40 @@ func (*RootResolver) AddChannelEmote(ctx context.Context, args struct {
 			Actor:   usr.DisplayName,
 		})
 	}
-	return GenerateUserResolver(ctx, channel, &channelID, field.children)
+	return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
 }
 
 //
 // Mutate Emote - Remove from Channel
 //
-func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
+func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 	ChannelID string
 	EmoteID   string
 	Reason    *string
-}) (*userResolver, error) {
+}) (*query_resolvers.UserResolver, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
-		return nil, errLoginRequired
+		return nil, resolvers.ErrLoginRequired
 	}
 
 	emoteID, err := primitive.ObjectIDFromHex(args.EmoteID)
 	if err != nil {
-		return nil, errUnknownEmote
+		return nil, resolvers.ErrUnknownEmote
 	}
 
 	channelID, err := primitive.ObjectIDFromHex(args.ChannelID)
 	if err != nil {
-		return nil, errUnknownChannel
+		return nil, resolvers.ErrUnknownChannel
 	}
 
 	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	if err == nil {
-		return nil, errChannelBanned
+		return nil, resolvers.ErrUserBanned
 	}
 
 	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
@@ -215,10 +217,10 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 	}
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, errUnknownChannel
+			return nil, resolvers.ErrUnknownChannel
 		}
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
@@ -231,7 +233,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 				}
 			}
 			if !found {
-				return nil, errAccessDenied
+				return nil, resolvers.ErrAccessDenied
 			}
 		}
 	}
@@ -248,13 +250,13 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		}
 	}
 
-	field, failed := GenerateSelectedFieldMap(ctx, maxDepth)
+	field, failed := query_resolvers.GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
-		return nil, errDepth
+		return nil, resolvers.ErrDepth
 	}
 
 	if !found {
-		return GenerateUserResolver(ctx, channel, &channelID, field.children)
+		return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
 	}
 
 	_, err = mongo.Database.Collection("users").UpdateOne(mongo.Ctx, bson.M{
@@ -280,7 +282,7 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 
 	if doc.Err() != nil {
 		log.Errorf("mongo, err=%v", err)
-		return nil, errInternalServer
+		return nil, resolvers.ErrInternalServer
 	}
 
 	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
@@ -309,5 +311,5 @@ func (*RootResolver) RemoveChannelEmote(ctx context.Context, args struct {
 			Actor:   usr.DisplayName,
 		})
 	}
-	return GenerateUserResolver(ctx, channel, &channelID, field.children)
+	return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
 }

@@ -1,6 +1,10 @@
-package resolvers
+package mutation_resolvers
 
-import "context"
+import (
+	"context"
+
+	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
+)
 
 type roleInput struct {
 	ID       string      `json:"id"`
@@ -11,6 +15,6 @@ type roleInput struct {
 	Denied   *complex128 `json:"denied"`
 }
 
-func (r *RootResolver) CreateRole(ctx context.Context, args roleInput) (*roleResolver, error) {
+func (r *MutationResolver) CreateRole(ctx context.Context, args roleInput) (*query_resolvers.RoleResolver, error) {
 	return nil, nil
 }

@@ -1,4 +1,4 @@
-package resolvers
+package query_resolvers
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,14 +16,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type emoteResolver struct {
+type EmoteResolver struct {
 	ctx context.Context
 	v   *datastructure.Emote
 
 	fields map[string]*SelectedField
 }
 
-func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emoteID *primitive.ObjectID, fields map[string]*SelectedField) (*emoteResolver, error) {
+func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emoteID *primitive.ObjectID, fields map[string]*SelectedField) (*EmoteResolver, error) {
 	if emote == nil {
 		emote = &datastructure.Emote{}
 		if err := cache.FindOne("emotes", "", bson.M{
@@ -30,7 +31,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 		}, emote); err != nil {
 			if err != mongo.ErrNoDocuments {
 				log.Errorf("mongo, err=%v", err)
-				return nil, errInternalServer
+				return nil, resolvers.ErrInternalServer
 			}
 			return nil, nil
 		}
@@ -48,7 +49,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 				"target.type": "emotes",
 			}, emote.AuditEntries); err != nil {
 				log.Errorf("mongo, err=%v", err)
-				return nil, errInternalServer
+				return nil, resolvers.ErrInternalServer
 			}
 		}
 	}
@@ -62,7 +63,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 					"$in": []primitive.ObjectID{emote.ID},
 				},
 			}, emote.Channels); err != nil {
-				return nil, errInternalServer
+				return nil, resolvers.ErrInternalServer
 			}
 		}
 	}
@@ -75,10 +76,10 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 			"target.type": "emotes",
 		}, emote.Reports); err != nil {
 			log.Errorf("mongo, err=%v", err)
-			return nil, errInternalServer
+			return nil, resolvers.ErrInternalServer
 		}
 
-		_, query := v.children["reporter"]
+		_, query := v.Children["reporter"]
 
 		reports := *emote.Reports
 		reportMap := map[primitive.ObjectID][]*datastructure.Report{}
@@ -101,7 +102,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 				},
 			}, &reporters); err != nil {
 				log.Errorf("mongo, err=%v", err)
-				return nil, errInternalServer
+				return nil, resolvers.ErrInternalServer
 			}
 			for _, u := range reporters {
 				for _, r := range reportMap[u.ID] {
@@ -115,7 +116,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 		emote.Provider = "7TV"
 	}
 
-	r := &emoteResolver{
+	r := &EmoteResolver{
 		ctx:    ctx,
 		v:      emote,
 		fields: fields,
@@ -123,46 +124,46 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 	return r, nil
 }
 
-func (r *emoteResolver) ID() string {
+func (r *EmoteResolver) ID() string {
 	if r.v.ID.IsZero() {
 		return utils.Ternary(r.v.ProviderID != nil, *r.v.ProviderID, "").(string)
 	}
 
 	return r.v.ID.Hex()
 }
-func (r *emoteResolver) Name() string {
+func (r *EmoteResolver) Name() string {
 	return r.v.Name
 }
-func (r *emoteResolver) OwnerID() string {
+func (r *EmoteResolver) OwnerID() string {
 	return r.v.OwnerID.Hex()
 }
-func (r *emoteResolver) Visibility() int32 {
+func (r *EmoteResolver) Visibility() int32 {
 	return r.v.Visibility
 }
-func (r *emoteResolver) Mime() string {
+func (r *EmoteResolver) Mime() string {
 	return r.v.Mime
 }
-func (r *emoteResolver) Status() int32 {
+func (r *EmoteResolver) Status() int32 {
 	return r.v.Status
 }
 
-func (r *emoteResolver) Tags() []string {
+func (r *EmoteResolver) Tags() []string {
 	return r.v.Tags
 }
 
-func (r *emoteResolver) CreatedAt() string {
+func (r *EmoteResolver) CreatedAt() string {
 	return r.v.ID.Timestamp().Format(time.RFC3339)
 }
 
-func (r *emoteResolver) Owner() (*userResolver, error) {
+func (r *EmoteResolver) Owner() (*UserResolver, error) {
 	if r.v.Owner != nil {
-		resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, nil, r.fields["owner"].children)
+		resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, nil, r.fields["owner"].Children)
 		if err != nil {
 			return nil, err
 		}
 		return resolver, nil
 	}
-	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.OwnerID, r.fields["owner"].children)
+	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.OwnerID, r.fields["owner"].Children)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +174,7 @@ func (r *emoteResolver) Owner() (*userResolver, error) {
 	return resolver, nil
 }
 
-func (r *emoteResolver) AuditEntries() ([]string, error) {
+func (r *EmoteResolver) AuditEntries() ([]string, error) {
 	if r.v.AuditEntries == nil {
 		return nil, nil
 	}
@@ -189,13 +190,13 @@ func (r *emoteResolver) AuditEntries() ([]string, error) {
 	return logs, nil
 }
 
-func (r *emoteResolver) Channels() (*[]*userResolver, error) {
+func (r *EmoteResolver) Channels() (*[]*UserResolver, error) {
 	if r.v.Channels == nil {
 		return nil, nil
 	}
 
 	u := *r.v.Channels
-	users := make([]*userResolver, len(u))
+	users := make([]*UserResolver, len(u))
 	for i, usr := range u {
 		resolver, err := GenerateUserResolver(r.ctx, usr, &usr.ID, nil)
 		if err != nil {
@@ -208,10 +209,10 @@ func (r *emoteResolver) Channels() (*[]*userResolver, error) {
 	return &users, nil
 }
 
-func (r *emoteResolver) Reports() (*[]*reportResolver, error) {
+func (r *EmoteResolver) Reports() (*[]*reportResolver, error) {
 	u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok || (u.Rank != datastructure.UserRankAdmin && u.Rank != datastructure.UserRankModerator) {
-		return nil, errAccessDenied
+		return nil, resolvers.ErrAccessDenied
 	}
 
 	if r.v.Reports == nil {
@@ -222,7 +223,7 @@ func (r *emoteResolver) Reports() (*[]*reportResolver, error) {
 	reports := make([]*reportResolver, len(e))
 	var err error
 	for i, l := range e {
-		reports[i], err = GenerateReportResolver(r.ctx, l, r.fields["reports"].children)
+		reports[i], err = GenerateReportResolver(r.ctx, l, r.fields["reports"].Children)
 		if err != nil {
 			return nil, err
 		}
@@ -230,15 +231,15 @@ func (r *emoteResolver) Reports() (*[]*reportResolver, error) {
 	return &reports, nil
 }
 
-func (r *emoteResolver) Provider() string {
+func (r *EmoteResolver) Provider() string {
 	return r.v.Provider
 }
 
-func (r *emoteResolver) ProviderID() *string {
+func (r *EmoteResolver) ProviderID() *string {
 	return r.v.ProviderID
 }
 
-func (r *emoteResolver) URLs() [][]string {
+func (r *EmoteResolver) URLs() [][]string {
 	result := make([][]string, 4) // 4 length because there are 4 CDN sizes supported (1x, 2x, 3x, 4x)
 
 	if r.v.Provider == "7TV" { // Provider is 7TV: append URLs

@@ -1,4 +1,4 @@
-package resolvers
+package query_resolvers
 
 import (
 	"context"
@@ -49,16 +49,16 @@ func (r *banResolver) IssuedByID() *string {
 	return &hex
 }
 
-func (r *banResolver) User() (*userResolver, error) {
+func (r *banResolver) User() (*UserResolver, error) {
 	if r.v.UserID == nil {
 		return nil, nil
 	}
-	return GenerateUserResolver(r.ctx, nil, r.v.UserID, r.fields["user"].children)
+	return GenerateUserResolver(r.ctx, nil, r.v.UserID, r.fields["user"].Children)
 }
 
-func (r *banResolver) IssuedBy() (*userResolver, error) {
+func (r *banResolver) IssuedBy() (*UserResolver, error) {
 	if r.v.IssuedByID == nil {
 		return nil, nil
 	}
-	return GenerateUserResolver(r.ctx, nil, r.v.IssuedByID, r.fields["user"].children)
+	return GenerateUserResolver(r.ctx, nil, r.v.IssuedByID, r.fields["user"].Children)
 }
