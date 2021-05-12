@@ -43,7 +43,7 @@ func CreateRoute(router fiber.Router) {
 		if !ok {
 			return 500, errInternalServer, nil
 		}
-		if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteCreate) {
+		if !usr.HasPermission(datastructure.RolePermissionEmoteCreate) {
 			return 403, utils.S2B(fmt.Sprintf(errAccessDenied, "You don't have permission to do that.")), nil
 		}
 
@@ -147,7 +147,7 @@ func CreateRoute(router fiber.Router) {
 			return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The fields were not provided.")), nil
 		}
 
-		if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
+		if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 			if channelID.Hex() != usr.ID.Hex() {
 				if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 					"_id":     channelID,

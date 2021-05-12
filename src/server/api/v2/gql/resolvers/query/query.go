@@ -138,8 +138,8 @@ func (*QueryResolver) Emote(ctx context.Context, args struct{ ID string }) (*Emo
 	// Get actor user
 	usr, _ := ctx.Value(utils.UserKey).(*datastructure.User)
 	// Verify actor permissions
-	if utils.HasBits(int64(resolver.v.Visibility), int64(datastructure.EmoteVisibilityPrivate)) && usr.ID != resolver.v.OwnerID {
-		if usr == nil || !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
+	if utils.BitField.HasBits(int64(resolver.v.Visibility), int64(datastructure.EmoteVisibilityPrivate)) && usr.ID != resolver.v.OwnerID {
+		if usr == nil || !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
 			return nil, resolvers.ErrUnknownEmote
 		}
 	}
@@ -234,7 +234,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		}
 	}
 
-	if usr == nil || !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
+	if usr == nil || !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
 		var usrID primitive.ObjectID
 		if usr != nil {
 			usrID = usr.ID

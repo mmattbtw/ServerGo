@@ -77,7 +77,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
+	if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			return nil, resolvers.ErrAccessDenied
 		}
@@ -175,7 +175,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
+	if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			return nil, resolvers.ErrAccessDenied
 		}

@@ -213,7 +213,7 @@ func (r *UserResolver) ID() string {
 }
 
 func (r *UserResolver) Email() *string {
-	if u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User); ok && (r.v.ID == u.ID || datastructure.UserHasPermission(u, datastructure.RolePermissionManageUsers)) {
+	if u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User); ok && (r.v.ID == u.ID || u.HasPermission(datastructure.RolePermissionManageUsers)) {
 		return &r.v.Email
 	} else { // Hide the email address if
 		s := "<hidden>"

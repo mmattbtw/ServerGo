@@ -101,12 +101,12 @@ type User struct {
 }
 
 // Test whether a User has a permission flag
-func UserHasPermission(user *User, flag int64) bool {
+func (u *User) HasPermission(flag int64) bool {
 	var allowed int64 = 0
 	var denied int64 = 0
-	if user != nil {
-		allowed = user.Role.Allowed
-		denied = user.Role.Denied
+	if u != nil {
+		allowed = u.Role.Allowed
+		denied = u.Role.Denied
 	}
 
 	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
@@ -115,8 +115,8 @@ func UserHasPermission(user *User, flag int64) bool {
 	}
 
 	// Get the sum with denied permissions removed from the bitset
-	sum := utils.RemoveBits(allowed, denied)
-	return utils.HasBits(sum, flag) || utils.HasBits(sum, RolePermissionAdministrator)
+	sum := utils.BitField.RemoveBits(allowed, denied)
+	return utils.BitField.HasBits(sum, flag) || utils.BitField.HasBits(sum, RolePermissionAdministrator)
 }
 
 type Role struct {

@@ -68,7 +68,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
+	if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			found := false
 			for _, e := range channel.EditorIDs {
@@ -116,7 +116,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 	for _, v := range emote.SharedWith {
 		sharedWith = append(sharedWith, v.Hex())
 	}
-	if utils.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityPrivate)) {
+	if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityPrivate)) {
 		if emote.OwnerID.Hex() != channelID.Hex() || !utils.Contains(sharedWith, emoteID.Hex()) {
 			return nil, resolvers.ErrUnknownEmote
 		}
@@ -223,7 +223,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionManageUsers) {
+	if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
 			found := false
 			for _, e := range channel.EditorIDs {

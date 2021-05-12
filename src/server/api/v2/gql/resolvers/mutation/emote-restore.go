@@ -51,7 +51,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionEmoteEditAll) {
+	if !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
 			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 				"_id":     emote.OwnerID,

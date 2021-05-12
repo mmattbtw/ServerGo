@@ -25,7 +25,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrLoginRequired
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionBanUsers) {
+	if !usr.HasPermission(datastructure.RolePermissionBanUsers) {
 		return nil, resolvers.ErrAccessDenied
 	}
 
@@ -127,7 +127,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrLoginRequired
 	}
 
-	if !datastructure.UserHasPermission(usr, datastructure.RolePermissionBanUsers) {
+	if !usr.HasPermission(datastructure.RolePermissionBanUsers) {
 		return nil, resolvers.ErrAccessDenied
 	}
 
