@@ -227,7 +227,6 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		mongoUser := &datastructure.User{}
 		if doc.Err() != nil {
-			fmt.Println(doc.Err())
 			if doc.Err() == mongo.ErrNoDocuments {
 				mongoUser = &datastructure.User{
 					TwitchID:        user.ID,
@@ -239,6 +238,7 @@ func Twitch(app fiber.Router) fiber.Router {
 					Description:     user.Description,
 					CreatedAt:       user.CreatedAt,
 					OfflineImageURL: user.OfflineImageURL,
+					BroadcasterType: user.BroadcasterType,
 					ViewCount:       int32(user.ViewCount),
 					EmoteIDs:        []primitive.ObjectID{},
 					EditorIDs:       []primitive.ObjectID{},
