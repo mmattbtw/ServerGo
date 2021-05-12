@@ -155,6 +155,10 @@ func (r *EmoteResolver) CreatedAt() string {
 	return r.v.ID.Timestamp().Format(time.RFC3339)
 }
 
+func (r *EmoteResolver) ChannelCount() int32 {
+	return *r.v.ChannelCount
+}
+
 func (r *EmoteResolver) Owner() (*UserResolver, error) {
 	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.OwnerID, r.fields["owner"].Children)
 	if err != nil {

@@ -116,6 +116,8 @@ type Emote {
   provider_id: String
   # CDN URLs to this emote
   urls: [[String!]!]!
+  # Get the amount of channels this emote is added to
+  channel_count: Int!
 }
 
 type User {
