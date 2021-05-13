@@ -33,6 +33,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/graph-gophers/graphql-go => github.com/StreamerVods/graphql-go v0.0.0-20210313100256-379b9c062e58
+replace github.com/graph-gophers/graphql-go => github.com/troydota/graphql-go v0.0.0-20210513105700-d1faf5042c4f
 
 replace github.com/gofiber/fiber/v2 => github.com/SevenTV/fiber/v2 v2.6.1-0.20210319160543-361927aee8a2
