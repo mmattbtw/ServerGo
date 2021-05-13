@@ -38,6 +38,11 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
+	// Can't add self as editor...
+	if editorID.Hex() == channelID.Hex() {
+		return nil, resolvers.ErrYourself
+	}
+
 	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
