@@ -144,11 +144,17 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if _, ok := fields["editor_in"]; ok && user.EditorIn == nil {
 		user.EditorIn = &[]*datastructure.User{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:editor_in", user.ID.Hex()), bson.M{
+
+		if cur, err := mongo.Database.Collection("users").Find(mongo.Ctx, bson.M{
 			"editors": user.ID,
-		}, user.EditorIn); err != nil {
+		}); err != nil {
 			log.Errorf("mongo, err=%v", err)
 			return nil, resolvers.ErrInternalServer
+		} else {
+			if err = cur.All(mongo.Ctx, user.EditorIn); err != nil {
+				log.Errorf("mongo, err=%v", err)
+				return nil, resolvers.ErrInternalServer
+			}
 		}
 	}
 

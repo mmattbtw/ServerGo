@@ -187,11 +187,7 @@ func changeStream(collection string, data bson.M) {
 		}
 		ojson = dataString
 	}
-	if eventType == "create" {
-		switch collection {
-		case "emote":
-		}
-	}
+
 	_, err := redis.InvalidateCache(fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
 	if err != nil {
 		log.Errorf("redis, err=%s", err)
