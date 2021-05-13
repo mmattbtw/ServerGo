@@ -83,14 +83,12 @@ func main() {
 	select {}
 }
 
-func Cleanup() error {
+func Cleanup() {
 	// Remove websocket connections from Redis
 	log.Infof("<WebSocket> Closing %d connections", len(api_websocket.Connections))
 	for _, conn := range api_websocket.Connections {
 		conn.Unregister()
 	}
-
-	return nil
 }
 
 // Get all roles available and cache into the mongo context

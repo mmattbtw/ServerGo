@@ -88,11 +88,10 @@ func WebSocket(app fiber.Router) {
 				case WebSocketMessageOpHeartbeat:
 					chHeartbeat <- msg
 					go awaitHeartbeat(ctx, c, chHeartbeat, time.Second*time.Duration(heartbeatInterval)) // Start waiting for the next heartbeat
-					break
-				// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
+
+					// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
 				case WebSocketMessageOpIdentify:
 					chIdentified <- true
-					break
 
 				// Opcode: SUBSCRIBE (Client wants to start receiving events from a specified source)
 				case WebSocketMessageOpSubscribe:
@@ -117,12 +116,10 @@ func WebSocket(app fiber.Router) {
 
 					default: // Unknown Subscription
 						c.SendClosure(1003, "Unknown Subscription Type")
-						break
 					}
 
 				default:
 					c.SendClosure(1003, "Invalid Opcode")
-					break
 				}
 			} else {
 				break
