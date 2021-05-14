@@ -2,14 +2,11 @@ package emotes
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"image"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"io"
-	"math"
 	"mime/multipart"
 	"os"
 	"os/exec"
@@ -31,7 +28,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/image/draw"
 )
 
 const MAX_FRAME_COUNT int = 1024
@@ -59,7 +55,6 @@ func CreateRoute(router fiber.Router) {
 		var emote *datastructure.Emote
 		var emoteName string              // The name of the emote
 		var channelID *primitive.ObjectID // The channel creating this emote
-		var ogFileStream bytes.Buffer     // The original file, being streamed in
 		var contentType string
 		var ext string
 		id, _ := uuid.NewRandom()
@@ -70,6 +65,7 @@ func CreateRoute(router fiber.Router) {
 			log.Errorf("mkdir, err=%v", err)
 			return 500, errInternalServer, nil
 		}
+		ogFilePath := fmt.Sprintf("%v/og", fileDir) // The original file's path in temp
 
 		// Remove temp dir once this function completes
 		defer os.RemoveAll(fileDir)
@@ -123,16 +119,21 @@ func CreateRoute(router fiber.Router) {
 					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The file content type is not supported. It must be one of jpg, png or gif")), nil
 				}
 
+				osFile, err := os.Create(ogFilePath)
+				if err != nil {
+					log.Errorf("file, err=%v", err)
+					return 500, errInternalServer, nil
+				}
+
 				for {
 					n, err := part.Read(data)
 					if err != nil && err != io.EOF {
 						log.Errorf("read, err=%v", err)
 						return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "We failed to read the file.")), nil
 					}
-
-					_, err2 := ogFileStream.Write(data[:n])
+					_, err2 := osFile.Write(data[:n])
 					if err2 != nil {
-						ogFileStream.Reset()
+						osFile.Close()
 						log.Errorf("write, err=%v", err)
 						return 500, errInternalServer, nil
 					}
@@ -163,29 +164,32 @@ func CreateRoute(router fiber.Router) {
 		}
 
 		// Get uploaded image file into an image.Image
-		var frames []*image.Image
-		var gifOptions gif.GIF
-		isGIF := false
-
+		ogFile, err := os.Open(ogFilePath)
+		if err != nil {
+			log.Errorf("could not open original file, err=%v", err)
+			return 500, errInternalServer, nil
+		}
+		ogHeight := 0
+		ogWidth := 0
 		switch ext {
 		case "jpg":
-			img, err := jpeg.Decode(&ogFileStream)
+			img, err := jpeg.Decode(ogFile)
 			if err != nil {
 				log.Errorf("could not decode jpeg, err=%v", err)
 				return 500, errInternalServer, nil
 			}
-
-			frames = append(frames, &img)
+			ogWidth = img.Bounds().Dx()
+			ogHeight = img.Bounds().Dy()
 		case "png":
-			img, err := png.Decode(&ogFileStream)
+			img, err := png.Decode(ogFile)
 			if err != nil {
 				log.Errorf("could not decode png, err=%v", err)
 				return 500, errInternalServer, nil
 			}
-
-			frames = append(frames, &img)
+			ogWidth = img.Bounds().Dx()
+			ogHeight = img.Bounds().Dy()
 		case "gif":
-			g, err := gif.DecodeAll(&ogFileStream)
+			g, err := gif.DecodeAll(ogFile)
 			if err != nil {
 				log.Errorf("could not decode gif, err=%v", err)
 				return 500, errInternalServer, nil
@@ -196,13 +200,7 @@ func CreateRoute(router fiber.Router) {
 				return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, fmt.Sprintf("Your GIF exceeds the maximum amount of frames permitted. (%v)", MAX_FRAME_COUNT))), nil
 			}
 
-			for _, f := range g.Image {
-				img := f.SubImage(f.Rect)
-				frames = append(frames, &img)
-			}
-
-			isGIF = true
-			gifOptions = *g
+			ogWidth, ogHeight = getGifDimensions(g)
 		}
 
 		// Define sizes to be generated
@@ -214,69 +212,31 @@ func CreateRoute(router fiber.Router) {
 		}
 
 		// Resize the frame(s)
-		firstFrame := *frames[0]
 		for _, file := range files {
-			scopedFolderPath := file[0] // The temporary filepath where to store the generated emote sizes
 			scope := file[1]
 			sizes := strings.Split(file[2], "x")
 			maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
 			maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
-			quality := file[3]
+			outFile := fmt.Sprintf("%v/%v.webp", fileDir, scope)
+			// quality := file[3]
 
 			// Get calculed ratio for the size
 			width, height := utils.GetSizeRatio(
-				[]float64{float64(firstFrame.Bounds().Dx()), float64(firstFrame.Bounds().Dy())},
+				[]float64{float64(ogWidth), float64(ogHeight)},
 				[]float64{maxWidth, maxHeight},
 			)
 
 			// Create new boundaries for frames
-			rect := image.Rect(0, 0, int(width), int(height))
+			fmt.Println("Width/Height", width, maxHeight)
 
-			// Render all frames individually
-			_ = os.Mkdir(scopedFolderPath, 0777)
-
-			cmdArgs := []string{ // The argument list for the img2webp command
-				"-loop",
-				fmt.Sprintf("%v", utils.Ternary(isGIF, gifOptions.LoopCount, 1)),
-			}
-
-			// Iterate through each frame
-			// Encode as PNG, then append to arguments for webp creation
-			for i, f := range frames {
-				scale := draw.BiLinear
-				dst := image.NewRGBA(rect) // Create new RGBA image
-
-				// Scale the image according to our defined bounds
-				// calculated by GetSizeRatio() method
-				scale.Scale(dst, rect, *f, (*f).Bounds(), draw.Over, nil)
-				filePath := scopedFolderPath + fmt.Sprintf("/%v.png", i)
-
-				// Write frames to file
-				writer, _ := os.Create(filePath)
-				_ = png.Encode(writer, dst)
-
-				// Append argument
-				cmdArgs = append(cmdArgs, []string{
-					"-lossy",
-					"-q", quality,
-					"-d",
-					func() string {
-						if isGIF && len(gifOptions.Delay) > 0 {
-							return fmt.Sprint(math.Max(16, float64(gifOptions.Delay[i]*10))) // The delay is gif frame delay * 10
-						} else {
-							return "16"
-						}
-					}(),
-					filePath,
-				}...)
-			}
-			cmdArgs = append(cmdArgs, []string{ // Add outpt argument
-				"-o",
-				fileDir + fmt.Sprintf("/%v.webp", scope), // outputs as tmp/<uuid>/*x.webp
+			cmd := exec.Command("convert", []string{
+				ogFilePath,
+				// "-quality", quality,
+				"-coalesce",
+				"-resize", fmt.Sprintf("%dx%d", width, height),
+				"-define", "webp:lossless=false",
+				outFile,
 			}...)
-
-			//
-			cmd := exec.Command("img2webp", cmdArgs...)
 
 			// Print output to console for debugging
 			stderr, _ := cmd.StderrPipe()
@@ -293,7 +253,6 @@ func CreateRoute(router fiber.Router) {
 				log.Errorf("cmd, err=%v", err)
 				return 500, errInternalServer, nil
 			}
-
 		}
 
 		wg := &sync.WaitGroup{}
@@ -385,4 +344,28 @@ func CreateRoute(router fiber.Router) {
 			CreatedBy: usr.ID,
 		}
 	}))
+}
+
+func getGifDimensions(gif *gif.GIF) (x, y int) {
+	var leastX int
+	var leastY int
+	var mostX int
+	var mostY int
+
+	for _, img := range gif.Image {
+		if img.Rect.Min.X < leastX {
+			leastX = img.Rect.Min.X
+		}
+		if img.Rect.Min.Y < leastY {
+			leastY = img.Rect.Min.Y
+		}
+		if img.Rect.Max.X > mostX {
+			mostX = img.Rect.Max.X
+		}
+		if img.Rect.Max.Y > mostY {
+			mostY = img.Rect.Max.Y
+		}
+	}
+
+	return mostX - leastX, mostY - leastY
 }

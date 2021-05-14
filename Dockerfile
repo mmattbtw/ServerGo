@@ -20,7 +20,7 @@ RUN go build -o seventv
 
 # Start fresh from a smaller image
 FROM alpine
-RUN apk update && apk add ca-certificates libwebp-tools libwebp-dev libpng-dev jpeg-dev giflib-dev
+RUN apk update && apk add ca-certificates imagemagick libwebp-tools libwebp-dev libpng-dev jpeg-dev giflib-dev
 
 WORKDIR /app
 
