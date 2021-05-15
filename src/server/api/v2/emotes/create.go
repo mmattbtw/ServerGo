@@ -215,7 +215,6 @@ func CreateRoute(router fiber.Router) {
 			maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
 			maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
 			outFile := fmt.Sprintf("%v/%v.webp", fileDir, scope)
-			// quality := file[3]
 
 			// Get calculed ratio for the size
 			width, height := utils.GetSizeRatio(
@@ -230,10 +229,9 @@ func CreateRoute(router fiber.Router) {
 
 			cmd := exec.Command("convert", []string{
 				ogFilePath,
-				// "-quality", quality,
 				"-coalesce",
 				"-resize", fmt.Sprintf("%dx%d", width, height),
-				"-define", "webp:lossless=false",
+				"-define", "webp:lossless=false,auto-filter=true,method=6",
 				outFile,
 			}...)
 
