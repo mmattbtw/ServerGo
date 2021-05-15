@@ -16,11 +16,13 @@ COPY . .
 
 # Build the Go app
 RUN packr2
+RUN apk add pkgconfig imagemagick-dev build-base
 RUN go build -o seventv
 
 # Start fresh from a smaller image
 FROM alpine
-RUN apk update && apk add ca-certificates imagemagick libwebp-tools libwebp-dev libpng-dev jpeg-dev giflib-dev
+ENV MAGICK_HOME=/usr
+RUN apk update && apk add ca-certificates pkgconfig imagemagick libwebp-tools libwebp-dev libpng-dev jpeg-dev giflib-dev
 
 WORKDIR /app
 

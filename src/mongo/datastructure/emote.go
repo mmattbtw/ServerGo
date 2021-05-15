@@ -21,7 +21,7 @@ func (*emoteUtil) AddSizeMetadata(emote *Emote) ([4]int16, [4]int16, error) {
 	width := [4]int16{0, 0, 0, 0}
 	height := [4]int16{0, 0, 0, 0}
 
-	if MagickOK == false {
+	if !MagickOK {
 		InitMagickWand()
 	}
 

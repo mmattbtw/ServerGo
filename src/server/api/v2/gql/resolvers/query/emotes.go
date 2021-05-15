@@ -127,7 +127,8 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 						"height": height,
 					},
 				})
-				fmt.Println(fmt.Sprintf("Set Size of %v -> %dx%d", emote.Name, width, height))
+
+				fmt.Printf("Set Size of %v -> %dx%d\n", emote.Name, width, height)
 				if err != nil {
 					log.Errorf("query_resolvers, GenerateEmoteResolver(), err=%v", err)
 				}
