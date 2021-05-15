@@ -203,16 +203,13 @@ func CreateRoute(router fiber.Router) {
 			ogWidth, ogHeight = getGifDimensions(g)
 		}
 
-		// Define sizes to be generated
-		files := [][]string{
-			{fmt.Sprintf("%s/4x", fileDir), "4x", "384x128", "90"},
-			{fmt.Sprintf("%s/3x", fileDir), "3x", "228x76", "80"},
-			{fmt.Sprintf("%s/2x", fileDir), "2x", "144x48", "75"},
-			{fmt.Sprintf("%s/1x", fileDir), "1x", "96x32", "65"},
-		}
+		files := datastructure.EmoteUtil.GetFilesMeta(fileDir)
+		mime := "image/webp"
 
+		sizeX := [4]int16{0, 0, 0, 0}
+		sizeY := [4]int16{0, 0, 0, 0}
 		// Resize the frame(s)
-		for _, file := range files {
+		for i, file := range files {
 			scope := file[1]
 			sizes := strings.Split(file[2], "x")
 			maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
@@ -225,6 +222,8 @@ func CreateRoute(router fiber.Router) {
 				[]float64{float64(ogWidth), float64(ogHeight)},
 				[]float64{maxWidth, maxHeight},
 			)
+			sizeX[i] = int16(width)
+			sizeY[i] = int16(height)
 
 			// Create new boundaries for frames
 			fmt.Println("Width/Height", width, maxHeight)
@@ -258,7 +257,6 @@ func CreateRoute(router fiber.Router) {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(files))
 
-		mime := "image/webp"
 		emote = &datastructure.Emote{
 			Name:             emoteName,
 			Mime:             mime,
@@ -267,6 +265,8 @@ func CreateRoute(router fiber.Router) {
 			Visibility:       datastructure.EmoteVisibilityPrivate,
 			OwnerID:          *channelID,
 			LastModifiedDate: time.Now(),
+			Width:            sizeX,
+			Height:           sizeY,
 		}
 		res, err := mongo.Database.Collection("emotes").InsertOne(mongo.Ctx, emote)
 

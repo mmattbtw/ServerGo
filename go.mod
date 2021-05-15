@@ -30,6 +30,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20210324051608-47abb6519492 // indirect
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
+	gopkg.in/gographics/imagick.v3 v3.4.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
