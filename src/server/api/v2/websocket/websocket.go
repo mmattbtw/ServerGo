@@ -222,7 +222,7 @@ func (c *Conn) Register() {
 
 // Bump the EXPIRE for this connection in the global redis store
 func (c *Conn) Refresh() {
-	redis.Client.Expire(redis.Ctx, c.Stat.RedisKey, time.Second*90)
+	redis.Client.Expire(redis.Ctx, c.Stat.RedisKey, time.Second*time.Duration(heartbeatInterval)+time.Second*60)
 }
 
 // Unregister the connection in the global redis store
