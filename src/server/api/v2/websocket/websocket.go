@@ -194,6 +194,7 @@ func (c *Conn) SendClosure(code int, message string) {
 		return
 	}
 	c.Stat.Lock.Lock()
+	c.Stat.Closed = true
 
 	b := websocket.FormatCloseMessage(code, message)
 
