@@ -116,26 +116,6 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 		emote.Provider = "7TV"
 	}
 
-	if emote.Provider == "" && (emote.Width[0] == 0 && emote.Height[0] == 0) {
-		go func() {
-			if width, height, err := datastructure.EmoteUtil.AddSizeMetadata(emote); err != nil {
-				log.Errorf("query_resolvers, GenerateEmoteResolver(), %v, err=%v", fmt.Sprint(emote.Name, emote.ID.Hex()), err)
-			} else {
-				_, err := mongo.Database.Collection("emotes").UpdateByID(mongo.Ctx, emote.ID, bson.M{
-					"$set": bson.M{
-						"width":  width,
-						"height": height,
-					},
-				})
-
-				fmt.Printf("Set Size of %v -> %dx%d\n", emote.Name, width, height)
-				if err != nil {
-					log.Errorf("query_resolvers, GenerateEmoteResolver(), err=%v", err)
-				}
-			}
-		}()
-	}
-
 	r := &EmoteResolver{
 		ctx:    ctx,
 		v:      emote,

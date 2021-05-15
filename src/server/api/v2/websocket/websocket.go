@@ -25,7 +25,8 @@ type Stat struct {
 	CreatedAt     time.Time               `json:"age"`    // The time at which this connection became active
 	Subscriptions []WebSocketSubscription `json:"subs"`   // A list of active subscription types&
 	Closed        bool                    `json:"closed"` // True if the connection has been closed
-	CloseLock     *sync.Mutex
+	Lock          *sync.Mutex
+	RedisKey      string
 }
 
 func WebSocket(app fiber.Router) {
@@ -66,7 +67,7 @@ func WebSocket(app fiber.Router) {
 
 		// We will disconnect clients who don't create a subscription
 		// These connections are considered stale, as they serve no purpose
-		noOpTimeout := time.AfterFunc(time.Second*30, func() {
+		noOpTimeout := time.AfterFunc(time.Second*45, func() {
 			if len(c.Stat.Subscriptions) == 0 {
 				c.SendClosure(websocket.CloseNormalClosure, "Connection is stale")
 			}
@@ -145,14 +146,16 @@ type Conn struct {
 }
 
 func transform(ws *websocket.Conn) *Conn {
+	id := uuid.New()
 	return &Conn{
 		ws,
 		WebSocketHelpers{},
 		Stat{
-			UUID:          uuid.New(),
+			UUID:          id,
 			Subscriptions: []WebSocketSubscription{},
 			CreatedAt:     time.Now(),
-			CloseLock:     &sync.Mutex{},
+			Lock:          &sync.Mutex{},
+			RedisKey:      fmt.Sprintf("ws:connections:%v", id.String()),
 		},
 	}
 }
@@ -190,7 +193,7 @@ func (c *Conn) SendClosure(code int, message string) {
 	if c == nil || c.Stat.Closed {
 		return
 	}
-	c.Stat.CloseLock.Lock()
+	c.Stat.Lock.Lock()
 
 	b := websocket.FormatCloseMessage(code, message)
 
@@ -198,17 +201,11 @@ func (c *Conn) SendClosure(code int, message string) {
 		log.Errorf("WebSocket, err=failed to write closure message, %v", err)
 	}
 	c.Close()
-	c.Stat.CloseLock.Unlock()
+	c.Stat.Lock.Unlock()
 }
 
 // Register the connection in the global redis store
 func (c *Conn) Register() {
-	redis.Client.ZAdd(redis.Ctx, "ws:connections", &redis.Z{
-		Score:  0,
-		Member: c.Stat.UUID.String(),
-	}) // Add to ZSET
-
-	// Convert stat to map
 	data := make([]string, 8)
 	data = append(data, "id", c.Stat.UUID.String())
 	data = append(data, "seq", string(c.Stat.Sequence))
@@ -217,25 +214,32 @@ func (c *Conn) Register() {
 		data = append(data, "subs", string(j))
 	}
 
-	if err := redis.Client.HSet(redis.Ctx, fmt.Sprintf("ws:connections:%v", c.Stat.UUID.String()), data).Err(); err != nil {
+	if err := redis.Client.HSet(redis.Ctx, c.Stat.RedisKey, data).Err(); err != nil {
 		log.Errorf("WebSocket, err=could not register socket, %v", err)
 	}
+	redis.Client.Expire(redis.Ctx, c.Stat.RedisKey, time.Second*90)
+}
+
+// Bump the EXPIRE for this connection in the global redis store
+func (c *Conn) Refresh() {
+	redis.Client.Expire(redis.Ctx, c.Stat.RedisKey, time.Second*90)
 }
 
 // Unregister the connection in the global redis store
 func (c *Conn) Unregister() {
-	redis.Client.ZRem(redis.Ctx, "ws:connections", c.Stat.UUID.String())                // Remove from ZSET
-	redis.Client.Del(redis.Ctx, fmt.Sprintf("ws:connections:%v", c.Stat.UUID.String())) // Remove key
+	redis.Client.Del(redis.Ctx, c.Stat.RedisKey) // Remove key
 }
 
 func (c *Conn) sendMessage(message *WebSocketMessageOutbound) {
 	if c.Stat.Closed {
 		return
 	}
+	c.Stat.Lock.Lock()
 
 	if err := c.WriteJSON(message); err != nil {
 		log.Errorf("WebSocket, err=failed to write json message, %v", err)
 	}
+	c.Stat.Lock.Unlock()
 }
 
 func (c *Conn) decodeMessageData(ctx context.Context, msg WebSocketMessageInbound, v interface{}) {
