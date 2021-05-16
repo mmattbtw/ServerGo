@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
@@ -80,6 +81,11 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 			if !found {
 				return nil, resolvers.ErrAccessDenied
 			}
+		}
+
+		maxEmoteSlots := configure.Config.GetInt("limits.meta.channel_emote_slots")
+		if (len(channel.EmoteIDs) + 1) > maxEmoteSlots {
+			return nil, resolvers.ErrEmoteSlotLimitReached
 		}
 	}
 

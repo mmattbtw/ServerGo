@@ -31,6 +31,11 @@ temp_file_store: "./tmp"
 # For signing and validating user access tokens
 jwt_secret: ""
 
+# Define Rate Limits
+limits:
+  meta:
+    channel_emote_slots: 150
+
 # AWS/S3 Credentials
 aws_akid: ""
 aws_endpoint: ""
