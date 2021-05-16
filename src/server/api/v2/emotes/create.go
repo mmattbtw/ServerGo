@@ -23,6 +23,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/SevenTV/ServerGo/src/validation"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -84,9 +85,9 @@ func CreateRoute(router fiber.Router) {
 				if err != nil && err != io.EOF {
 					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "We couldn't read the name.")), nil
 				}
-				// max emote name length
-				if n > 100 {
-					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The emote name is longer than we expected.")), nil
+
+				if !validation.ValidateEmoteName(buf[:n]) {
+					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "Invalid Emote Name")), nil
 				}
 				emoteName = utils.B2S(buf[:n])
 			} else if part.FormName() == "channel" {
