@@ -2,7 +2,9 @@ package gql
 
 import (
 	"context"
+	"time"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	mutation_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/mutation"
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
@@ -43,9 +45,14 @@ func GQL(app fiber.Router) fiber.Router {
 		&mutation_resolvers.MutationResolver{},
 	}, graphql.UseFieldResolvers())
 
+	rl := configure.Config.GetIntSlice("limits.route.gql")
+	gql.Use(middleware.RateLimitMiddleware("gql", int32(rl[0]), time.Millisecond*time.Duration(rl[1])))
 	gql.Post("/", func(c *fiber.Ctx) error {
 		req := &GQLRequest{}
 		err := c.BodyParser(req)
+		if err != nil {
+			return err
+		}
 		if err != nil {
 			log.Errorf("gql req, err=%v", err)
 			return c.Status(400).JSON(fiber.Map{
