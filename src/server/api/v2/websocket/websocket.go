@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ type Stat struct {
 	CreatedAt     time.Time               `json:"age"`    // The time at which this connection became active
 	Subscriptions []WebSocketSubscription `json:"subs"`   // A list of active subscription types&
 	Closed        bool                    `json:"closed"` // True if the connection has been closed
+	IP            string                  `json:"ip"`     // The client's IP Address
 	Lock          *sync.Mutex
 	RedisKey      string
 }
@@ -36,6 +38,14 @@ func WebSocket(app fiber.Router) {
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
+			var ip string
+			if len(c.IPs()) > 0 {
+				ip = c.IPs()[0]
+			} else {
+				ip = c.Context().RemoteIP().String()
+			}
+
+			c.Locals("ClientIP", ip)
 			c.Locals("allowed", true)
 			return c.Next()
 		}
@@ -43,7 +53,7 @@ func WebSocket(app fiber.Router) {
 	})
 
 	// WebSocket Endpoint:
-	// Subscribe to changes of db collection/document
+	// Subscribe to event channels
 	ws.Get("/", websocket.New(func(conn *websocket.Conn) {
 		c := transform(conn)
 		c.SendOpGreet() // Send an hello payload to the user
@@ -90,7 +100,7 @@ func WebSocket(app fiber.Router) {
 					chHeartbeat <- msg
 					go awaitHeartbeat(ctx, c, chHeartbeat, time.Second*time.Duration(heartbeatInterval)) // Start waiting for the next heartbeat
 
-					// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
+				// Opcode: IDENTIFY (Client wants to sign in to make authorized commands)
 				case WebSocketMessageOpIdentify:
 					chIdentified <- true
 
@@ -102,8 +112,7 @@ func WebSocket(app fiber.Router) {
 					subscription := data.Type // The subscription that the client wants to create
 					// Verify that the user is not already subscribed
 					if active[subscription] {
-						c.SendClosure(websocket.ClosePolicyViolation, "Already Subscribed")
-						break
+						continue
 					}
 					active[subscription] = true // Set subscription as active
 					c.Stat.Subscriptions = append(c.Stat.Subscriptions, data)
@@ -156,6 +165,7 @@ func transform(ws *websocket.Conn) *Conn {
 			CreatedAt:     time.Now(),
 			Lock:          &sync.Mutex{},
 			RedisKey:      fmt.Sprintf("ws:connections:%v", id.String()),
+			IP:            ws.Locals("ClientIP").(string),
 		},
 	}
 }
@@ -163,6 +173,7 @@ func transform(ws *websocket.Conn) *Conn {
 func (c *Conn) SendOpDispatch(data interface{}, t string) {
 	// Increase sequence
 	c.Stat.Sequence++
+	_ = redis.Client.HIncrBy(redis.Ctx, c.Stat.RedisKey, "seq", 1)
 
 	c.sendMessage(&WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
@@ -209,7 +220,8 @@ func (c *Conn) SendClosure(code int, message string) {
 func (c *Conn) Register() {
 	data := make([]string, 8)
 	data = append(data, "id", c.Stat.UUID.String())
-	data = append(data, "seq", string(c.Stat.Sequence))
+	data = append(data, "ip", c.Stat.IP)
+	data = append(data, "seq", strconv.Itoa(int(c.Stat.Sequence)))
 	data = append(data, "age", c.Stat.CreatedAt.String())
 	if j, err := json.Marshal(c.Stat.Subscriptions); err == nil {
 		data = append(data, "subs", string(j))

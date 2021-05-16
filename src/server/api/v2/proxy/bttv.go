@@ -113,6 +113,8 @@ func bttvTo7TV(emotes []emoteBTTV) ([]*datastructure.Emote, error) {
 
 		result[i] = &datastructure.Emote{
 			Name:       emote.Code,
+			Width:      [4]int16{28, 0, 0, 0},
+			Height:     [4]int16{28, 0, 0, 0},
 			Visibility: 0,
 			Mime:       "image/" + emote.ImageType,
 			Status:     datastructure.EmoteStatusLive,

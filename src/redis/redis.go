@@ -23,8 +23,6 @@ func init() {
 	}
 
 	Client = redis.NewClient(options)
-	Publisher = redis.NewClient(options)
-	Subscriber = redis.NewClient(options)
 
 	box := packr.New("lua", "./lua")
 

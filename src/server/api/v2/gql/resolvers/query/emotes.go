@@ -160,7 +160,7 @@ func (r *EmoteResolver) ChannelCount() int32 {
 }
 
 func (r *EmoteResolver) Owner() (*UserResolver, error) {
-	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.OwnerID, r.fields["owner"].Children)
+	resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, &r.v.OwnerID, r.fields["owner"].Children)
 	if err != nil {
 		return nil, err
 	}

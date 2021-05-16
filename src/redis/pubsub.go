@@ -6,9 +6,6 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-var Publisher *redis.Client
-var Subscriber *redis.Client
-
 // Publish to a redis channel
 func Publish(channel string, data interface{}) error {
 	j, err := json.Marshal(data)
@@ -26,7 +23,7 @@ func Publish(channel string, data interface{}) error {
 
 // Subscribe to a channel on Redis
 func Subscribe(ch chan []byte, subscribeTo ...string) *redis.PubSub {
-	topic := Subscriber.Subscribe(Ctx, subscribeTo...)
+	topic := Client.Subscribe(Ctx, subscribeTo...)
 	channel := topic.Channel() // Get a channel for this subscription
 
 	go func() {

@@ -102,7 +102,6 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			ids := make([]primitive.ObjectID, len(ems))
 			emotes := make(map[primitive.ObjectID]*datastructure.Emote, len(ems))
 			for i, e := range ems {
-				e.Owner = user
 				ids[i] = e.ID
 				emotes[e.ID] = e
 			}

@@ -81,6 +81,8 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
 
 		result[i] = &datastructure.Emote{
 			Name:       emote.Name,
+			Width:      [4]int16{emote.Width, 0, 0, 0},
+			Height:     [4]int16{emote.Height, 0, 0, 0},
 			Visibility: 0,
 			Mime:       "image/png",
 			Status:     datastructure.EmoteStatusLive,
@@ -106,6 +108,8 @@ func getCdnURL_FFZ(emoteID int32, size int8) string {
 type emoteFFZ struct {
 	ID          int32     `json:"id"`
 	Name        string    `json:"name"`
+	Width       int16     `json:"width"`
+	Height      int16     `json:"height"`
 	Public      bool      `json:"public"`
 	Hidden      bool      `json:"hidden"`
 	Owner       userFFZ   `json:"owner"`
