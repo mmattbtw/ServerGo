@@ -44,7 +44,6 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 
 		// Create RateLimiter instance
 		redisKey := fmt.Sprintf("rl:%s", hex.EncodeToString(h.Sum(nil)))
-		fmt.Println(redisKey)
 		rl := RateLimiter{
 			c,          // Connection
 			redisKey,   // Redis Key
@@ -60,7 +59,7 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		c.Set("X-RateLimit-Remaining", strconv.Itoa(int(rl.Remaining)))
 
 		resetAt, _ := redis.Client.HGet(redis.Ctx, rl.RedisKey, "reset").Time()
-		resetIn := duration.Seconds() - time.Now().Sub(resetAt).Seconds() // Calculate seconds until reset
+		resetIn := duration.Seconds() - time.Since(resetAt).Seconds() // Calculate seconds until reset
 		c.Set("X-RateLimit-Reset", strconv.Itoa(int(resetIn)))
 
 		// 429 Too Many Requests?
