@@ -58,12 +58,16 @@ func SendEmoteEdit(emote datastructure.Emote, actor datastructure.User, logs []*
 		"_id": emote.OwnerID,
 	}, &emote.Owner)
 
+	ownerName := datastructure.DeletedUser.DisplayName
+	if emote.Owner != nil {
+		ownerName = emote.Owner.DisplayName
+	}
 	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: fmt.Sprintf("**[activity]** ✏️ emote [%s](%v) edited by [%s](%v)", emote.Name, utils.GetEmotePageURL(emote.ID.Hex()), actor.DisplayName, utils.GetUserPageURL(actor.ID.Hex())),
 		Embeds: []*dgo.MessageEmbed{
 			{
 				Title:       emote.Name,
-				Description: fmt.Sprintf("by %v", emote.Owner.DisplayName),
+				Description: fmt.Sprintf("by %v", ownerName),
 				Thumbnail: &dgo.MessageEmbedThumbnail{
 					URL: utils.GetEmoteImageURL(emote.ID.Hex()),
 				},

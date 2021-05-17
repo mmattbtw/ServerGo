@@ -19,20 +19,6 @@ func init() {
 		webhookID = &s[0]
 		webhookToken = &s[1]
 	}
-
-	_, _ = getEmotesUsage()
-	//	if err != nil {
-	//		fmt.Println("You're shit", err)
-	//	} else {
-	//		for _, emote := range emotes {
-	//			fmt.Println("", *emote.ChannelCount, emote.Name)
-	//			/* Spam the fuck out of general poggers
-	//			if _, err := d.ChannelMessageSend("817075418640678964", emote.Name); err != nil {
-	//				fmt.Println("You're more shit", err)
-	//			}
-	//			*/
-	//		}
-	//	}
 }
 
 func toIntColor(s string) int {
@@ -43,3 +29,5 @@ func toIntColor(s string) int {
 
 	return int(i)
 }
+
+var Discord = d
