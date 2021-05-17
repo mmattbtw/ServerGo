@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	_ "github.com/SevenTV/ServerGo/src/redis"
@@ -89,6 +90,9 @@ func Cleanup() {
 	for _, conn := range api_websocket.Connections {
 		conn.Unregister()
 	}
+
+	// Logout from discord
+	discord.Discord.CloseWithCode(1000)
 }
 
 // Get all roles available and cache into the mongo context
