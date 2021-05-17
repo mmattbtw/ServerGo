@@ -48,7 +48,8 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
 		user.OwnedEmotes = &[]*datastructure.Emote{}
 		if err := cache.Find("emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
-			"owner": user.ID,
+			"owner":  user.ID,
+			"status": datastructure.EmoteStatusLive,
 		}, user.OwnedEmotes); err != nil {
 			log.Errorf("mongo, err=%v", err)
 			return nil, resolvers.ErrInternalServer
