@@ -66,6 +66,14 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 	}, depth > max
 }
 
+func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
+	Page  int32
+	Limit int32
+}) ([]*auditResolver, error) {
+
+	return nil, nil
+}
+
 func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*UserResolver, error) {
 	isMe := args.ID == "@me" // Handle @me (current authenticated user)
 	user := &datastructure.User{}
