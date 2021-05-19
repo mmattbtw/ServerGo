@@ -122,8 +122,9 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 	for _, v := range emote.SharedWith {
 		sharedWith = append(sharedWith, v.Hex())
 	}
+	fmt.Println(emote.OwnerID.Hex(), channelID.Hex())
 	if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityPrivate)) {
-		if emote.OwnerID.Hex() != channelID.Hex() || !utils.Contains(sharedWith, emoteID.Hex()) {
+		if emote.OwnerID.Hex() != channelID.Hex() && !utils.Contains(sharedWith, emoteID.Hex()) {
 			return nil, resolvers.ErrUnknownEmote
 		}
 	}
