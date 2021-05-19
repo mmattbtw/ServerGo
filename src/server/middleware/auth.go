@@ -32,7 +32,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Invalid token.1",
+				"error":  "Invalid Token",
 			})
 		}
 
@@ -44,7 +44,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Invalid token.",
+				"error":  "Invalid Token",
 			})
 		}
 
@@ -56,7 +56,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Invalid token.",
+				"error":  "Invalid Token",
 			})
 		}
 
@@ -66,7 +66,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "Token expired",
+				"error":  "Access Token Expired",
 			})
 		}
 
@@ -92,7 +92,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 				}
 				return c.Status(403).JSON(&fiber.Map{
 					"status": 403,
-					"error":  "Invalid token.",
+					"error":  "Invalid Token",
 				})
 			}
 			log.Errorf("mongo, err=%v", err)
@@ -101,7 +101,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(500).JSON(&fiber.Map{
 				"status": 500,
-				"error":  "Internal server error.",
+				"error":  "Internal Server Error",
 			})
 		}
 
@@ -115,7 +115,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(500).JSON(&fiber.Map{
 				"status": 500,
-				"error":  "Internal server error.",
+				"error":  "Internal Server Error",
 			})
 		}
 
@@ -127,7 +127,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			}
 			return c.Status(500).JSON(&fiber.Map{
 				"status": 500,
-				"error":  "Internal server error.",
+				"error":  "Internal Server Error",
 			})
 		}
 
@@ -135,9 +135,10 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			if !required {
 				return c.Next()
 			}
+
 			return c.Status(403).JSON(&fiber.Map{
 				"status": 403,
-				"error":  "You are banned.",
+				"error":  "You Are Banned",
 				"reason": reason,
 			})
 		}

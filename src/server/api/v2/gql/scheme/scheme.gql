@@ -23,9 +23,9 @@ type Mutation {
   # Report a user. Requires login.
   reportUser(user_id: String!, reason: String): Response
   # Ban a user. Requires permission.
-  banUser(user_id: String!, reason: String): Response
+  banUser(victim_id: String!, expire_at: String, reason: String): Response
   # Unban a user. Requires permission.
-  unbanUser(user_id: String!, reason: String): Response
+  unbanUser(victim_id: String!, reason: String): Response
 }
 
 type Response {
@@ -36,6 +36,8 @@ type Response {
 }
 
 type Query {
+  # Get audit logs
+  auditLogs(page: Int!, limit: Int!): [AuditLog!]!
   # Get emote by id.
   emote(id: String!): Emote
   # Get emotes by user id.
@@ -59,6 +61,23 @@ type Query {
   role(id: String!): Role
   # Search for users.
   search_users(query: String!, page: Int, limit: Int): [UserPartial]!
+}
+
+type AuditLog {
+  id: String!
+  type: Int!
+  target: AuditLogTarget!
+  changes: [AuditLogChange!]!
+}
+
+type AuditLogTarget {
+  id: String!
+  type: String!
+}
+
+type AuditLogChange {
+  key: String!
+  values: [String!]!
 }
 
 enum Provider {
@@ -236,3 +255,5 @@ type Ban {
   # The moderator who banned them.
   issued_by: UserPartial
 }
+
+scalar Date

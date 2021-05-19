@@ -13,6 +13,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/jwt"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -277,6 +278,23 @@ func Twitch(app fiber.Router) fiber.Router {
 			}
 		}
 
+		var respError error
+		// Check ban?
+		if reason, err := redis.Client.HGet(redis.Ctx, "user:bans", mongoUser.ID.Hex()).Result(); err != redis.ErrNil {
+			var ban *datastructure.Ban
+			res := mongo.Database.Collection("bans").FindOne(mongo.Ctx, bson.M{"user_id": mongoUser.ID, "active": true})
+			if res.Err() == nil {
+				res.Decode(&ban)
+				respError = fmt.Errorf(
+					"You are currently banned for '%v'%v",
+					reason,
+					fmt.Sprintf(" until %v", utils.Ternary(ban != nil && !ban.ExpireAt.IsZero(), ban.ExpireAt.Format("Mon, 02 Jan 2006 15:04:05 MST"), "the universe fades out")),
+				)
+			} else {
+				log.Errorf("jwt, err=%v", res.Err())
+			}
+		}
+
 		authPl := &middleware.PayloadJWT{
 			ID:           mongoUser.ID,
 			TWID:         mongoUser.TwitchID,
@@ -302,8 +320,12 @@ func Twitch(app fiber.Router) fiber.Router {
 			Expires:  time.Now().Add(time.Hour * 24 * 14),
 		})
 
-		return c.Redirect(configure.Config.GetString("website_url") + "/callback")
+		return c.Redirect(configure.Config.GetString("website_url") + "/callback" + utils.Ternary(respError != nil, fmt.Sprintf("?error=%v", respError), "").(string))
 	})
 
 	return twitch
+}
+
+func callbackError(c *fiber.Ctx, status int, err string) error {
+	return c.Redirect(configure.Config.GetString("website_url" + fmt.Sprintf("/callback?error=(%d) %v", status, err)))
 }

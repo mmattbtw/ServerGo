@@ -189,6 +189,7 @@ type Ban struct {
 	Reason     string              `json:"reason" bson:"reason"`
 	Active     bool                `json:"active" bson:"active"`
 	IssuedByID *primitive.ObjectID `json:"issued_by_id" bson:"issued_by_id"`
+	ExpireAt   time.Time           `json:"expire_at" bson:"expire_at"`
 }
 
 type AuditLog struct {

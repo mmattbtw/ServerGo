@@ -2,6 +2,7 @@ package mutation_resolvers
 
 import (
 	"context"
+	"time"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -17,47 +18,51 @@ import (
 // BAN USER
 //
 func (*MutationResolver) BanUser(ctx context.Context, args struct {
-	UserID string
-	Reason *string
+	VictimID string
+	ExpireAt *string
+	Reason   *string
 }) (*response, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, resolvers.ErrLoginRequired
 	}
 
+	// Verify actor has permission to ban
 	if !usr.HasPermission(datastructure.RolePermissionBanUsers) {
 		return nil, resolvers.ErrAccessDenied
 	}
 
-	id, err := primitive.ObjectIDFromHex(args.UserID)
+	// Serialize id to ObjectID
+	id, err := primitive.ObjectIDFromHex(args.VictimID)
 	if err != nil {
 		return nil, resolvers.ErrUnknownUser
 	}
 
+	// Is actor silly?
 	if id.Hex() == usr.ID.Hex() {
 		return nil, resolvers.ErrYourself
 	}
 
+	// Check if ban already exists on victim
 	_, err = redis.Client.HGet(redis.Ctx, "user:bans", id.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
-
 	if err == nil {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	res := mongo.Database.Collection("user").FindOne(mongo.Ctx, bson.M{
+	// Find user
+	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 		"_id": id,
 	})
-
 	user := &datastructure.User{}
-
 	err = res.Err()
-
 	if err == nil {
 		err = res.Decode(user)
+		role := datastructure.GetRole(mongo.Ctx, user.RoleID)
+		user.Role = &role
 	}
 
 	if err != nil {
@@ -68,13 +73,19 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
+	// Check if actor has a higher role than victim
 	if user.Role.Position >= usr.Role.Position {
 		return nil, resolvers.ErrAccessDenied
 	}
 
-	reasonN := "Not Provided"
+	reasonN := "no reason"
 	if args.Reason != nil {
 		reasonN = *args.Reason
+	}
+
+	expireAt := time.Time{}
+	if args.ExpireAt != nil {
+		expireAt, _ = time.Parse("2006-01-02T15:04:05.999Z07:00", *args.ExpireAt)
 	}
 
 	ban := &datastructure.Ban{
@@ -82,6 +93,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		Active:     true,
 		Reason:     reasonN,
 		IssuedByID: &usr.ID,
+		ExpireAt:   expireAt,
 	}
 
 	_, err = mongo.Database.Collection("bans").InsertOne(mongo.Ctx, ban)
@@ -119,8 +131,8 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 //
 
 func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
-	UserID string
-	Reason *string
+	VictimID string
+	Reason   *string
 }) (*response, error) {
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
@@ -131,7 +143,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrAccessDenied
 	}
 
-	id, err := primitive.ObjectIDFromHex(args.UserID)
+	id, err := primitive.ObjectIDFromHex(args.VictimID)
 	if err != nil {
 		return nil, resolvers.ErrUnknownUser
 	}
@@ -149,7 +161,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	res := mongo.Database.Collection("user").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
 		"_id": id,
 	})
 
@@ -167,10 +179,6 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		}
 		log.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
-	}
-
-	if user.Role.Position >= usr.Role.Position {
-		return nil, resolvers.ErrAccessDenied
 	}
 
 	_, err = mongo.Database.Collection("bans").UpdateMany(mongo.Ctx, bson.M{
