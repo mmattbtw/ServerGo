@@ -8,6 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -200,6 +201,19 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 				}
 			}
 		}
+	}
+
+	if _, ok := fields["bans"]; ok && usrValid && usr.HasPermission(datastructure.RolePermissionBanUsers) && user.Bans == nil {
+		user.Bans = &[]*datastructure.Ban{}
+		res, err := mongo.Database.Collection("bans").Find(mongo.Ctx, bson.M{
+			"user_id": user.ID,
+		})
+		if err != nil {
+			log.Errorf("mongo, err=%v", err)
+			return nil, resolvers.ErrInternalServer
+		}
+
+		res.All(mongo.Ctx, user.Bans)
 	}
 
 	r := &UserResolver{
@@ -401,7 +415,7 @@ func (r *UserResolver) Reports() (*[]*reportResolver, error) {
 
 func (r *UserResolver) Bans() (*[]*banResolver, error) {
 	u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
-	if !ok || (u.Rank != datastructure.UserRankAdmin && u.Rank != datastructure.UserRankModerator) {
+	if !ok || !u.HasPermission(datastructure.RolePermissionBanUsers) {
 		return nil, resolvers.ErrAccessDenied
 	}
 
@@ -419,6 +433,10 @@ func (r *UserResolver) Bans() (*[]*banResolver, error) {
 		}
 	}
 	return &bans, nil
+}
+
+func (r *UserResolver) Banned() bool {
+	return redis.Client.HGet(redis.Ctx, "user:bans", r.v.ID.Hex()).Val() != ""
 }
 
 func (r *UserResolver) AuditEntries() (*[]string, error) {

@@ -137,6 +137,10 @@ type Emote {
   urls: [[String!]!]!
   # Get the amount of channels this emote is added to
   channel_count: Int!
+  # Get the width of the emote in pixels
+  width: [Int!]!
+  # Get the height of the emote in pixels
+  height: [Int!]!
 }
 
 type User {
@@ -182,6 +186,8 @@ type User {
   audit_entries: [String!]
   # Get the bans on this user. Requries Permission.
   bans: [Ban!]
+  # Get whether the user is banned
+  banned: Boolean!
 }
 
 type UserPartial {
@@ -255,5 +261,3 @@ type Ban {
   # The moderator who banned them.
   issued_by: UserPartial
 }
-
-scalar Date

@@ -255,3 +255,21 @@ func (r *EmoteResolver) URLs() [][]string {
 
 	return r.v.URLs
 }
+
+func (r *EmoteResolver) Width() []int32 {
+	result := make([]int32, 4)
+	for i, v := range r.v.Width {
+		result[i] = int32(v)
+	}
+
+	return result
+}
+
+func (r *EmoteResolver) Height() []int32 {
+	result := make([]int32, 4)
+	for i, v := range r.v.Height {
+		result[i] = int32(v)
+	}
+
+	return result
+}

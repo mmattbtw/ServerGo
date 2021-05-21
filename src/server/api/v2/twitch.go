@@ -284,7 +284,7 @@ func Twitch(app fiber.Router) fiber.Router {
 			var ban *datastructure.Ban
 			res := mongo.Database.Collection("bans").FindOne(mongo.Ctx, bson.M{"user_id": mongoUser.ID, "active": true})
 			if res.Err() == nil {
-				res.Decode(&ban)
+				_ = res.Decode(&ban)
 				respError = fmt.Errorf(
 					"You are currently banned for '%v'%v",
 					reason,
@@ -324,8 +324,4 @@ func Twitch(app fiber.Router) fiber.Router {
 	})
 
 	return twitch
-}
-
-func callbackError(c *fiber.Ctx, status int, err string) error {
-	return c.Redirect(configure.Config.GetString("website_url" + fmt.Sprintf("/callback?error=(%d) %v", status, err)))
 }
