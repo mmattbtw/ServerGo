@@ -213,7 +213,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			return nil, resolvers.ErrInternalServer
 		}
 
-		res.All(ctx, user.Bans)
+		_ = res.All(ctx, user.Bans)
 	}
 
 	r := &UserResolver{

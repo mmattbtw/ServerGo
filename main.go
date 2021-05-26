@@ -92,7 +92,7 @@ func Cleanup() {
 	}
 
 	// Logout from discord
-	discord.Discord.CloseWithCode(1000)
+	_ = discord.Discord.CloseWithCode(1000)
 }
 
 // Get all roles available and cache into the mongo context
