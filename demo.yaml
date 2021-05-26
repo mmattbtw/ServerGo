@@ -50,3 +50,8 @@ discord:
   # 0: webhook id
   # 1: webhook token
   webhook: ["<webhook_id>", "<webhook_token>"] 
+
+chatterino:
+  version: "7.0.0"
+  portable_download: ""
+  update: ""
