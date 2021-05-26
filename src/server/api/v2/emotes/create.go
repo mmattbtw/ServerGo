@@ -157,7 +157,7 @@ func CreateRoute(router fiber.Router) {
 
 			if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 				if channelID.Hex() != usr.ID.Hex() {
-					if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+					if err := mongo.Database.Collection("users").FindOne(c.Context(), bson.M{
 						"_id":     channelID,
 						"editors": usr.ID,
 					}).Err(); err != nil {
@@ -273,7 +273,7 @@ func CreateRoute(router fiber.Router) {
 				Width:            sizeX,
 				Height:           sizeY,
 			}
-			res, err := mongo.Database.Collection("emotes").InsertOne(mongo.Ctx, emote)
+			res, err := mongo.Database.Collection("emotes").InsertOne(c.Context(), emote)
 
 			if err != nil {
 				log.Errorf("mongo, err=%v", err)
@@ -283,7 +283,7 @@ func CreateRoute(router fiber.Router) {
 			_id, ok := res.InsertedID.(primitive.ObjectID)
 			if !ok {
 				log.Errorf("mongo, id=%v", res.InsertedID)
-				_, err := mongo.Database.Collection("emotes").DeleteOne(mongo.Ctx, bson.M{
+				_, err := mongo.Database.Collection("emotes").DeleteOne(c.Context(), bson.M{
 					"_id": res.InsertedID,
 				})
 				if err != nil {
@@ -314,7 +314,7 @@ func CreateRoute(router fiber.Router) {
 			wg.Wait()
 
 			if errored {
-				_, err := mongo.Database.Collection("emotes").DeleteOne(mongo.Ctx, bson.M{
+				_, err := mongo.Database.Collection("emotes").DeleteOne(c.Context(), bson.M{
 					"_id": _id,
 				})
 				if err != nil {
@@ -323,7 +323,7 @@ func CreateRoute(router fiber.Router) {
 				return 500, errInternalServer, nil
 			}
 
-			_, err = mongo.Database.Collection("emotes").UpdateOne(mongo.Ctx, bson.M{
+			_, err = mongo.Database.Collection("emotes").UpdateOne(c.Context(), bson.M{
 				"_id": _id,
 			}, bson.M{
 				"$set": bson.M{

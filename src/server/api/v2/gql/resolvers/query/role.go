@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -28,7 +27,7 @@ func GenerateRoleResolver(ctx context.Context, pRole *datastructure.Role, roleID
 		return nil, nil
 	}
 
-	role := datastructure.GetRole(mongo.Ctx, roleID)
+	role := datastructure.GetRole(ctx, roleID)
 	r := &RoleResolver{
 		ctx:    ctx,
 		v:      &role,

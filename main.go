@@ -16,11 +16,11 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
+	"github.com/SevenTV/ServerGo/src/mongo/cache"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	_ "github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server"
 	api_websocket "github.com/SevenTV/ServerGo/src/server/api/v2/websocket"
-	"github.com/SevenTV/ServerGo/src/utils"
 )
 
 func init() {
@@ -75,7 +75,7 @@ func main() {
 	log.Infoln("Application Started.")
 
 	// Get and cache roles
-	roles, err := GetAllRoles()
+	roles, err := GetAllRoles(context.Background())
 	if err != nil {
 		log.Errorf("could not get roles, %s", err)
 	}
@@ -88,7 +88,7 @@ func Cleanup() {
 	// Remove websocket connections from Redis
 	log.Infof("<WebSocket> Closing %d connections", len(api_websocket.Connections))
 	for _, conn := range api_websocket.Connections {
-		conn.Unregister()
+		conn.Unregister(context.Background())
 	}
 
 	// Logout from discord
@@ -96,15 +96,15 @@ func Cleanup() {
 }
 
 // Get all roles available and cache into the mongo context
-func GetAllRoles() ([]datastructure.Role, error) {
+func GetAllRoles(ctx context.Context) ([]datastructure.Role, error) {
 	roles := []datastructure.Role{}
-	cur, err := mongo.Database.Collection("roles").Find(mongo.Ctx, bson.M{})
+	cur, err := mongo.Database.Collection("roles").Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 
-	roles = append(roles, *datastructure.DefaultRole)  // Add default role
-	if err := cur.All(mongo.Ctx, &roles); err != nil { // Fetch roles
+	roles = append(roles, *datastructure.DefaultRole) // Add default role
+	if err := cur.All(ctx, &roles); err != nil {      // Fetch roles
 		if err == mongo.ErrNoDocuments {
 			return roles, nil
 		}
@@ -113,6 +113,6 @@ func GetAllRoles() ([]datastructure.Role, error) {
 	}
 
 	// Set "AllRoles" value to mongo context
-	mongo.Ctx = context.WithValue(mongo.Ctx, utils.AllRolesKey, roles)
+	cache.CachedRoles = roles
 	return roles, nil
 }

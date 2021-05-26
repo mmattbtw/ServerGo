@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,7 +34,7 @@ type TwitchUser struct {
 	CreatedAt       time.Time `json:"created_at" bson:"twitch_created_at"`
 }
 
-func GetUsers(oauth string, ids []string, logins []string) ([]TwitchUser, error) {
+func GetUsers(ctx context.Context, oauth string, ids []string, logins []string) ([]TwitchUser, error) {
 	returnv := []TwitchUser{}
 	for len(ids) != 0 || len(logins) != 0 {
 		var temp []string
@@ -64,7 +65,7 @@ func GetUsers(oauth string, ids []string, logins []string) ([]TwitchUser, error)
 		var err error
 
 		if oauth == "" {
-			token, err = auth.GetAuth()
+			token, err = auth.GetAuth(ctx)
 			if err != nil {
 				return nil, err
 			}

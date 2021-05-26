@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SevenTV/ServerGo/src/mongo/cache"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -130,11 +131,6 @@ type Role struct {
 	Denied   int64              `json:"denied" bson:"denied"`
 }
 
-// Get cached roles
-func GetRoles(ctx context.Context) []Role {
-	return ctx.Value(utils.AllRolesKey).([]Role)
-}
-
 // Get a cached role by ID
 func GetRole(ctx context.Context, id *primitive.ObjectID) Role {
 	if id == nil {
@@ -143,7 +139,8 @@ func GetRole(ctx context.Context, id *primitive.ObjectID) Role {
 
 	var found bool
 	var role Role
-	roles := GetRoles(ctx)
+
+	roles := cache.CachedRoles.([]Role)
 
 	for _, r := range roles {
 		if r.ID.Hex() != id.Hex() {

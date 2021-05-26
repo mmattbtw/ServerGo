@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type RateLimiter struct {
@@ -52,13 +54,17 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 			limit - 1,  // Remaining
 			duration,   // Reset After
 		}
-		rl.CheckLimit()
+		_, err := rl.CheckLimit(c.Context())
+		if err != nil {
+			log.Errorf("ratelimit, err=%v", err)
+			return c.SendStatus(500)
+		}
 
 		// Apply rate limit headers
 		c.Set("X-RateLimit-Limit", strconv.Itoa(int(rl.Limit)))
 		c.Set("X-RateLimit-Remaining", strconv.Itoa(int(rl.Remaining)))
 
-		resetAt, _ := redis.Client.HGet(redis.Ctx, rl.RedisKey, "reset").Time()
+		resetAt, _ := redis.Client.HGet(c.Context(), rl.RedisKey, "reset").Time()
 		resetIn := duration.Seconds() - time.Since(resetAt).Seconds() // Calculate seconds until reset
 		c.Set("X-RateLimit-Reset", strconv.Itoa(int(resetIn)))
 
@@ -74,21 +80,31 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 	}
 }
 
-func (rl *RateLimiter) CheckLimit() bool {
-	if !redis.Client.HExists(redis.Ctx, rl.RedisKey, "remaining").Val() {
+func (rl *RateLimiter) CheckLimit(ctx context.Context) (bool, error) {
+	if !redis.Client.HExists(ctx, rl.RedisKey, "remaining").Val() {
 		resetAt := time.Now()
 		resetAt.Add(rl.Reset)
 
-		redis.Client.HSet(redis.Ctx, rl.RedisKey,
+		err := redis.Client.HSet(ctx, rl.RedisKey,
 			"identifier", rl.Identifier,
 			"limit", rl.Limit,
 			"remaining", rl.Limit-1,
 			"reset", resetAt,
-		)
-		redis.Client.Expire(redis.Ctx, rl.RedisKey, rl.Reset)
+		).Err()
+		if err != nil {
+			return false, err
+		}
+		err = redis.Client.Expire(ctx, rl.RedisKey, rl.Reset).Err()
+		if err != nil {
+			return false, err
+		}
 	} else {
-		rl.Remaining = int32(redis.Client.HIncrBy(redis.Ctx, rl.RedisKey, "remaining", -1).Val())
+		val, err := redis.Client.HIncrBy(ctx, rl.RedisKey, "remaining", -1).Result()
+		if err != nil {
+			return false, err
+		}
+		rl.Remaining = int32(val)
 	}
 
-	return false
+	return false, nil
 }

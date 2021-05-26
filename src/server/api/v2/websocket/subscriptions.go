@@ -10,7 +10,7 @@ import (
 func createChannelEmoteSubscription(ctx context.Context, c *Conn, channel string) {
 	// Subscribe to these events with Redis
 	c.helpers.SubscriberChannelUserEmotes(ctx, strings.ToLower(channel), func(res emoteSubscriptionResult) {
-		c.SendOpDispatch(res, "CHANNEL_EMOTES_UPDATE")
+		c.SendOpDispatch(ctx, res, "CHANNEL_EMOTES_UPDATE")
 	})
 }
 

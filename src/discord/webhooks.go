@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/cache"
@@ -54,7 +55,7 @@ func SendEmoteEdit(emote datastructure.Emote, actor datastructure.User, logs []*
 		})
 	}
 
-	_ = cache.FindOne("users", "", bson.M{
+	_ = cache.FindOne(context.Background(), "users", "", bson.M{
 		"_id": emote.OwnerID,
 	}, &emote.Owner)
 

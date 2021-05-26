@@ -1,6 +1,7 @@
 package api_proxy
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -13,12 +14,12 @@ import (
 const baseUrlFFZ = "https://api.frankerfacez.com/v1"
 
 // Get channel emotes from the FFZ provider
-func GetChannelEmotesFFZ(login string) ([]*datastructure.Emote, error) {
+func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Emote, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/rooms/%v", baseUrlFFZ, login)
 
 	// Send the request
-	resp, err := cache.CacheGetRequest(uri, time.Minute*10, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*10, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}
@@ -37,11 +38,11 @@ func GetChannelEmotesFFZ(login string) ([]*datastructure.Emote, error) {
 	return emotes, nil
 }
 
-func GetGlobalEmotesFFZ() ([]*datastructure.Emote, error) {
+func GetGlobalEmotesFFZ(ctx context.Context) ([]*datastructure.Emote, error) {
 	uri := fmt.Sprintf("%v/set/global", baseUrlFFZ)
 
 	// Send request
-	resp, err := cache.CacheGetRequest(uri, time.Hour*4, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*4, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}

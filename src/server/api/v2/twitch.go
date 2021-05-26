@@ -207,7 +207,7 @@ func Twitch(app fiber.Router) fiber.Router {
 			})
 		}
 
-		users, err := api.GetUsers(tokenResp.AccessToken, nil, nil)
+		users, err := api.GetUsers(c.Context(), tokenResp.AccessToken, nil, nil)
 		if err != nil || len(users) != 1 {
 			log.Errorf("twitch, err=%v, resp=%v, token=%v", err, users, tokenResp)
 			return c.Status(400).JSON(&fiber.Map{
@@ -218,7 +218,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		user := users[0]
 		after := options.After
-		doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
+		doc := mongo.Database.Collection("users").FindOneAndUpdate(c.Context(), bson.M{
 			"id": user.ID,
 		}, bson.M{
 			"$set": user,
@@ -245,7 +245,7 @@ func Twitch(app fiber.Router) fiber.Router {
 					EditorIDs:       []primitive.ObjectID{},
 					TokenVersion:    "1",
 				}
-				res, err := mongo.Database.Collection("users").InsertOne(mongo.Ctx, mongoUser)
+				res, err := mongo.Database.Collection("users").InsertOne(c.Context(), mongoUser)
 				if err != nil {
 					log.Errorf("mongo, err=%v", err)
 					return c.Status(500).JSON(&fiber.Map{
@@ -280,9 +280,9 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		var respError error
 		// Check ban?
-		if reason, err := redis.Client.HGet(redis.Ctx, "user:bans", mongoUser.ID.Hex()).Result(); err != redis.ErrNil {
+		if reason, err := redis.Client.HGet(c.Context(), "user:bans", mongoUser.ID.Hex()).Result(); err != redis.ErrNil {
 			var ban *datastructure.Ban
-			res := mongo.Database.Collection("bans").FindOne(mongo.Ctx, bson.M{"user_id": mongoUser.ID, "active": true})
+			res := mongo.Database.Collection("bans").FindOne(c.Context(), bson.M{"user_id": mongoUser.ID, "active": true})
 			if res.Err() == nil {
 				_ = res.Decode(&ban)
 				respError = fmt.Errorf(

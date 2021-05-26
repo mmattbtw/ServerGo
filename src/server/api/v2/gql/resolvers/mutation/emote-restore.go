@@ -31,7 +31,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownEmote
 	}
 
-	res := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("emotes").FindOne(ctx, bson.M{
 		"_id":    id,
 		"status": datastructure.EmoteStatusDeleted,
 	})
@@ -53,7 +53,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 
 	if !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
 		if emote.OwnerID.Hex() != usr.ID.Hex() {
-			if err := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+			if err := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 				"_id":     emote.OwnerID,
 				"editors": usr.ID,
 			}).Err(); err != nil {
@@ -66,7 +66,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		}
 	}
 
-	_, err = mongo.Database.Collection("emotes").UpdateOne(mongo.Ctx, bson.M{
+	_, err = mongo.Database.Collection("emotes").UpdateOne(ctx, bson.M{
 		"_id": id,
 	}, bson.M{
 		"$set": bson.M{
@@ -96,7 +96,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 
 	wg.Wait()
 
-	_, err = mongo.Database.Collection("emotes").UpdateOne(mongo.Ctx, bson.M{
+	_, err = mongo.Database.Collection("emotes").UpdateOne(ctx, bson.M{
 		"_id": id,
 	}, bson.M{
 		"$set": bson.M{
@@ -109,7 +109,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeEmoteUndoDelete,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &id, Type: "emotes"},

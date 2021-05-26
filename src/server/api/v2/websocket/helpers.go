@@ -40,7 +40,8 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 
 		rCh := make(chan []byte)
 		key := fmt.Sprintf("users:%v:emotes", userID)
-		_ = redis.Subscribe(rCh, key)
+		sub := redis.Subscribe(ctx, rCh, key)
+		defer sub.Close()
 
 		go func() {
 			for b := range rCh {
@@ -58,7 +59,7 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 					continue
 				}
 
-				if err := cache.FindOne("emotes", "", bson.M{"_id": id}, &emote); err != nil {
+				if err := cache.FindOne(ctx, "emotes", "", bson.M{"_id": id}, &emote); err != nil {
 					continue
 				}
 				urls := datastructure.GetEmoteURLs(*emote)
@@ -90,12 +91,6 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 
 	}
 
-	// nolint:gosimple
-	for {
-		select {
-		case <-ctx.Done():
-			delete(subscriberCallersUserEmotes[userID], c.Stat.UUID)
-			return
-		}
-	}
+	<-ctx.Done()
+	delete(subscriberCallersUserEmotes[userID], c.Stat.UUID)
 }

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
@@ -50,8 +51,8 @@ func genSha(prefix, collection string, q interface{}, opts interface{}) (string,
 	return sha1, nil
 }
 
-func query(collection, sha1 string, output interface{}) ([]primitive.ObjectID, error) {
-	d, err := redis.GetCache(collection, sha1)
+func query(ctx context.Context, collection, sha1 string, output interface{}) ([]primitive.ObjectID, error) {
+	d, err := redis.GetCache(ctx, collection, sha1)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,7 @@ func query(collection, sha1 string, output interface{}) ([]primitive.ObjectID, e
 	return mItems, nil
 }
 
-func Find(collection, commonIndex string, q interface{}, output interface{}, opts ...*options.FindOptions) error {
+func Find(ctx context.Context, collection, commonIndex string, q interface{}, output interface{}, opts ...*options.FindOptions) error {
 	if !utils.IsSliceArrayPointer(output) {
 		return fmt.Errorf("the output must be a pointer to some array")
 	}
@@ -98,20 +99,20 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 
 	val := []bson.M{}
 
-	missingIDs, err := query(collection, sha1, &val)
+	missingIDs, err := query(ctx, collection, sha1, &val)
 	if err != nil {
 		if err != redis.ErrNil {
 			log.Errorf("redis, err=%v", err)
 		}
 		// MongoQuery
-		cur, err := mongo.Database.Collection(collection).Find(mongo.Ctx, q, opts...)
+		cur, err := mongo.Database.Collection(collection).Find(ctx, q, opts...)
 		if err != nil {
 			return err
 		}
 
 		out := []bson.M{}
 
-		if err = cur.All(mongo.Ctx, &out); err != nil {
+		if err = cur.All(ctx, &out); err != nil {
 			return err
 		}
 
@@ -127,14 +128,14 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 				return err
 			}
 		}
-		_, err = redis.SetCache(collection, sha1, commonIndex, args...)
+		_, err = redis.SetCache(ctx, collection, sha1, commonIndex, args...)
 		if err != nil {
 			return err
 		}
 
 		return decoder.Decode(out, output)
 	} else if len(missingIDs) > 0 {
-		cur, err := mongo.Database.Collection(collection).Find(mongo.Ctx, bson.M{
+		cur, err := mongo.Database.Collection(collection).Find(ctx, bson.M{
 			"_id": bson.M{
 				"$in": missingIDs,
 			},
@@ -144,7 +145,7 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 		}
 
 		results := []bson.M{}
-		if err = cur.All(mongo.Ctx, &results); err != nil {
+		if err = cur.All(ctx, &results); err != nil {
 			return err
 		}
 
@@ -160,7 +161,7 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 				return err
 			}
 		}
-		_, err = redis.SetCache(collection, sha1, commonIndex, args...)
+		_, err = redis.SetCache(ctx, collection, sha1, commonIndex, args...)
 		if err != nil {
 			return err
 		}
@@ -173,7 +174,7 @@ func Find(collection, commonIndex string, q interface{}, output interface{}, opt
 	return decoder.Decode(val, output)
 }
 
-func FindOne(collection, commonIndex string, q interface{}, output interface{}, opts ...*options.FindOneOptions) error {
+func FindOne(ctx context.Context, collection, commonIndex string, q interface{}, output interface{}, opts ...*options.FindOneOptions) error {
 	if !utils.IsPointer(output) {
 		return fmt.Errorf("the output must be a pointer")
 	}
@@ -184,13 +185,13 @@ func FindOne(collection, commonIndex string, q interface{}, output interface{}, 
 	}
 
 	val := []bson.M{}
-	_, err = query(collection, sha1, &val)
+	_, err = query(ctx, collection, sha1, &val)
 	if err != nil {
 		if err != redis.ErrNil {
 			log.Errorf("redis, err=%v", err)
 		}
 		// MongoQuery
-		res := mongo.Database.Collection(collection).FindOne(mongo.Ctx, q, opts...)
+		res := mongo.Database.Collection(collection).FindOne(ctx, q, opts...)
 		err = res.Err()
 		if err != nil {
 			return err
@@ -210,7 +211,7 @@ func FindOne(collection, commonIndex string, q interface{}, output interface{}, 
 		if err != nil {
 			return err
 		}
-		_, err = redis.SetCache(collection, sha1, commonIndex, oid.Hex(), data)
+		_, err = redis.SetCache(ctx, collection, sha1, commonIndex, oid.Hex(), data)
 		if err != nil {
 			return err
 		}
@@ -221,29 +222,29 @@ func FindOne(collection, commonIndex string, q interface{}, output interface{}, 
 }
 
 // Gets the collection size then caches it in redis for some time
-func GetCollectionSize(collection string, q interface{}, opts ...*options.CountOptions) (int64, error) {
+func GetCollectionSize(ctx context.Context, collection string, q interface{}, opts ...*options.CountOptions) (int64, error) {
 	sha1, err := genSha("collection-size", collection, q, opts)
 	if err != nil {
 		return 0, err
 	}
 	key := "cached:collection-size:" + collection + ":" + sha1
 
-	if count, err := redis.Client.Get(redis.Ctx, key).Int64(); err == nil { // Try to find the cached value in redis
+	if count, err := redis.Client.Get(ctx, key).Int64(); err == nil { // Try to find the cached value in redis
 		return count, nil
 	} else { // Otherwise, query mongo
-		count, err := mongo.Database.Collection(collection).CountDocuments(mongo.Ctx, q, opts...)
+		count, err := mongo.Database.Collection(collection).CountDocuments(ctx, q, opts...)
 		if err != nil {
 			return 0, err
 		}
 
-		redis.Client.Set(redis.Ctx, key, count, 5*time.Minute)
+		redis.Client.Set(ctx, key, count, 5*time.Minute)
 		return count, nil
 	}
 
 }
 
 // Send a GET request to an endpoint and cache the result
-func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration time.Duration, headers ...struct {
+func CacheGetRequest(ctx context.Context, uri string, cacheDuration time.Duration, errorCacheDuration time.Duration, headers ...struct {
 	Key   string
 	Value string
 }) (*cachedGetRequest, error) {
@@ -256,7 +257,7 @@ func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration
 
 	// Establish distributed lock
 	// This prevents the same request from being executed multiple times simultaneously
-	lock, err := redis.GetLocker().Obtain(redis.Ctx, "lock:http-get"+sha1, 10*time.Second, &redislock.Options{
+	lock, err := redis.GetLocker().Obtain(ctx, "lock:http-get"+sha1, 10*time.Second, &redislock.Options{
 		RetryStrategy: redislock.ExponentialBackoff(4, 750),
 	})
 	if err != nil {
@@ -264,11 +265,11 @@ func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration
 		return nil, err
 	}
 	defer func() {
-		_ = lock.Release(redis.Ctx)
+		_ = lock.Release(context.Background())
 	}()
 
 	// Try to find the cached result of this request
-	cachedBody := redis.Client.Get(redis.Ctx, key).Val()
+	cachedBody := redis.Client.Get(ctx, key).Val()
 	if cachedBody != "" {
 		return &cachedGetRequest{
 			Status:     "OK",
@@ -296,9 +297,9 @@ func CacheGetRequest(uri string, cacheDuration time.Duration, errorCacheDuration
 	}
 	// Cache the request body
 	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		redis.Client.Set(redis.Ctx, key, body, cacheDuration)
+		redis.Client.Set(ctx, key, body, cacheDuration)
 	} else if errorCacheDuration > 0 { // Cache as errored for specified amount of time?
-		redis.Client.Set(redis.Ctx, key, fmt.Sprintf("err=%v", resp.StatusCode), errorCacheDuration)
+		redis.Client.Set(ctx, key, fmt.Sprintf("err=%v", resp.StatusCode), errorCacheDuration)
 	}
 
 	// Return request

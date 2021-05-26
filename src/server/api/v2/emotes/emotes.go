@@ -32,12 +32,12 @@ func Emotes(app fiber.Router) fiber.Router {
 		var emote *datastructure.Emote
 		var owner *datastructure.User
 		if id, err := primitive.ObjectIDFromHex(emoteID); err == nil {
-			if err := cache.FindOne("emotes", "", bson.M{
+			if err := cache.FindOne(c.Context(), "emotes", "", bson.M{
 				"_id": id,
 			}, &emote); err != nil {
 				return c.Status(400).Send([]byte("Unknown Emote: " + err.Error()))
 			}
-			if err := cache.FindOne("users", "", bson.M{
+			if err := cache.FindOne(c.Context(), "users", "", bson.M{
 				"_id": emote.OwnerID,
 			}, &owner); err != nil {
 				owner = &datastructure.User{}

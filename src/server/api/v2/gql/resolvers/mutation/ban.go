@@ -44,7 +44,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 	}
 
 	// Check if ban already exists on victim
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", id.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", id.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
@@ -54,14 +54,14 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 	}
 
 	// Find user
-	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 		"_id": id,
 	})
 	user := &datastructure.User{}
 	err = res.Err()
 	if err == nil {
 		err = res.Decode(user)
-		role := datastructure.GetRole(mongo.Ctx, user.RoleID)
+		role := datastructure.GetRole(ctx, user.RoleID)
 		user.Role = &role
 	}
 
@@ -96,19 +96,19 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		ExpireAt:   expireAt,
 	}
 
-	_, err = mongo.Database.Collection("bans").InsertOne(mongo.Ctx, ban)
+	_, err = mongo.Database.Collection("bans").InsertOne(ctx, ban)
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = redis.Client.HSet(redis.Ctx, "user:bans", id.Hex(), reasonN).Result()
+	_, err = redis.Client.HSet(ctx, "user:bans", id.Hex(), reasonN).Result()
 	if err != nil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserBan,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &id, Type: "users"},
@@ -152,7 +152,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrYourself
 	}
 
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", id.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", id.Hex()).Result()
 	if err != nil {
 		if err != redis.ErrNil {
 			return nil, resolvers.ErrUserNotBanned
@@ -161,7 +161,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 		"_id": id,
 	})
 
@@ -181,7 +181,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("bans").UpdateMany(mongo.Ctx, bson.M{
+	_, err = mongo.Database.Collection("bans").UpdateMany(ctx, bson.M{
 		"user_id": user.ID,
 		"active":  true,
 	}, bson.M{
@@ -194,13 +194,13 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = redis.Client.HDel(redis.Ctx, "user:bans", id.Hex()).Result()
+	_, err = redis.Client.HDel(ctx, "user:bans", id.Hex()).Result()
 	if err != nil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserUnban,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &id, Type: "users"},

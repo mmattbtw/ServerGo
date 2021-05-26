@@ -88,7 +88,7 @@ func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*User
 			return nil, fmt.Errorf("Cannot request @me while unauthenticated")
 		}
 	} else if !primitive.IsValidObjectID(args.ID) {
-		if err := cache.FindOne("users", "", bson.M{
+		if err := cache.FindOne(ctx, "users", "", bson.M{
 			"login": strings.ToLower(args.ID),
 		}, user); err != nil {
 			if err == mongo.ErrNoDocuments {
@@ -164,7 +164,7 @@ func (*QueryResolver) Emotes(ctx context.Context, args struct{ List []string }) 
 	ids := mongo.HexIDSliceToObjectID(args.List)
 	emotes := []*datastructure.Emote{}
 	if len(args.List) > 0 {
-		if err := cache.Find("emotes", "", bson.M{
+		if err := cache.Find(ctx, "emotes", "", bson.M{
 			"_id": bson.M{
 				"$in": ids,
 			},
@@ -237,7 +237,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	if args.Channel != nil {
 		var targetChannel *datastructure.User
 		// Find user and get their emotes
-		if err := cache.FindOne("users", "", bson.M{"login": args.Channel}, &targetChannel); err == nil {
+		if err := cache.FindOne(ctx, "users", "", bson.M{"login": args.Channel}, &targetChannel); err == nil {
 			match["_id"] = bson.M{"$in": targetChannel.EmoteIDs}
 		}
 	}
@@ -303,13 +303,13 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 				}}},
 				{primitive.E{Key: "$unset", Value: "channels"}},
 			}
-			cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, popCheck)
+			cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, popCheck)
 			if err != nil {
 				fmt.Println(err)
 			}
 
 			countedEmotes := []*datastructure.Emote{}
-			if err := cur.All(mongo.Ctx, &countedEmotes); err == nil && len(countedEmotes) > 0 {
+			if err := cur.All(ctx, &countedEmotes); err == nil && len(countedEmotes) > 0 {
 				if err == nil { // Get the unchecked emotes, add them to a slice
 					ops := make([]mongo.WriteModel, len(countedEmotes))
 					for i, e := range countedEmotes {
@@ -327,7 +327,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 					}
 
 					// Update unchecked with channel count data
-					_, err := mongo.Database.Collection("emotes").BulkWrite(mongo.Ctx, ops)
+					_, err := mongo.Database.Collection("emotes").BulkWrite(ctx, ops)
 					if err != nil {
 						log.Errorf("mongo, was unable to update channel count of "+fmt.Sprint(len(countedEmotes))+" emotes, err=%v", err)
 					}
@@ -390,7 +390,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
 
 		// Count documents in the collection
-		count, err := cache.GetCollectionSize("emotes", match)
+		count, err := cache.GetCollectionSize(ctx, "emotes", match)
 		if err != nil {
 			return nil, err
 		}
@@ -399,10 +399,10 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 
 	// Query the DB
-	cur, err := mongo.Database.Collection("emotes").Aggregate(mongo.Ctx, pipeline, opts)
+	cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, pipeline, opts)
 
 	if err == nil {
-		err = cur.All(mongo.Ctx, &emotes)
+		err = cur.All(ctx, &emotes)
 	}
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
@@ -437,23 +437,23 @@ func (*QueryResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 		switch p {
 		case "BTTV": // Handle BTTV Provider
 			if args.Channel != "" {
-				if bttv, err := api_proxy.GetChannelEmotesBTTV(args.Channel); err == nil { // Find channel bttv emotes
+				if bttv, err := api_proxy.GetChannelEmotesBTTV(ctx, args.Channel); err == nil { // Find channel bttv emotes
 					emotes = append(emotes, bttv...)
 				}
 			}
 			if args.Global != nil && *args.Global {
-				if bttvG, err := api_proxy.GetGlobalEmotesBTTV(); err == nil { // Find global bttv emotes
+				if bttvG, err := api_proxy.GetGlobalEmotesBTTV(ctx); err == nil { // Find global bttv emotes
 					globalEmotes = append(globalEmotes, bttvG...)
 				}
 			}
 		case "FFZ": // Handle FFZ Provider
 			if args.Channel != "" {
-				if ffz, err := api_proxy.GetChannelEmotesFFZ(args.Channel); err == nil { // Find channel FFZ emotes
+				if ffz, err := api_proxy.GetChannelEmotesFFZ(ctx, args.Channel); err == nil { // Find channel FFZ emotes
 					emotes = append(emotes, ffz...)
 				}
 			}
 			if args.Global != nil && *args.Global {
-				if ffzG, err := api_proxy.GetGlobalEmotesFFZ(); err == nil { // Find global ffz emotes
+				if ffzG, err := api_proxy.GetGlobalEmotesFFZ(ctx); err == nil { // Find global ffz emotes
 					globalEmotes = append(globalEmotes, ffzG...)
 				}
 			}
@@ -511,13 +511,13 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 
 	users := []*datastructure.User{}
 
-	cur, err := mongo.Database.Collection("users").Find(mongo.Ctx, bson.M{
+	cur, err := mongo.Database.Collection("users").Find(ctx, bson.M{
 		"login": bson.M{
 			"$regex": lQuery,
 		},
 	}, opts)
 	if err == nil {
-		err = cur.All(mongo.Ctx, &users)
+		err = cur.All(ctx, &users)
 	}
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)

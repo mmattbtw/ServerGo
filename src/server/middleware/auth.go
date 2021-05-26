@@ -82,7 +82,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			query["token_version"] = pl.TokenVersion
 		}
 
-		res := mongo.Database.Collection("users").FindOne(mongo.Ctx, query)
+		res := mongo.Database.Collection("users").FindOne(c.Context(), query)
 
 		err := res.Err()
 		if err != nil {
@@ -119,7 +119,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			})
 		}
 
-		reason, err := redis.Client.HGet(redis.Ctx, "user:bans", user.ID.Hex()).Result()
+		reason, err := redis.Client.HGet(c.Context(), "user:bans", user.ID.Hex()).Result()
 		if err != nil && err != redis.ErrNil {
 			log.Errorf("redis, err=%v", err)
 			if !required {
@@ -145,7 +145,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		// Assign role to user
 		if user.RoleID != nil {
-			role := datastructure.GetRole(mongo.Ctx, user.RoleID)                                               // Try to get the cached role
+			role := datastructure.GetRole(c.Context(), user.RoleID)                                             // Try to get the cached role
 			user.Role = utils.Ternary(role.ID.IsZero(), datastructure.DefaultRole, &role).(*datastructure.Role) // Assign cached role if available, otherwise set default role
 		} else {
 			user.Role = datastructure.DefaultRole // If no role assign default role

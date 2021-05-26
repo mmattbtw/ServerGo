@@ -1,6 +1,7 @@
 package api_proxy
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -12,12 +13,12 @@ import (
 
 const baseUrlBTTV = "https://api.betterttv.net/3"
 
-func GetGlobalEmotesBTTV() ([]*datastructure.Emote, error) {
+func GetGlobalEmotesBTTV(ctx context.Context) ([]*datastructure.Emote, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrlBTTV)
 
 	// Get global bttv emotes
-	resp, err := cache.CacheGetRequest(uri, time.Hour*4, time.Minute*15) // This request is cached for 4 hours as global emotes rarely change
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*4, time.Minute*15) // This request is cached for 4 hours as global emotes rarely change
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +44,9 @@ func GetGlobalEmotesBTTV() ([]*datastructure.Emote, error) {
 	return result, nil
 }
 
-func GetChannelEmotesBTTV(login string) ([]*datastructure.Emote, error) {
+func GetChannelEmotesBTTV(ctx context.Context, login string) ([]*datastructure.Emote, error) {
 	// Get Twitch User from ID
-	usr, err := GetTwitchUser(login)
+	usr, err := GetTwitchUser(ctx, login)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +55,7 @@ func GetChannelEmotesBTTV(login string) ([]*datastructure.Emote, error) {
 	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrlBTTV, usr.ID)
 
 	// Get bttv user response
-	resp, err := cache.CacheGetRequest(uri, time.Minute*5, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*5, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}

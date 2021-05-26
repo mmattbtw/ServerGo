@@ -1,6 +1,7 @@
 package api_proxy
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -12,18 +13,18 @@ import (
 
 const baseUrlTwitch = "https://api.twitch.tv"
 
-func GetTwitchUser(login string) (*userTwitch, error) {
+func GetTwitchUser(ctx context.Context, login string) (*userTwitch, error) {
 	// Set Request URI
 	uri := fmt.Sprintf("%v/helix/users?login=%v", baseUrlTwitch, login)
 
 	// Get auth
-	token, err := auth.GetAuth()
+	token, err := auth.GetAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Send request
-	resp, err := cache.CacheGetRequest(uri, time.Minute*30, time.Minute*15, struct {
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*30, time.Minute*15, struct {
 		Key   string
 		Value string
 	}{Key: "Client-ID", Value: configure.Config.GetString("twitch_client_id")}, struct {

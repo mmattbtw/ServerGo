@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -31,14 +32,14 @@ type AuthResp struct {
 
 var InvalidRespTwitch = fmt.Errorf("invalid resp from twitch")
 
-func GetAuth() (string, error) {
+func GetAuth(ctx context.Context) (string, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if auth != "" {
 		return auth, nil
 	}
 
-	val, err := redis.Client.Get(redis.Ctx, "twitch:auth").Result()
+	val, err := redis.Client.Get(ctx, "twitch:auth").Result()
 	if err != nil && err != redis.ErrNil {
 		return "", err
 	}
@@ -79,7 +80,7 @@ func GetAuth() (string, error) {
 
 	expiry := time.Second * time.Duration(int64(float64(resData.ExpiresIn)*0.75))
 
-	if err := redis.Client.SetNX(redis.Ctx, "twitch:auth", auth, expiry).Err(); err != nil {
+	if err := redis.Client.SetNX(ctx, "twitch:auth", auth, expiry).Err(); err != nil {
 		log.Errorf("redis, err=%v", err)
 	}
 

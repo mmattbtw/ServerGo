@@ -22,7 +22,7 @@ func awaitHeartbeat(ctx context.Context, c *Conn, waiter chan WebSocketMessageIn
 		case <-waiter: // Client sends a heartbeat: OK
 			// Acknowledge it
 			c.SendOpHeartbeatAck()
-			c.Refresh() // Refresh the connection's key expire in redis
+			c.Refresh(ctx) // Refresh the connection's key expire in redis
 			return
 		}
 	}

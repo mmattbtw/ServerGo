@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -11,9 +12,9 @@ var (
 	getCacheLuaScriptSHA1 string
 )
 
-func GetCache(collection, sha1 string) ([]interface{}, error) {
+func GetCache(ctx context.Context, collection, sha1 string) ([]interface{}, error) {
 	res, err := Client.EvalSha(
-		Ctx,
+		ctx,
 		getCacheLuaScriptSHA1, // scriptSHA1
 		[]string{
 			fmt.Sprintf("cached:queries:%s", collection),
@@ -36,7 +37,7 @@ var (
 	setCacheLuaScriptSHA1 string
 )
 
-func SetCache(collection, sha1, commonIndex string, args ...string) (int64, error) {
+func SetCache(ctx context.Context, collection, sha1, commonIndex string, args ...string) (int64, error) {
 	if len(args)%2 != 0 {
 		return 0, fmt.Errorf("invalid args, must be even")
 	}
@@ -58,7 +59,7 @@ func SetCache(collection, sha1, commonIndex string, args ...string) (int64, erro
 	}
 
 	s, err := Client.EvalSha(
-		Ctx,
+		ctx,
 		setCacheLuaScriptSHA1, // scriptSHA1
 		keys,                  // KEYS
 		newArgs...,            // ARGV
@@ -78,7 +79,7 @@ var (
 	invalidateCacheLuaScriptSHA1 string
 )
 
-func InvalidateCache(invalidateKey, collection, objectID, commonIndex string, objectJSON string) (int64, error) {
+func InvalidateCache(ctx context.Context, invalidateKey, collection, objectID, commonIndex string, objectJSON string) (int64, error) {
 	keys := []string{
 		invalidateKey,
 		fmt.Sprintf("cached:queries:%s", collection),
@@ -88,7 +89,7 @@ func InvalidateCache(invalidateKey, collection, objectID, commonIndex string, ob
 		keys = append(keys, fmt.Sprintf("cached:common-index:%s:%s", collection, commonIndex))
 	}
 	s, err := Client.EvalSha(
-		Ctx,
+		ctx,
 		invalidateCacheLuaScriptSHA1, // scriptSHA1
 		keys,                         // KEYS
 		time.Now().Unix(),            // ARGV[1]
@@ -110,13 +111,13 @@ var (
 	invalidateCommonIndexCacheLuaScriptSHA1 string
 )
 
-func InvalidateCommonIndexCache(collection, commonIndex string) (int64, error) {
+func InvalidateCommonIndexCache(ctx context.Context, collection, commonIndex string) (int64, error) {
 	keys := []string{
 		fmt.Sprintf("cached:queries:%s", collection),
 		fmt.Sprintf("cached:common-index:%s:%s", collection, commonIndex),
 	}
 	s, err := Client.EvalSha(
-		Ctx,
+		ctx,
 		invalidateCommonIndexCacheLuaScriptSHA1, // scriptSHA1
 		keys,                                    // KEYS
 		time.Now().Unix(),                       // ARGV[1]

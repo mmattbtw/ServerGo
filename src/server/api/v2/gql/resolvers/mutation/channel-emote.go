@@ -40,7 +40,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
@@ -50,7 +50,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 		"_id": channelID,
 	})
 
@@ -100,7 +100,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		}
 	}
 
-	emoteRes := mongo.Database.Collection("emotes").FindOne(mongo.Ctx, bson.M{
+	emoteRes := mongo.Database.Collection("emotes").FindOne(ctx, bson.M{
 		"_id":    emoteID,
 		"status": datastructure.EmoteStatusLive,
 	})
@@ -131,7 +131,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 
 	emoteIDs := append(channel.EmoteIDs, emoteID)
 	after := options.After
-	doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
+	doc := mongo.Database.Collection("users").FindOneAndUpdate(ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
 		"$set": bson.M{
@@ -149,7 +149,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserChannelEmoteAdd,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
@@ -169,7 +169,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.Login), redis.PubSubPayloadUserEmotes{
+		_ = redis.Publish(ctx, fmt.Sprintf("users:%v:emotes", channel.Login), redis.PubSubPayloadUserEmotes{
 			Removed: false,
 			ID:      emoteID.Hex(),
 			Actor:   usr.DisplayName,
@@ -201,7 +201,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
@@ -211,7 +211,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 		"_id": channelID,
 	})
 
@@ -266,7 +266,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
 	}
 
-	_, err = mongo.Database.Collection("users").UpdateOne(mongo.Ctx, bson.M{
+	_, err = mongo.Database.Collection("users").UpdateOne(ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
 		"$set": bson.M{
@@ -274,7 +274,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		},
 	})
 	after := options.After
-	doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
+	doc := mongo.Database.Collection("users").FindOneAndUpdate(ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
 		"$set": bson.M{
@@ -292,7 +292,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserChannelEmoteRemove,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
@@ -312,7 +312,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 			ids[i] = id.Hex()
 		}
 
-		_ = redis.Publish(fmt.Sprintf("users:%v:emotes", channel.Login), redis.PubSubPayloadUserEmotes{
+		_ = redis.Publish(ctx, fmt.Sprintf("users:%v:emotes", channel.Login), redis.PubSubPayloadUserEmotes{
 			Removed: true,
 			ID:      emoteID.Hex(),
 			Actor:   usr.DisplayName,

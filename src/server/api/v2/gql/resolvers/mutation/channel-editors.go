@@ -43,7 +43,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrYourself
 	}
 
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
@@ -53,7 +53,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", editorID.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", editorID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
@@ -63,7 +63,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 		"_id": channelID,
 	})
 
@@ -95,7 +95,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 
 	var newChannel *datastructure.User
 	after := options.After
-	doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
+	doc := mongo.Database.Collection("users").FindOneAndUpdate(ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
 		"$addToSet": bson.M{
@@ -113,7 +113,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserChannelEditorRemove,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
@@ -151,7 +151,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(redis.Ctx, "user:bans", channelID.Hex()).Result()
+	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
 		log.Errorf("redis, err=%v", err)
 		return nil, resolvers.ErrInternalServer
@@ -161,7 +161,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	res := mongo.Database.Collection("users").FindOne(mongo.Ctx, bson.M{
+	res := mongo.Database.Collection("users").FindOne(ctx, bson.M{
 		"_id": channelID,
 	})
 
@@ -193,7 +193,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 
 	var newChannel *datastructure.User
 	after := options.After
-	doc := mongo.Database.Collection("users").FindOneAndUpdate(mongo.Ctx, bson.M{
+	doc := mongo.Database.Collection("users").FindOneAndUpdate(ctx, bson.M{
 		"_id": channelID,
 	}, bson.M{
 		"$pull": bson.M{
@@ -211,7 +211,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = mongo.Database.Collection("audit").InsertOne(mongo.Ctx, &datastructure.AuditLog{
+	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserChannelEditorRemove,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},

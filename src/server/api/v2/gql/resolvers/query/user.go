@@ -31,7 +31,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		user = &datastructure.User{
 			Role: datastructure.DefaultRole,
 		}
-		if err := cache.FindOne("users", "", bson.M{
+		if err := cache.FindOne(ctx, "users", "", bson.M{
 			"_id": userID,
 		}, user); err != nil {
 			if err != mongo.ErrNoDocuments {
@@ -48,7 +48,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
 		user.OwnedEmotes = &[]*datastructure.Emote{}
-		if err := cache.Find("emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
+		if err := cache.Find(ctx, "emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
 			"owner":  user.ID,
 			"status": datastructure.EmoteStatusLive,
 		}, user.OwnedEmotes); err != nil {
@@ -65,7 +65,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		}
 		if _, ok := v.Children["audit_entries"]; ok {
 			logs := []*datastructure.AuditLog{}
-			if err := cache.Find("audit", fmt.Sprintf("user:%s:owned_emotes", user.ID.Hex()), bson.M{
+			if err := cache.Find(ctx, "audit", fmt.Sprintf("user:%s:owned_emotes", user.ID.Hex()), bson.M{
 				"target.id": bson.M{
 					"$in": ids,
 				},
@@ -92,7 +92,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			user.Emotes = &[]*datastructure.Emote{}
 		} else {
 			user.Emotes = &[]*datastructure.Emote{}
-			if err := cache.Find("emotes", fmt.Sprintf("user:%s:emotes", user.ID.Hex()), bson.M{
+			if err := cache.Find(ctx, "emotes", fmt.Sprintf("user:%s:emotes", user.ID.Hex()), bson.M{
 				"_id": bson.M{
 					"$in": user.EmoteIDs,
 				},
@@ -109,7 +109,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			}
 			if _, ok := v.Children["audit_entries"]; ok {
 				logs := []*datastructure.AuditLog{}
-				if err := cache.Find("audit", "", bson.M{
+				if err := cache.Find(ctx, "audit", "", bson.M{
 					"target.id": bson.M{
 						"$in": ids,
 					},
@@ -133,7 +133,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if _, ok := fields["editors"]; ok && user.Editors == nil {
 		user.Editors = &[]*datastructure.User{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:editors", user.ID.Hex()), bson.M{
+		if err := cache.Find(ctx, "users", fmt.Sprintf("user:%s:editors", user.ID.Hex()), bson.M{
 			"_id": bson.M{
 				"$in": utils.Ternary(len(user.EditorIDs) > 0, user.EditorIDs, []primitive.ObjectID{}).([]primitive.ObjectID),
 			},
@@ -146,13 +146,13 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 	if _, ok := fields["editor_in"]; ok && user.EditorIn == nil {
 		user.EditorIn = &[]*datastructure.User{}
 
-		if cur, err := mongo.Database.Collection("users").Find(mongo.Ctx, bson.M{
+		if cur, err := mongo.Database.Collection("users").Find(ctx, bson.M{
 			"editors": user.ID,
 		}); err != nil {
 			log.Errorf("mongo, err=%v", err)
 			return nil, resolvers.ErrInternalServer
 		} else {
-			if err = cur.All(mongo.Ctx, user.EditorIn); err != nil {
+			if err = cur.All(ctx, user.EditorIn); err != nil {
 				log.Errorf("mongo, err=%v", err)
 				return nil, resolvers.ErrInternalServer
 			}
@@ -162,7 +162,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
 	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != datastructure.UserRankAdmin && usr.Rank != datastructure.UserRankModerator) && user.Reports == nil {
 		user.Reports = &[]*datastructure.Report{}
-		if err := cache.Find("users", fmt.Sprintf("user:%s:reports", user.ID.Hex()), bson.M{
+		if err := cache.Find(ctx, "users", fmt.Sprintf("user:%s:reports", user.ID.Hex()), bson.M{
 			"target.id":   user.ID,
 			"target.type": "users",
 		}, user.EditorIn); err != nil {
@@ -187,7 +187,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			}
 			reporters := []*datastructure.User{}
 
-			if err := cache.Find("users", "", bson.M{
+			if err := cache.Find(ctx, "users", "", bson.M{
 				"_id": bson.M{
 					"$in": ids,
 				},
@@ -205,7 +205,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if _, ok := fields["bans"]; ok && usrValid && usr.HasPermission(datastructure.RolePermissionBanUsers) && user.Bans == nil {
 		user.Bans = &[]*datastructure.Ban{}
-		res, err := mongo.Database.Collection("bans").Find(mongo.Ctx, bson.M{
+		res, err := mongo.Database.Collection("bans").Find(ctx, bson.M{
 			"user_id": user.ID,
 		})
 		if err != nil {
@@ -213,7 +213,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			return nil, resolvers.ErrInternalServer
 		}
 
-		res.All(mongo.Ctx, user.Bans)
+		res.All(ctx, user.Bans)
 	}
 
 	r := &UserResolver{
@@ -247,7 +247,7 @@ func (r *UserResolver) Rank() int32 {
 
 func (r *UserResolver) Role() (*RoleResolver, error) {
 	roleID := r.v.RoleID
-	role := datastructure.GetRole(mongo.Ctx, roleID)
+	role := datastructure.GetRole(r.ctx, roleID)
 
 	res, err := GenerateRoleResolver(r.ctx, &role, roleID, nil)
 	if err != nil {
@@ -351,10 +351,10 @@ func (r *UserResolver) OwnedEmotes() ([]*EmoteResolver, error) {
 
 func (r *UserResolver) ThirdPartyEmotes() ([]*EmoteResolver, error) {
 	var emotes []*datastructure.Emote
-	if bttv, err := api_proxy.GetChannelEmotesBTTV(r.v.Login); err == nil { // Find channel bttv emotes
+	if bttv, err := api_proxy.GetChannelEmotesBTTV(r.ctx, r.v.Login); err == nil { // Find channel bttv emotes
 		emotes = append(emotes, bttv...)
 	}
-	if ffz, err := api_proxy.GetChannelEmotesFFZ(r.v.Login); err == nil { // Find channel FFZ emotes
+	if ffz, err := api_proxy.GetChannelEmotesFFZ(r.ctx, r.v.Login); err == nil { // Find channel FFZ emotes
 		emotes = append(emotes, ffz...)
 	}
 
@@ -436,7 +436,7 @@ func (r *UserResolver) Bans() (*[]*banResolver, error) {
 }
 
 func (r *UserResolver) Banned() bool {
-	return redis.Client.HGet(redis.Ctx, "user:bans", r.v.ID.Hex()).Val() != ""
+	return redis.Client.HGet(r.ctx, "user:bans", r.v.ID.Hex()).Val() != ""
 }
 
 func (r *UserResolver) AuditEntries() (*[]string, error) {

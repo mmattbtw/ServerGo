@@ -1,14 +1,13 @@
 package mongo
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
-
-	"context"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -27,7 +26,6 @@ import (
 // }.Froze()
 
 var Database *mongo.Database
-var Ctx = context.TODO()
 
 var ErrNoDocuments = mongo.ErrNoDocuments
 
@@ -41,23 +39,26 @@ func NewUpdateOneModel() *mongo.UpdateOneModel {
 }
 
 func init() {
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*25)
+	defer cancel()
+
 	clientOptions := options.Client().ApplyURI(configure.Config.GetString("mongo_uri"))
 	if configure.Config.GetBool("mongo_direct") {
 		clientOptions.SetDirect(true)
 	}
-	client, err := mongo.Connect(Ctx, clientOptions)
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		panic(err)
 	}
 
-	err = client.Ping(Ctx, nil)
+	err = client.Ping(ctx, nil)
 	if err != nil {
 		panic(err)
 	}
 
 	Database = client.Database(configure.Config.GetString("mongo_db"))
 
-	_, err = Database.Collection("emotes").Indexes().CreateMany(Ctx, []mongo.IndexModel{
+	_, err = Database.Collection("emotes").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"name": 1}},
 		{Keys: bson.M{"owner_id": 1}},
 		{Keys: bson.M{"tags": 1}},
@@ -72,7 +73,7 @@ func init() {
 		return
 	}
 
-	_, err = Database.Collection("users").Indexes().CreateMany(Ctx, []mongo.IndexModel{
+	_, err = Database.Collection("users").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"id": 1}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.M{"login": 1}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.M{"rank": 1}},
@@ -83,7 +84,7 @@ func init() {
 		return
 	}
 
-	_, err = Database.Collection("bans").Indexes().CreateMany(Ctx, []mongo.IndexModel{
+	_, err = Database.Collection("bans").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"user_id": 1}},
 		{Keys: bson.M{"issued_by": 1}},
 		{Keys: bson.M{"active": 1}},
@@ -93,7 +94,7 @@ func init() {
 		return
 	}
 
-	_, err = Database.Collection("audit").Indexes().CreateMany(Ctx, []mongo.IndexModel{
+	_, err = Database.Collection("audit").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"type": 1}},
 		{Keys: bson.M{"target.type": 1}},
 		{Keys: bson.M{"target.id": 1}},
@@ -103,7 +104,7 @@ func init() {
 		return
 	}
 
-	_, err = Database.Collection("reports").Indexes().CreateMany(Ctx, []mongo.IndexModel{
+	_, err = Database.Collection("reports").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"reporter_id": 1}},
 		{Keys: bson.M{"target.type": 1}},
 		{Keys: bson.M{"target.id": 1}},
@@ -117,18 +118,19 @@ func init() {
 
 	for _, v := range []string{"users", "emotes", "bans", "reports", "audit"} {
 		go func(col string) {
-			userChangeStream, err := Database.Collection(col).Watch(Ctx, mongo.Pipeline{}, opts)
+			userChangeStream, err := Database.Collection(col).Watch(ctx, mongo.Pipeline{}, opts)
 			if err != nil {
 				panic(err)
 			}
 			go func() {
-				for userChangeStream.Next(Ctx) {
+				ctx := context.TODO()
+				for userChangeStream.Next(ctx) {
 					data := bson.M{}
 					if err := userChangeStream.Decode(&data); err != nil {
 						log.Errorf("mongo change stream, err=%v, col=%s", err, col)
 						continue
 					}
-					changeStream(col, data)
+					changeStream(ctx, col, data)
 				}
 			}()
 		}(v)
@@ -147,7 +149,7 @@ func HexIDSliceToObjectID(arr []string) []primitive.ObjectID {
 	return r
 }
 
-func changeStream(collection string, data bson.M) {
+func changeStream(ctx context.Context, collection string, data bson.M) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("recovered, err=%v", err)
@@ -188,7 +190,7 @@ func changeStream(collection string, data bson.M) {
 		ojson = dataString
 	}
 
-	_, err := redis.InvalidateCache(fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
+	_, err := redis.InvalidateCache(ctx, fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
 	if err != nil {
 		log.Errorf("redis, err=%s", err)
 	}

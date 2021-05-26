@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"context"
+
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -8,8 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func getEmotesUsage() ([]*datastructure.Emote, error) {
-	cur, err := mongo.Database.Collection("emotes").Find(mongo.Ctx, bson.M{
+func getEmotesUsage(ctx context.Context) ([]*datastructure.Emote, error) {
+	cur, err := mongo.Database.Collection("emotes").Find(ctx, bson.M{
 		"channel_count": bson.M{
 			"$gte": 1,
 		},
@@ -25,7 +27,7 @@ func getEmotesUsage() ([]*datastructure.Emote, error) {
 	}
 
 	var emotes []*datastructure.Emote
-	_ = cur.All(mongo.Ctx, &emotes)
+	_ = cur.All(ctx, &emotes)
 
 	return emotes, nil
 }

@@ -60,16 +60,13 @@ func WebSocket(app fiber.Router) {
 
 		// This socket has connected
 		log.Infof("<WS> Connect: %v", c.RemoteAddr().String())
-		c.Register()
+		ctx, cancel := context.WithCancel(context.WithValue(context.Background(), WebSocketConnKey, c))
+		c.Register(ctx)
 		Connections[c.Stat.UUID] = c
 
 		// Event channels
 		chIdentified := make(chan bool)
 		chHeartbeat := make(chan WebSocketMessageInbound)
-
-		// Create context
-		ctx := context.WithValue(context.Background(), WebSocketConnKey, c) // Add connection to context
-		ctx, cancel := context.WithCancel(ctx)
 
 		// Wait for the client to send their first heartbeat
 		// Failure to do so in time will disconnect the socket
@@ -116,7 +113,7 @@ func WebSocket(app fiber.Router) {
 					}
 					active[subscription] = true // Set subscription as active
 					c.Stat.Subscriptions = append(c.Stat.Subscriptions, data)
-					c.Register()
+					c.Register(ctx)
 					noOpTimeout.Stop() // Prevent a no-op timeout from happening: the user has done something
 
 					switch subscription {
@@ -140,7 +137,7 @@ func WebSocket(app fiber.Router) {
 		log.Infof("<WS> Disconnect: %v", c.RemoteAddr().String())
 
 		// Handle connection removal
-		c.Unregister()
+		c.Unregister(ctx)
 		c.Stat.Closed = true             // Set closed stat to true
 		delete(Connections, c.Stat.UUID) // Remove from connections map
 		close(chIdentified)
@@ -170,10 +167,10 @@ func transform(ws *websocket.Conn) *Conn {
 	}
 }
 
-func (c *Conn) SendOpDispatch(data interface{}, t string) {
+func (c *Conn) SendOpDispatch(ctx context.Context, data interface{}, t string) {
 	// Increase sequence
 	c.Stat.Sequence++
-	_ = redis.Client.HIncrBy(redis.Ctx, c.Stat.RedisKey, "seq", 1)
+	_ = redis.Client.HIncrBy(ctx, c.Stat.RedisKey, "seq", 1)
 
 	c.sendMessage(&WebSocketMessageOutbound{
 		Op:       WebSocketMessageOpDispatch,
@@ -217,7 +214,7 @@ func (c *Conn) SendClosure(code int, message string) {
 }
 
 // Register the connection in the global redis store
-func (c *Conn) Register() {
+func (c *Conn) Register(ctx context.Context) {
 	data := make([]string, 8)
 	data = append(data, "id", c.Stat.UUID.String())
 	data = append(data, "ip", c.Stat.IP)
@@ -227,20 +224,20 @@ func (c *Conn) Register() {
 		data = append(data, "subs", string(j))
 	}
 
-	if err := redis.Client.HSet(redis.Ctx, c.Stat.RedisKey, data).Err(); err != nil {
+	if err := redis.Client.HSet(ctx, c.Stat.RedisKey, data).Err(); err != nil {
 		log.Errorf("WebSocket, err=could not register socket, %v", err)
 	}
-	redis.Client.Expire(redis.Ctx, c.Stat.RedisKey, time.Second*90)
+	redis.Client.Expire(ctx, c.Stat.RedisKey, time.Second*90)
 }
 
 // Bump the EXPIRE for this connection in the global redis store
-func (c *Conn) Refresh() {
-	redis.Client.Expire(redis.Ctx, c.Stat.RedisKey, time.Second*time.Duration(heartbeatInterval)+time.Second*60)
+func (c *Conn) Refresh(ctx context.Context) {
+	redis.Client.Expire(ctx, c.Stat.RedisKey, time.Second*time.Duration(heartbeatInterval)+time.Second*60)
 }
 
 // Unregister the connection in the global redis store
-func (c *Conn) Unregister() {
-	redis.Client.Del(redis.Ctx, c.Stat.RedisKey) // Remove key
+func (c *Conn) Unregister(ctx context.Context) {
+	redis.Client.Del(ctx, c.Stat.RedisKey) // Remove key
 }
 
 func (c *Conn) sendMessage(message *WebSocketMessageOutbound) {

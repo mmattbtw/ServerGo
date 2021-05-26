@@ -3,14 +3,13 @@ package redis
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobuffalo/packr/v2"
 )
-
-var Ctx = context.Background()
 
 var (
 	errInvalidResp = fmt.Errorf("invalid resp from redis")
@@ -30,7 +29,9 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	v, err := Client.ScriptLoad(Ctx, tokenConsumerLuaScript).Result()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*25)
+	defer cancel()
+	v, err := Client.ScriptLoad(ctx, tokenConsumerLuaScript).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +41,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	v, err = Client.ScriptLoad(Ctx, getCacheLuaScript).Result()
+	v, err = Client.ScriptLoad(ctx, getCacheLuaScript).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +51,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	v, err = Client.ScriptLoad(Ctx, setCacheLuaScript).Result()
+	v, err = Client.ScriptLoad(ctx, setCacheLuaScript).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +61,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	v, err = Client.ScriptLoad(Ctx, invalidateCacheLuaScript).Result()
+	v, err = Client.ScriptLoad(ctx, invalidateCacheLuaScript).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +71,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	v, err = Client.ScriptLoad(Ctx, invalidateCommonIndexCacheLuaScript).Result()
+	v, err = Client.ScriptLoad(ctx, invalidateCommonIndexCacheLuaScript).Result()
 	if err != nil {
 		panic(err)
 	}

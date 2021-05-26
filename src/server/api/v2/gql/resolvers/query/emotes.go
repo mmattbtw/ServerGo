@@ -26,7 +26,7 @@ type EmoteResolver struct {
 func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emoteID *primitive.ObjectID, fields map[string]*SelectedField) (*EmoteResolver, error) {
 	if emote == nil {
 		emote = &datastructure.Emote{}
-		if err := cache.FindOne("emotes", "", bson.M{
+		if err := cache.FindOne(ctx, "emotes", "", bson.M{
 			"_id": emoteID,
 		}, emote); err != nil {
 			if err != mongo.ErrNoDocuments {
@@ -44,7 +44,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 	if emote.AuditEntries == nil {
 		if _, ok := fields["audit_entries"]; ok {
 			emote.AuditEntries = &[]*datastructure.AuditLog{}
-			if err := cache.Find("audit", fmt.Sprintf("logs:%s", emote.ID.Hex()), bson.M{
+			if err := cache.Find(ctx, "audit", fmt.Sprintf("logs:%s", emote.ID.Hex()), bson.M{
 				"target.id":   emote.ID,
 				"target.type": "emotes",
 			}, emote.AuditEntries); err != nil {
@@ -58,7 +58,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 		if _, ok := fields["channels"]; ok {
 			emote.Channels = &[]*datastructure.User{}
 
-			if err := cache.Find("users", fmt.Sprintf("emotes:%s", emote.ID.Hex()), bson.M{
+			if err := cache.Find(ctx, "users", fmt.Sprintf("emotes:%s", emote.ID.Hex()), bson.M{
 				"emotes": bson.M{
 					"$in": []primitive.ObjectID{emote.ID},
 				},
@@ -71,7 +71,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
 	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != datastructure.UserRankAdmin && usr.Rank != datastructure.UserRankModerator) && emote.Reports == nil {
 		emote.Reports = &[]*datastructure.Report{}
-		if err := cache.Find("reports", fmt.Sprintf("reports:%s", emote.ID.Hex()), bson.M{
+		if err := cache.Find(ctx, "reports", fmt.Sprintf("reports:%s", emote.ID.Hex()), bson.M{
 			"target.id":   emote.ID,
 			"target.type": "emotes",
 		}, emote.Reports); err != nil {
@@ -96,7 +96,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 			}
 
 			reporters := []*datastructure.User{}
-			if err := cache.Find("users", "", bson.M{
+			if err := cache.Find(ctx, "users", "", bson.M{
 				"_id": bson.M{
 					"$in": ids,
 				},
