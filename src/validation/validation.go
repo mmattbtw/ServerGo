@@ -1,25 +1,15 @@
 package validation
 
-// var (
-// 	emoteNameRegex = regexp.MustCompile(`^[\\w-]{2,100}$`)
-// 	ValidateEmoteTag = regexp.MustCompile(`^[\\w-]{2,100}$`)
-// )
+import "regexp"
 
-// TODO: Check hate speech.
+var (
+	emoteNameRegex = regexp.MustCompile(`^[-_A-Za-z():0-9]{2,100}$`)
+
+//	ValidateEmoteTag = regexp.MustCompile(`^[\\w-]{2,100}$`)
+)
 
 func ValidateEmoteName(name []byte) bool {
-	length := len(name)
-	if length < 2 || length > 100 {
-		return false
-	}
-	for _, b := range name {
-		// Ascii characters basically the regex [\w-]
-		if b == 45 || b == 95 || (b >= 48 && b <= 57) || (b >= 65 && b <= 90) || (b >= 97 && b <= 122) {
-			continue
-		}
-		return false
-	}
-	return true
+	return emoteNameRegex.Match(name)
 }
 
 func ValidateEmoteTag(tag []byte) bool {
