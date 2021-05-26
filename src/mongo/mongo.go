@@ -118,12 +118,12 @@ func init() {
 
 	for _, v := range []string{"users", "emotes", "bans", "reports", "audit"} {
 		go func(col string) {
+			ctx := context.TODO()
 			userChangeStream, err := Database.Collection(col).Watch(ctx, mongo.Pipeline{}, opts)
 			if err != nil {
 				panic(err)
 			}
 			go func() {
-				ctx := context.TODO()
 				for userChangeStream.Next(ctx) {
 					data := bson.M{}
 					if err := userChangeStream.Decode(&data); err != nil {
