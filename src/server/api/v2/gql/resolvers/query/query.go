@@ -6,7 +6,6 @@ import (
 	"math"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
@@ -279,63 +278,6 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		switch sortBy {
 		// Popularity Sort - Channels Added
 		case "popularity":
-			// Create a pipeline for ranking emotes by channel count
-			popCheck := mongo.Pipeline{
-				{primitive.E{Key: "$match", Value: bson.M{
-					"$or": bson.A{
-						bson.M{ // Match emotes where kast check was over 6 hours ago
-							"channel_count_checked_at": bson.M{
-								"$lt": time.Now().Add(-6 * time.Hour),
-							},
-						},
-						bson.M{"channel_count_checked_at": bson.M{"$exists": false}},
-						bson.M{"channel_count_checked_at": nil},
-					},
-				}}},
-				{primitive.E{Key: "$lookup", Value: bson.M{
-					"from":         "users",
-					"localField":   "_id",
-					"foreignField": "emotes",
-					"as":           "channels",
-				}}},
-				{primitive.E{Key: "$addFields", Value: bson.M{
-					"channel_count": bson.M{"$size": "$channels"},
-				}}},
-				{primitive.E{Key: "$unset", Value: "channels"}},
-			}
-			cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, popCheck)
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			countedEmotes := []*datastructure.Emote{}
-			if err := cur.All(ctx, &countedEmotes); err == nil && len(countedEmotes) > 0 {
-				if err == nil { // Get the unchecked emotes, add them to a slice
-					ops := make([]mongo.WriteModel, len(countedEmotes))
-					for i, e := range countedEmotes {
-						now := time.Now()
-						update := mongo.NewUpdateOneModel(). // Append update ops for bulk write
-											SetFilter(bson.M{"_id": e.ID}).
-											SetUpdate(bson.M{
-								"$set": bson.M{
-									"channel_count":            e.ChannelCount,
-									"channel_count_checked_at": &now,
-								},
-							})
-
-						ops[i] = update
-					}
-
-					// Update unchecked with channel count data
-					_, err := mongo.Database.Collection("emotes").BulkWrite(ctx, ops)
-					if err != nil {
-						log.Errorf("mongo, was unable to update channel count of "+fmt.Sprint(len(countedEmotes))+" emotes, err=%v", err)
-					}
-				}
-			} else if err != nil {
-				log.Errorf("mongo, was unable to aggregate channel count of emotes, err=%v", err)
-			}
-
 			// Sort by channel count
 			pipeline = append(pipeline, []bson.D{
 				{primitive.E{Key: "$sort", Value: bson.D{
