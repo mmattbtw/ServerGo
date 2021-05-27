@@ -267,7 +267,7 @@ func CreateRoute(router fiber.Router) {
 				Mime:             mime,
 				Status:           datastructure.EmoteStatusProcessing,
 				Tags:             []string{},
-				Visibility:       datastructure.EmoteVisibilityPrivate,
+				Visibility:       datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityHidden,
 				OwnerID:          *channelID,
 				LastModifiedDate: time.Now(),
 				Width:            sizeX,
@@ -292,6 +292,7 @@ func CreateRoute(router fiber.Router) {
 				return 500, errInternalServer, nil
 			}
 
+			emote.ID = _id
 			errored := false
 
 			for _, path := range files {

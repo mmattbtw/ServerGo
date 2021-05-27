@@ -6,7 +6,6 @@ metadata:
   labels:
     app: 7tv-goapi
 spec:
-  replicas: 3
   serviceName: seventv-goapi-svc
   selector:
     matchLabels:
