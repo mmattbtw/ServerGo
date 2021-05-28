@@ -232,13 +232,11 @@ func CreateRoute(router fiber.Router) {
 				sizeY[i] = int16(height)
 
 				// Create new boundaries for frames
-				fmt.Println("Width/Height", width, maxHeight)
-
 				cmd := exec.Command("convert", []string{
 					ogFilePath,
 					"-coalesce",
 					"-resize", fmt.Sprintf("%dx%d", width, height),
-					"-define", "webp:lossless=false,auto-filter=true,method=6",
+					"-define", "webp:lossless=false,auto-filter=true,method=4",
 					outFile,
 				}...)
 
