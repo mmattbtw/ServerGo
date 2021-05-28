@@ -149,7 +149,9 @@ type User {
   # email of this user
   email: String
   # rank of this user
-  rank: Int!
+  rank: Int! @deprecated
+  # user descriptino
+  description: String!
   # role of this user
   role: Role!
   # emotes of this user

@@ -245,6 +245,10 @@ func (r *UserResolver) Rank() int32 {
 	return r.v.Rank
 }
 
+func (r *UserResolver) Description() string {
+	return r.v.Description
+}
+
 func (r *UserResolver) Role() (*RoleResolver, error) {
 	roleID := r.v.RoleID
 	role := datastructure.GetRole(r.ctx, roleID)
