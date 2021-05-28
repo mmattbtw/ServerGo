@@ -135,8 +135,15 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 		}
 	}
 	if req.Visibility != nil {
-		if utils.BitField.HasBits(int64(*req.Visibility), int64(datastructure.EmoteVisibilityGlobal)) && !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
-			return nil, resolvers.ErrAccessDenied // User tries to set emote's global state but lacks permission
+		if !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
+			if utils.BitField.HasBits(int64(*req.Visibility), int64(datastructure.EmoteVisibilityGlobal)) {
+				return nil, resolvers.ErrAccessDenied // User tries to set emote's global state but lacks permission
+			}
+
+			// User tries to remove the hidden state but lacks permission
+			if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityHidden)) && !utils.BitField.HasBits(int64(*req.Visibility), int64(datastructure.EmoteVisibilityHidden)) {
+				return nil, resolvers.ErrAccessDenied
+			}
 		}
 
 		if emote.Visibility != update["visibility"] {
