@@ -47,7 +47,7 @@ type Query {
     query: String!, limit: Int,
     page: Int, pageSize: Int,
     globalState: String, sortBy: String, sortOrder: Int,
-    channel: String, submitted_by: String
+    channel: String, submitted_by: String, filter: EmoteFilter
   ): [Emote]!
   #
   third_party_emotes(
@@ -61,6 +61,11 @@ type Query {
   role(id: String!): Role
   # Search for users.
   search_users(query: String!, page: Int, limit: Int): [UserPartial]!
+}
+
+input EmoteFilter {
+  width_range: [Int]
+  visibility: Int
 }
 
 type AuditLog {

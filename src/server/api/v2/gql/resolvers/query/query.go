@@ -193,6 +193,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	SortOrder   *int32
 	Channel     *string
 	SubmittedBy *string
+	Filter      *EmoteSearchFilter
 }) ([]*EmoteResolver, error) {
 	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
@@ -252,6 +253,12 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 				bson.M{"visibility": bson.M{"$bitsAllClear": int32(datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityHidden)}},
 				bson.M{"owner": usrID},
 			}},
+		}
+	}
+
+	if args.Filter != nil {
+		if args.Filter.Visibility != nil {
+			match["visibility"] = bson.M{"$bitsAllSet": *args.Filter.Visibility}
 		}
 	}
 
@@ -362,6 +369,11 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	return resolvers, nil
 }
 
+type EmoteSearchFilter struct {
+	WidthRange *[]*int16
+	Visibility *int32
+}
+
 func (*QueryResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 	Providers []string
 	Channel   string
@@ -453,17 +465,31 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 
 	users := []*datastructure.User{}
 
-	cur, err := mongo.Database.Collection("users").Find(ctx, bson.M{
+	match := bson.M{
 		"login": bson.M{
 			"$regex": lQuery,
 		},
-	}, opts)
+	}
+	cur, err := mongo.Database.Collection("users").Find(ctx, match, opts)
 	if err == nil {
 		err = cur.All(ctx, &users)
 	}
 	if err != nil {
 		log.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
+	}
+
+	// Determine the full collection size
+	{
+		f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
+
+		// Count documents in the collection
+		count, err := cache.GetCollectionSize(ctx, "users", match)
+		if err != nil {
+			return nil, err
+		}
+
+		f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
 	}
 
 	resolvers := make([]*UserResolver, len(users))
