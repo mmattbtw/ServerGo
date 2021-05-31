@@ -116,6 +116,38 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 		emote.Provider = "7TV"
 	}
 
+	// Updated the emote's channel count value
+	go func() {
+		var elapsed *time.Duration
+		if emote.LastChannelCountCheck != nil {
+			since := time.Since(*emote.LastChannelCountCheck)
+			elapsed = &since
+		}
+
+		if elapsed == nil || *elapsed > (time.Hour*6) {
+			count, err := mongo.Database.Collection("users").CountDocuments(ctx, bson.M{
+				"emotes": bson.M{
+					"$in": []primitive.ObjectID{emote.ID},
+				},
+			})
+			if err != nil {
+				log.Errorf("mongo, err=%v", err)
+				return
+			}
+
+			if _, err := mongo.Database.Collection("emotes").UpdateOne(ctx, bson.M{
+				"_id": emote.ID,
+			}, bson.M{
+				"$set": bson.M{
+					"channel_count_checked_at": time.Now(),
+					"channel_count":            count,
+				},
+			}); err != nil {
+				log.Errorf("mongo, err=%v", err)
+			}
+		}
+	}()
+
 	r := &EmoteResolver{
 		ctx:    ctx,
 		v:      emote,
