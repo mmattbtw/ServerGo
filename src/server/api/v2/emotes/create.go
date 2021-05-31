@@ -227,6 +227,8 @@ func CreateRoute(router fiber.Router) {
 					log.Errorf("could not decode webp, err=%v", err)
 					return 500, errInternalServer, nil
 				}
+			default:
+				return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Unsupported File Format")), nil
 			}
 
 			files := datastructure.EmoteUtil.GetFilesMeta(fileDir)
