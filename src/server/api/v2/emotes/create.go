@@ -29,9 +29,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
-const MAX_FRAME_COUNT int = 1024
+const MAX_FRAME_COUNT = 4096
+const MAX_FILE_SIZE = 5000000
 
 func CreateRoute(router fiber.Router) {
 
@@ -122,6 +124,8 @@ func CreateRoute(router fiber.Router) {
 						ext = "png"
 					case "image/gif":
 						ext = "gif"
+					case "image/webp":
+						ext = "webp"
 					default:
 						return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The file content type is not supported. It must be one of jpg, png or gif")), nil
 					}
@@ -132,8 +136,14 @@ func CreateRoute(router fiber.Router) {
 						return 500, errInternalServer, nil
 					}
 
+					byteSize := 0
 					for {
 						n, err := part.Read(data)
+						byteSize += n
+						if byteSize >= MAX_FILE_SIZE {
+							return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "The file is too large.")), nil
+						}
+
 						if err != nil && err != io.EOF {
 							log.Errorf("read, err=%v", err)
 							return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "We failed to read the file.")), nil
@@ -208,6 +218,15 @@ func CreateRoute(router fiber.Router) {
 				}
 
 				ogWidth, ogHeight = getGifDimensions(g)
+			case "webp":
+				wand := imagick.NewMagickWand()
+				if err := wand.ReadImageFile(ogFile); err == nil {
+					ogWidth = int(wand.GetImageWidth())
+					ogHeight = int(wand.GetImageHeight())
+				} else {
+					log.Errorf("could not decode webp, err=%v", err)
+					return 500, errInternalServer, nil
+				}
 			}
 
 			files := datastructure.EmoteUtil.GetFilesMeta(fileDir)
