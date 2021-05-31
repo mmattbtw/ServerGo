@@ -18,8 +18,8 @@ func Chatterino(app fiber.Router) fiber.Router {
 		version := configure.Config.GetString("chatterino.version")
 
 		result := VersionResult{
-			portableDownload,
 			download,
+			portableDownload,
 			update,
 			version,
 		}
@@ -29,6 +29,7 @@ func Chatterino(app fiber.Router) fiber.Router {
 			return c.Status(500).SendString(err.Error())
 		}
 
+		c.Set("Content-Type", "application/json")
 		return c.Status(200).Send(b)
 	})
 
@@ -36,8 +37,8 @@ func Chatterino(app fiber.Router) fiber.Router {
 }
 
 type VersionResult struct {
-	PortableDownload string `json:"portable_download"`
 	Download         string `json:"download"`
+	PortableDownload string `json:"portable_download"`
 	UpdateEXE        string `json:"updateexe"`
 	Version          string `json:"version"`
 }
