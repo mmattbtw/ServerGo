@@ -17,5 +17,6 @@ func createChannelEmoteSubscription(ctx context.Context, c *Conn, channel string
 type emoteSubscriptionResult struct {
 	Emote   *datastructure.Emote `json:"emote"`
 	Removed bool                 `json:"removed"`
+	Channel string               `json:"channel"`
 	Actor   string               `json:"actor"`
 }
