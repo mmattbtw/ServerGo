@@ -80,7 +80,6 @@ func WebSocket(app fiber.Router) {
 			}
 		})
 
-		active := make(map[int8]bool)
 		for { // Listen to client messages
 			if _, b, err := c.ReadMessage(); err == nil {
 				var msg WebSocketMessageInbound
@@ -107,11 +106,7 @@ func WebSocket(app fiber.Router) {
 					c.decodeMessageData(ctx, msg, &data) // Decode message data
 
 					subscription := data.Type // The subscription that the client wants to create
-					// Verify that the user is not already subscribed
-					if active[subscription] {
-						continue
-					}
-					active[subscription] = true // Set subscription as active
+
 					c.Stat.Subscriptions = append(c.Stat.Subscriptions, data)
 					c.Register(ctx)
 					noOpTimeout.Stop() // Prevent a no-op timeout from happening: the user has done something

@@ -44,40 +44,48 @@ func (h *WebSocketHelpers) SubscriberChannelUserEmotes(ctx context.Context, user
 		defer sub.Close()
 
 		go func() {
-			for b := range rCh {
-				// Get new emote list
-				var d redis.PubSubPayloadUserEmotes
-				if err := json.Unmarshal(b, &d); err != nil {
-					log.Errorf("websocket, err=%v", err)
-					continue
+			for {
+				select {
+				case <-ctx.Done():
+					return
+
+				case b := <-rCh:
+					// Get new emote list
+					var d redis.PubSubPayloadUserEmotes
+					if err := json.Unmarshal(b, &d); err != nil {
+						log.Errorf("websocket, err=%v", err)
+						continue
+					}
+
+					// Get full emote objects for added
+					var emote *datastructure.Emote
+					id, err := primitive.ObjectIDFromHex(d.ID)
+					if err != nil {
+						continue
+					}
+
+					if err := cache.FindOne(ctx, "emotes", "", bson.M{"_id": id}, &emote); err != nil {
+						continue
+					}
+					urls := datastructure.GetEmoteURLs(*emote)
+					emote.URLs = urls
+					emote.Provider = "7TV"
+
+					ch <- emoteSubscriptionResult{
+						Emote: &datastructure.Emote{
+							ID:         emote.ID,
+							Provider:   emote.Provider,
+							Visibility: emote.Visibility,
+							Mime:       emote.Mime,
+							Name:       emote.Name,
+							URLs:       emote.URLs,
+						},
+						Removed: d.Removed,
+						Channel: userID,
+						Actor:   d.Actor,
+					}
 				}
 
-				// Get full emote objects for added
-				var emote *datastructure.Emote
-				id, err := primitive.ObjectIDFromHex(d.ID)
-				if err != nil {
-					continue
-				}
-
-				if err := cache.FindOne(ctx, "emotes", "", bson.M{"_id": id}, &emote); err != nil {
-					continue
-				}
-				urls := datastructure.GetEmoteURLs(*emote)
-				emote.URLs = urls
-				emote.Provider = "7TV"
-
-				ch <- emoteSubscriptionResult{
-					Emote: &datastructure.Emote{
-						ID:         emote.ID,
-						Provider:   emote.Provider,
-						Visibility: emote.Visibility,
-						Mime:       emote.Mime,
-						Name:       emote.Name,
-						URLs:       emote.URLs,
-					},
-					Removed: d.Removed,
-					Actor:   d.Actor,
-				}
 			}
 		}()
 
