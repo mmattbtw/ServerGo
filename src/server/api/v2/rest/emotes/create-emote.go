@@ -286,7 +286,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				Mime:             mime,
 				Status:           datastructure.EmoteStatusProcessing,
 				Tags:             []string{},
-				Visibility:       datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityHidden,
+				Visibility:       datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityUnlisted,
 				OwnerID:          *channelID,
 				LastModifiedDate: time.Now(),
 				Width:            sizeX,

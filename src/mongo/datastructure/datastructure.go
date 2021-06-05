@@ -55,7 +55,7 @@ func GetEmoteURLs(emote Emote) [][]string {
 const (
 	EmoteVisibilityPrivate int32 = 1 << iota
 	EmoteVisibilityGlobal
-	EmoteVisibilityHidden
+	EmoteVisibilityUnlisted
 	EmoteVisibilityOverrideBTTV
 	EmoteVisibilityOverrideFFZ
 	EmoteVisibilityOverrideTwitchGlobal

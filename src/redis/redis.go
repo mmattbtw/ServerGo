@@ -76,6 +76,16 @@ func init() {
 		panic(err)
 	}
 	invalidateCommonIndexCacheLuaScriptSHA1 = v
+
+	rateLimitLuaScript, err := box.FindString("rate-limit.lua")
+	if err != nil {
+		panic(err)
+	}
+	v, err = Client.ScriptLoad(ctx, rateLimitLuaScript).Result()
+	if err != nil {
+		panic(err)
+	}
+	RateLimitScriptSHA1 = v
 }
 
 var Client *redis.Client
@@ -99,3 +109,5 @@ type StringStringMapCmd = redis.StringStringMapCmd
 type Z = redis.Z
 
 const ErrNil = redis.Nil
+
+var RateLimitScriptSHA1 string

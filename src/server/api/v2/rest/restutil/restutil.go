@@ -81,7 +81,7 @@ func CreateEmoteResponse(emote *datastructure.Emote, owner *datastructure.User) 
 var emoteVisibilitySimpleMap = map[int32]string{
 	datastructure.EmoteVisibilityPrivate:                  "PRIVATE",
 	datastructure.EmoteVisibilityGlobal:                   "GLOBAL",
-	datastructure.EmoteVisibilityHidden:                   "HIDDEN",
+	datastructure.EmoteVisibilityUnlisted:                 "UNLISTED",
 	datastructure.EmoteVisibilityOverrideFFZ:              "OVERRIDE_FFZ",
 	datastructure.EmoteVisibilityOverrideBTTV:             "OVERRIDE_BTTV",
 	datastructure.EmoteVisibilityOverrideTwitchSubscriber: "OVERRIDE_TWITCH_SUBSCRIBER",

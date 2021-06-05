@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -36,7 +35,7 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		} else if len(c.IPs()) > 0 {
 			identifier = c.IPs()[0]
 		} else {
-			identifier = c.Context().RemoteAddr().String()
+			identifier = c.IP()
 		}
 
 		// Create hash of identifier + route tag
@@ -44,32 +43,34 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		h.Write(utils.S2B(identifier))
 		h.Write(utils.S2B(tag))
 
+		// Remaining
+		remaining := int64(limit)
+		ttl := int64(0)
+
 		// Create RateLimiter instance
-		redisKey := fmt.Sprintf("rl:%s", hex.EncodeToString(h.Sum(nil)))
-		rl := RateLimiter{
-			c,          // Connection
-			redisKey,   // Redis Key
-			identifier, // Identifier
-			limit,      // Limit
-			limit - 1,  // Remaining
-			duration,   // Reset After
-		}
-		_, err := rl.CheckLimit(c.Context())
-		if err != nil {
+		redisKey := hex.EncodeToString(h.Sum(nil))
+		if result, err := redis.Client.EvalSha(c.Context(), redis.RateLimitScriptSHA1, []string{}, redisKey, duration.Seconds(), limit, 1).Result(); err != nil {
 			log.Errorf("ratelimit, err=%v", err)
-			return c.SendStatus(500)
+			return err
+		} else {
+			a := make([]int64, 3)
+			for i, v := range result.([]interface{}) {
+				val := v.(int64)
+				a[i] = val
+			}
+
+			remaining -= a[0]
+			ttl = a[1]
 		}
 
 		// Apply rate limit headers
-		c.Set("X-RateLimit-Limit", strconv.Itoa(int(rl.Limit)))
-		c.Set("X-RateLimit-Remaining", strconv.Itoa(int(rl.Remaining)))
+		c.Set("X-RateLimit-Limit", strconv.Itoa(int(limit)))
+		c.Set("X-RateLimit-Remaining", strconv.Itoa(int(remaining)))
 
-		resetAt, _ := redis.Client.HGet(c.Context(), rl.RedisKey, "reset").Time()
-		resetIn := duration.Seconds() - time.Since(resetAt).Seconds() // Calculate seconds until reset
-		c.Set("X-RateLimit-Reset", strconv.Itoa(int(resetIn)))
+		c.Set("X-RateLimit-Reset", fmt.Sprint(ttl))
 
 		// 429 Too Many Requests?
-		if rl.Remaining < 1 {
+		if remaining < 1 {
 			return c.Status(fiber.StatusTooManyRequests).JSON(&fiber.Map{
 				"status": 429,
 				"error":  "You are being rate limited",
@@ -80,31 +81,7 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 	}
 }
 
-func (rl *RateLimiter) CheckLimit(ctx context.Context) (bool, error) {
-	if !redis.Client.HExists(ctx, rl.RedisKey, "remaining").Val() {
-		resetAt := time.Now()
-		resetAt.Add(rl.Reset)
-
-		err := redis.Client.HSet(ctx, rl.RedisKey,
-			"identifier", rl.Identifier,
-			"limit", rl.Limit,
-			"remaining", rl.Limit-1,
-			"reset", resetAt,
-		).Err()
-		if err != nil {
-			return false, err
-		}
-		err = redis.Client.Expire(ctx, rl.RedisKey, rl.Reset).Err()
-		if err != nil {
-			return false, err
-		}
-	} else {
-		val, err := redis.Client.HIncrBy(ctx, rl.RedisKey, "remaining", -1).Result()
-		if err != nil {
-			return false, err
-		}
-		rl.Remaining = int32(val)
-	}
-
-	return false, nil
+type rateLimitScriptReply struct {
+	Count int `json:"count"`
+	TTL   int `json:"ttl"`
 }

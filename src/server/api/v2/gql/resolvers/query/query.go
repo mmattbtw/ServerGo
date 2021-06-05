@@ -250,7 +250,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 
 		match["$and"] = bson.A{
 			bson.M{"$or": bson.A{
-				bson.M{"visibility": bson.M{"$bitsAllClear": int32(datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityHidden)}},
+				bson.M{"visibility": bson.M{"$bitsAllClear": int32(datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityUnlisted)}},
 				bson.M{"owner": usrID},
 			}},
 		}

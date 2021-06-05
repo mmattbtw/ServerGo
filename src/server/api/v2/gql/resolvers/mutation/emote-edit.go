@@ -140,8 +140,8 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 				return nil, resolvers.ErrAccessDenied // User tries to set emote's global state but lacks permission
 			}
 
-			// User tries to remove the hidden state but lacks permission
-			if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityHidden)) && !utils.BitField.HasBits(int64(*req.Visibility), int64(datastructure.EmoteVisibilityHidden)) {
+			// User tries to remove the unlisted or hidden state but lacks permission
+			if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityUnlisted)) && !utils.BitField.HasBits(int64(*req.Visibility), int64(datastructure.EmoteVisibilityUnlisted)) {
 				return nil, resolvers.ErrAccessDenied
 			}
 		}
