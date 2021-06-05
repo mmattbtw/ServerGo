@@ -6,9 +6,16 @@ import (
 )
 
 func RestV2(app fiber.Router) fiber.Router {
+	restGroup := app.Group("/")
+	restGroup.Use(func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "application/json")
 
-	emoteGroup := app.Group("/emotes")
+		return c.Next()
+	})
+
+	emoteGroup := restGroup.Group("/emotes")
 	emotes.CreateEmoteRoute(emoteGroup)
+	emotes.Emotes(emoteGroup)
 
 	return nil
 }

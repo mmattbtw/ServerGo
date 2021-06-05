@@ -61,7 +61,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 	err = res.Err()
 	if err == nil {
 		err = res.Decode(user)
-		role := datastructure.GetRole(ctx, user.RoleID)
+		role := datastructure.GetRole(user.RoleID)
 		user.Role = &role
 	}
 

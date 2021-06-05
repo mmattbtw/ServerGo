@@ -1,7 +1,6 @@
 package datastructure
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -133,7 +132,7 @@ type Role struct {
 }
 
 // Get a cached role by ID
-func GetRole(ctx context.Context, id *primitive.ObjectID) Role {
+func GetRole(id *primitive.ObjectID) Role {
 	if id == nil {
 		return *DefaultRole
 	}

@@ -8,7 +8,9 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,8 +26,41 @@ var (
 func Emotes(router fiber.Router) {
 	// Get Emote
 	router.Get("/:emote", func(c *fiber.Ctx) error {
+		// Parse Emote ID
+		id, err := primitive.ObjectIDFromHex(c.Params("emote"))
+		if err != nil {
+			return restutil.MalformedObjectId.Send(c)
+		}
 
-		return nil
+		// Fetch emote data
+		var emote datastructure.Emote
+		if err := cache.FindOne(c.Context(), "emotes", "", bson.M{
+			"_id": id,
+		}, &emote); err != nil {
+			if err == mongo.ErrNoDocuments {
+				return restutil.ErrUnknownEmote.Send(c)
+			}
+			return restutil.ErrInternalServer.Send(c, err.Error())
+		}
+
+		// Fetch emote owner
+		var owner *datastructure.User
+		if err := cache.FindOne(c.Context(), "users", "", bson.M{
+			"_id": emote.OwnerID,
+		}, &owner); err != nil {
+			if err != mongo.ErrNoDocuments {
+				return restutil.ErrInternalServer.Send(c, err.Error())
+			}
+		}
+
+		response := restutil.CreateEmoteResponse(emote, owner)
+
+		b, err := json.Marshal(&response)
+		if err != nil {
+			return restutil.ErrInternalServer.Send(c, err.Error())
+		}
+
+		return c.Send(b)
 	})
 
 	// OEmbed
@@ -66,14 +101,6 @@ func Emotes(router fiber.Router) {
 			return c.Status(400).Send([]byte(err.Error()))
 		}
 	})
-}
-
-type EmoteResponse struct {
-	ID               string              `json:"string"`
-	Name             string              `json:"name"`
-	Owner            *datastructure.User `json:""`
-	Visibility       int32               `json:"visibility"`
-	VisibilitySimple *[]string           `json:"visibility_simple"`
 }
 
 type OEmbedData struct {

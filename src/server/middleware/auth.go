@@ -145,7 +145,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		// Assign role to user
 		if user.RoleID != nil {
-			role := datastructure.GetRole(c.Context(), user.RoleID)                                             // Try to get the cached role
+			role := datastructure.GetRole(user.RoleID)                                                          // Try to get the cached role
 			user.Role = utils.Ternary(role.ID.IsZero(), datastructure.DefaultRole, &role).(*datastructure.Role) // Assign cached role if available, otherwise set default role
 		} else {
 			user.Role = datastructure.DefaultRole // If no role assign default role

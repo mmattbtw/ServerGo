@@ -27,7 +27,7 @@ func GenerateRoleResolver(ctx context.Context, pRole *datastructure.Role, roleID
 		return nil, nil
 	}
 
-	role := datastructure.GetRole(ctx, roleID)
+	role := datastructure.GetRole(roleID)
 	r := &RoleResolver{
 		ctx:    ctx,
 		v:      &role,

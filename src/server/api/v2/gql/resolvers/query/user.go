@@ -251,7 +251,7 @@ func (r *UserResolver) Description() string {
 
 func (r *UserResolver) Role() (*RoleResolver, error) {
 	roleID := r.v.RoleID
-	role := datastructure.GetRole(r.ctx, roleID)
+	role := datastructure.GetRole(roleID)
 
 	res, err := GenerateRoleResolver(r.ctx, &role, roleID, nil)
 	if err != nil {
