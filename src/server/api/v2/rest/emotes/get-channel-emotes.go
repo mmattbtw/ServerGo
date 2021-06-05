@@ -2,7 +2,6 @@ package emotes
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/SevenTV/ServerGo/src/cache"
@@ -25,8 +24,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 				bson.M{"login": strings.ToLower(channelIdentifier)},
 			},
 		}, &channel); err != nil {
-			fmt.Println("er", err)
-			return restutil.ErrUnknownUser.Send(c)
+			return restutil.ErrUnknownUser.Send(c, err.Error())
 		}
 
 		// Find emotes
@@ -69,7 +67,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 		response := make([]restutil.EmoteResponse, len(emotes))
 		for i, emote := range emotes {
 			owner := ownerMap[emote.OwnerID]
-			response[i] = restutil.CreateEmoteResponse(*emote, owner)
+			response[i] = restutil.CreateEmoteResponse(emote, owner)
 		}
 
 		j, err := json.Marshal(response)

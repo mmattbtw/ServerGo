@@ -53,7 +53,7 @@ func GetEmoteRoute(router fiber.Router) {
 			}
 		}
 
-		response := restutil.CreateEmoteResponse(emote, owner)
+		response := restutil.CreateEmoteResponse(&emote, owner)
 
 		b, err := json.Marshal(&response)
 		if err != nil {

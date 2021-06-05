@@ -15,8 +15,9 @@ func RestV2(app fiber.Router) fiber.Router {
 
 	emoteGroup := restGroup.Group("/emotes")
 	emotes.CreateEmoteRoute(emoteGroup)
-	emotes.GetEmoteRoute(emoteGroup)
 	emotes.GetChannelEmotesRoute(emoteGroup)
+	emotes.GetGlobalEmotes(emoteGroup)
+	emotes.GetEmoteRoute(emoteGroup)
 
 	return nil
 }

@@ -36,7 +36,7 @@ var (
 	ErrInternalServer = createErrorResponse(500, "Internal Server Error (%s)")
 )
 
-func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) EmoteResponse {
+func CreateEmoteResponse(emote *datastructure.Emote, owner *datastructure.User) EmoteResponse {
 	// Generate URLs
 	urls := make([][]string, 4)
 	for i := 1; i <= 4; i++ {
@@ -50,9 +50,7 @@ func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) E
 	// Generate simple visibility value
 	simpleVis := []string{}
 	for vis, s := range emoteVisibilitySimpleMap {
-		fmt.Println("vis:", emote.Visibility, s)
 		if !utils.BitField.HasBits(int64(emote.Visibility), int64(vis)) {
-			fmt.Println("does not have", s)
 			continue
 		}
 
@@ -63,7 +61,7 @@ func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) E
 	response := EmoteResponse{
 		ID:               emote.ID.Hex(),
 		Name:             emote.Name,
-		Owner:            CreateUserResponse(owner),
+		Owner:            nil,
 		Visibility:       emote.Visibility,
 		VisibilitySimple: &simpleVis,
 		Mime:             emote.Mime,
@@ -72,6 +70,9 @@ func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) E
 		Width:            emote.Width,
 		Height:           emote.Height,
 		URLs:             urls,
+	}
+	if owner != nil {
+		response.Owner = CreateUserResponse(owner)
 	}
 
 	return response
