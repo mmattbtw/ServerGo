@@ -69,6 +69,11 @@ func WebSocket(app fiber.Router) {
 	// WebSocket Endpoint:
 	// Subscribe to event channels
 	ws.Get("/", websocket.New(func(conn *websocket.Conn) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.WithField("err", err).Error("panic in websocket")
+			}
+		}()
 		c := transform(conn)
 		c.SendOpGreet() // Send an hello payload to the user
 
@@ -118,7 +123,7 @@ func WebSocket(app fiber.Router) {
 		)
 
 		for { // Listen to client messages
-			if _, b, err = c.ReadMessage(); err == nil {
+			if _, b, err = c.ReadMessage(); err != nil {
 				return
 			}
 			// Handle invalid payload
