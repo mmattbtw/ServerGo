@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
@@ -46,12 +44,6 @@ func New() *Server {
 		}),
 		listener: l,
 	}
-
-	server.app.Use(cors.New(cors.Config{
-		AllowOrigins:  fmt.Sprintf("%v,%v,%v", configure.Config.GetString("website_url"), "chrome-extension://*", "moz-extension://*"),
-		ExposeHeaders: "X-Collection-Size",
-		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
-	}))
 
 	server.app.Use(logger.New(logger.Config{
 		Output: &CustomLogger{},

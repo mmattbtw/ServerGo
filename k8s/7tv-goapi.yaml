@@ -15,7 +15,7 @@ spec:
       labels:
         app: 7tv-goapi
     spec:
-      terminationGracePeriodSeconds: 1
+      terminationGracePeriodSeconds: 30
       imagePullSecrets:
         - name: regcred
       containers:

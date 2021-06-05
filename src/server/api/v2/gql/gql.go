@@ -2,6 +2,7 @@ package gql
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/configure"
@@ -11,6 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/graph-gophers/graphql-go"
 
 	log "github.com/sirupsen/logrus"
@@ -30,7 +32,11 @@ type RootResolver struct {
 }
 
 func GQL(app fiber.Router) fiber.Router {
-	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))
+	gql := app.Group("/gql", middleware.UserAuthMiddleware(false), cors.New(cors.Config{
+		AllowOrigins:  fmt.Sprintf("%v,%v,%v", configure.Config.GetString("website_url"), "chrome-extension://*", "moz-extension://*"),
+		ExposeHeaders: "X-Collection-Size",
+		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
+	}))
 
 	box := packr.New("gql", "./scheme")
 

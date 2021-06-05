@@ -35,7 +35,7 @@ import (
 const MAX_FRAME_COUNT = 4096
 const MAX_FILE_SIZE = 5000000
 
-func CreateRoute(router fiber.Router) {
+func CreateEmoteRoute(router fiber.Router) {
 
 	rl := configure.Config.GetIntSlice("limits.route.emote-create")
 	router.Post(
@@ -225,7 +225,7 @@ func CreateRoute(router fiber.Router) {
 					ogHeight = int(wand.GetImageHeight())
 				} else {
 					log.Errorf("could not decode webp, err=%v", err)
-					return 500, errInternalServer, nil
+					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, err.Error())), nil
 				}
 			default:
 				return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Unsupported File Format")), nil

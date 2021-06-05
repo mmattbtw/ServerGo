@@ -21,10 +21,15 @@ var (
 	errAccessDenied   = `{"status":403,"message":"%s"}`
 )
 
-func Emotes(app fiber.Router) fiber.Router {
-	emotes := app.Group("/emotes")
+func Emotes(router fiber.Router) {
+	// Get Emote
+	router.Get("/:emote", func(c *fiber.Ctx) error {
 
-	emotes.Get("/oembed/:emote.json", func(c *fiber.Ctx) error {
+		return nil
+	})
+
+	// OEmbed
+	router.Get("/oembed/:emote.json", func(c *fiber.Ctx) error {
 		emoteID := c.Params("emote") // Get the emote ID parameter
 		pageTitle := c.Query("page-title", "7TV")
 
@@ -61,10 +66,14 @@ func Emotes(app fiber.Router) fiber.Router {
 			return c.Status(400).Send([]byte(err.Error()))
 		}
 	})
+}
 
-	CreateRoute(emotes)
-
-	return emotes
+type EmoteResponse struct {
+	ID               string              `json:"string"`
+	Name             string              `json:"name"`
+	Owner            *datastructure.User `json:""`
+	Visibility       int32               `json:"visibility"`
+	VisibilitySimple *[]string           `json:"visibility_simple"`
 }
 
 type OEmbedData struct {
