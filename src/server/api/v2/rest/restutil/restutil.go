@@ -15,8 +15,9 @@ type ErrorResponse struct {
 }
 
 func (e *ErrorResponse) Send(c *fiber.Ctx, placeholders ...string) error {
-	e.Message = fmt.Sprintf(e.Message, placeholders)
-	fmt.Println("hello", e.Message, placeholders)
+	if len(placeholders) > 0 {
+		e.Message = fmt.Sprintf(e.Message, placeholders)
+	}
 
 	b, _ := json.Marshal(e)
 	return c.Status(e.Status).Send(b)
@@ -29,12 +30,13 @@ func createErrorResponse(status int, message string) ErrorResponse {
 }
 
 var (
-	ErrUnknownEmote   = createErrorResponse(400, "Unknown Emote")
+	ErrUnknownEmote   = createErrorResponse(404, "Unknown Emote")
+	ErrUnknownUser    = createErrorResponse(404, "Unknown User")
 	MalformedObjectId = createErrorResponse(400, "Malformed Object ID")
 	ErrInternalServer = createErrorResponse(500, "Internal Server Error (%s)")
 )
 
-func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) emoteResponse {
+func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) EmoteResponse {
 	// Generate URLs
 	urls := make([][]string, 4)
 	for i := 1; i <= 4; i++ {
@@ -58,7 +60,7 @@ func CreateEmoteResponse(emote datastructure.Emote, owner *datastructure.User) e
 	}
 
 	// Create the final response
-	response := emoteResponse{
+	response := EmoteResponse{
 		ID:               emote.ID.Hex(),
 		Name:             emote.Name,
 		Owner:            CreateUserResponse(owner),
@@ -85,10 +87,10 @@ var emoteVisibilitySimpleMap = map[int32]string{
 	datastructure.EmoteVisibilityOverrideTwitchGlobal:     "OVERRIDE_TWITCH_GLOBAL",
 }
 
-type emoteResponse struct {
+type EmoteResponse struct {
 	ID               string        `json:"id"`
 	Name             string        `json:"name"`
-	Owner            *userResponse `json:"owner"`
+	Owner            *UserResponse `json:"owner"`
 	Visibility       int32         `json:"visibility"`
 	VisibilitySimple *[]string     `json:"visibility_simple"`
 	Mime             string        `json:"mime"`
@@ -99,20 +101,18 @@ type emoteResponse struct {
 	URLs             [][]string    `json:"urls"`
 }
 
-func CreateUserResponse(user *datastructure.User) *userResponse {
-	response := userResponse{
+func CreateUserResponse(user *datastructure.User) *UserResponse {
+	response := UserResponse{
 		ID:          user.ID.Hex(),
 		Login:       user.Login,
 		DisplayName: user.DisplayName,
-	}
-	if user.RoleID != nil {
-		response.Role = datastructure.GetRole(user.RoleID)
+		Role:        datastructure.GetRole(user.RoleID),
 	}
 
 	return &response
 }
 
-type userResponse struct {
+type UserResponse struct {
 	ID          string             `json:"id"`
 	TwitchID    string             `json:"twitch_id"`
 	Login       string             `json:"login"`

@@ -23,7 +23,7 @@ var (
 	errAccessDenied   = `{"status":403,"message":"%s"}`
 )
 
-func Emotes(router fiber.Router) {
+func GetEmoteRoute(router fiber.Router) {
 	// Get Emote
 	router.Get("/:emote", func(c *fiber.Ctx) error {
 		// Parse Emote ID
