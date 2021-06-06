@@ -41,6 +41,10 @@ func GetTwitchUser(ctx context.Context, login string) (*userTwitch, error) {
 		return nil, err
 	}
 
+	if len(userResponse.Data) == 0 {
+		return nil, nil
+	}
+
 	return &userResponse.Data[0], nil
 }
 
