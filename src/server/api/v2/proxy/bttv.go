@@ -50,6 +50,9 @@ func GetChannelEmotesBTTV(ctx context.Context, login string) ([]*datastructure.E
 	if err != nil {
 		return nil, err
 	}
+	if usr == nil {
+		return []*datastructure.Emote{}, nil
+	}
 
 	// Set Requesst URI
 	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrlBTTV, usr.ID)
