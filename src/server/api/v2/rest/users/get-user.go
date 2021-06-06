@@ -25,6 +25,7 @@ func GetUser(router fiber.Router) {
 			"$or": bson.A{
 				bson.M{"_id": id},
 				bson.M{"login": strings.ToLower(c.Params("user"))},
+				bson.M{"id": strings.ToLower(c.Params("user"))},
 			},
 		}, &user); err != nil {
 			if err == mongo.ErrNoDocuments {
