@@ -1,4 +1,4 @@
-package emotes
+package users
 
 import (
 	"encoding/json"
@@ -15,9 +15,9 @@ import (
 )
 
 func GetChannelEmotesRoute(router fiber.Router) {
-	router.Get("/channels/:channel", middleware.RateLimitMiddleware("get-user-emotes", 24, 9*time.Second),
+	router.Get("/:user/emotes", middleware.RateLimitMiddleware("get-user-emotes", 24, 9*time.Second),
 		func(c *fiber.Ctx) error {
-			channelIdentifier := c.Params("channel")
+			channelIdentifier := c.Params("user")
 
 			// Find channel user
 			var channel *datastructure.User
@@ -27,7 +27,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 					bson.M{"login": strings.ToLower(channelIdentifier)},
 				},
 			}, &channel); err != nil {
-				return restutil.ErrUnknownUser.Send(c, err.Error())
+				return restutil.ErrUnknownUser().Send(c, err.Error())
 			}
 
 			// Find emotes
@@ -37,7 +37,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 					"$in": channel.EmoteIDs,
 				},
 			}, &emotes); err != nil {
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
 			// Find IDs of emote owners
@@ -60,7 +60,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 					"$in": ownerIDs,
 				},
 			}, &owners); err != nil {
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 			for _, o := range owners {
 				ownerMap[o.ID] = o
@@ -75,7 +75,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 
 			j, err := json.Marshal(response)
 			if err != nil {
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
 			return c.Send(j)

@@ -2,6 +2,7 @@ package rest
 
 import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/emotes"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/users"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,9 +16,11 @@ func RestV2(app fiber.Router) fiber.Router {
 
 	emoteGroup := restGroup.Group("/emotes")
 	emotes.CreateEmoteRoute(emoteGroup)
-	emotes.GetChannelEmotesRoute(emoteGroup)
 	emotes.GetGlobalEmotes(emoteGroup)
 	emotes.GetEmoteRoute(emoteGroup)
+
+	userGroup := restGroup.Group("/users")
+	users.GetChannelEmotesRoute(userGroup)
 
 	return nil
 }

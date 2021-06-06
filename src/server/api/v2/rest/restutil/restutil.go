@@ -23,17 +23,17 @@ func (e *ErrorResponse) Send(c *fiber.Ctx, placeholders ...string) error {
 	return c.Status(e.Status).Send(b)
 }
 
-func createErrorResponse(status int, message string) ErrorResponse {
-	return ErrorResponse{
+func createErrorResponse(status int, message string) *ErrorResponse {
+	return &ErrorResponse{
 		status, message,
 	}
 }
 
 var (
-	ErrUnknownEmote   = createErrorResponse(404, "Unknown Emote")
-	ErrUnknownUser    = createErrorResponse(404, "Unknown User")
-	MalformedObjectId = createErrorResponse(400, "Malformed Object ID")
-	ErrInternalServer = createErrorResponse(500, "Internal Server Error (%s)")
+	ErrUnknownEmote   = func() *ErrorResponse { return createErrorResponse(404, "Unknown Emote") }
+	ErrUnknownUser    = func() *ErrorResponse { return createErrorResponse(404, "Unknown User") }
+	MalformedObjectId = func() *ErrorResponse { return createErrorResponse(400, "Malformed Object ID") }
+	ErrInternalServer = func() *ErrorResponse { return createErrorResponse(500, "Internal Server Error (%s)") }
 )
 
 func CreateEmoteResponse(emote *datastructure.Emote, owner *datastructure.User) EmoteResponse {

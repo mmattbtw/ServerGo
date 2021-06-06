@@ -21,7 +21,7 @@ func GetGlobalEmotes(router fiber.Router) {
 					"$bitsAllSet": datastructure.EmoteVisibilityGlobal,
 				},
 			}, &emotes); err != nil {
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
 			response := make([]restutil.EmoteResponse, len(emotes))
@@ -31,7 +31,7 @@ func GetGlobalEmotes(router fiber.Router) {
 
 			j, err := json.Marshal(response)
 			if err != nil {
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
 			return c.Send(j)

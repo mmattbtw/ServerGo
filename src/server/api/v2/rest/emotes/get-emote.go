@@ -32,7 +32,7 @@ func GetEmoteRoute(router fiber.Router) {
 			// Parse Emote ID
 			id, err := primitive.ObjectIDFromHex(c.Params("emote"))
 			if err != nil {
-				return restutil.MalformedObjectId.Send(c)
+				return restutil.MalformedObjectId().Send(c)
 			}
 
 			// Fetch emote data
@@ -41,9 +41,9 @@ func GetEmoteRoute(router fiber.Router) {
 				"_id": id,
 			}, &emote); err != nil {
 				if err == mongo.ErrNoDocuments {
-					return restutil.ErrUnknownEmote.Send(c)
+					return restutil.ErrUnknownEmote().Send(c)
 				}
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
 			// Fetch emote owner
@@ -52,7 +52,7 @@ func GetEmoteRoute(router fiber.Router) {
 				"_id": emote.OwnerID,
 			}, &owner); err != nil {
 				if err != mongo.ErrNoDocuments {
-					return restutil.ErrInternalServer.Send(c, err.Error())
+					return restutil.ErrInternalServer().Send(c, err.Error())
 				}
 			}
 
@@ -60,7 +60,7 @@ func GetEmoteRoute(router fiber.Router) {
 
 			b, err := json.Marshal(&response)
 			if err != nil {
-				return restutil.ErrInternalServer.Send(c, err.Error())
+				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
 			return c.Send(b)
