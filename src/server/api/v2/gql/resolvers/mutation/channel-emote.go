@@ -154,7 +154,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{
-			{Key: "emotes", OldValue: channel.EmoteIDs, NewValue: emoteIDs},
+			{Key: "emotes", OldValue: nil, NewValue: emoteID},
 		},
 		Reason: args.Reason,
 	})
@@ -297,7 +297,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{
-			{Key: "emotes", OldValue: channel.EmoteIDs, NewValue: newIds},
+			{Key: "emotes", OldValue: nil, NewValue: emoteID},
 		},
 		Reason: args.Reason,
 	})
