@@ -118,7 +118,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{
-			{Key: "editors", OldValue: channel.EditorIDs, NewValue: newChannel.EditorIDs},
+			{Key: "editors", OldValue: nil, NewValue: editorID},
 		},
 		Reason: args.Reason,
 	})
@@ -216,7 +216,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{
-			{Key: "editors", OldValue: channel.EditorIDs, NewValue: newChannel.EditorIDs},
+			{Key: "editors", OldValue: nil, NewValue: editorID},
 		},
 		Reason: args.Reason,
 	})
