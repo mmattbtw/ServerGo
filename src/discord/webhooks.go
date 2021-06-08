@@ -3,6 +3,7 @@ package discord
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -98,4 +99,16 @@ func SendEmoteDelete(emote datastructure.Emote, actor datastructure.User, reason
 		log.Errorf("discord, SendEmoteDelete, err=%v", err)
 		return
 	}
+}
+
+func SendPopularityCheckUpdateNotice(wg *sync.WaitGroup) {
+	d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+		Content: "**[routine]** ⚙️ updating emote popularities...",
+	})
+
+	wg.Wait()
+
+	d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+		Content: "**[routine]** ⚙️ successfully updated emote popularities!",
+	})
 }

@@ -20,6 +20,8 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	_ "github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server"
+
+	"github.com/SevenTV/ServerGo/src/server/api/tasks"
 	api_websocket "github.com/SevenTV/ServerGo/src/server/api/v2/websocket"
 )
 
@@ -42,6 +44,7 @@ func main() {
 	go func() {
 		sig := <-c
 		log.Infof("sig=%v, gracefully shutting down...", sig)
+
 		start := time.Now().UnixNano()
 
 		// Run pre-shutdown cleanup
@@ -80,12 +83,17 @@ func main() {
 	}
 	log.Infof("Retrieved %s roles", fmt.Sprint(len(roles)))
 
+	go tasks.Start()
+
 	select {}
 }
 
 func Cleanup() {
 	// Remove websocket connections from Redis
 	api_websocket.Cleanup()
+
+	// Cleanup ongoing tasks
+	tasks.Cleanup()
 
 	// Logout from discord
 	_ = discord.Discord.CloseWithCode(1000)
