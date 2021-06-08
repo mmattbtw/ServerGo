@@ -22,7 +22,10 @@ func init() {
 	}
 
 	Client = redis.NewClient(options)
+	ReloadScripts()
+}
 
+func ReloadScripts() error {
 	box := packr.New("lua", "./lua")
 
 	tokenConsumerLuaScript, err := box.FindString("token-consumer.lua")
@@ -86,6 +89,8 @@ func init() {
 		panic(err)
 	}
 	RateLimitScriptSHA1 = v
+
+	return nil
 }
 
 var Client *redis.Client

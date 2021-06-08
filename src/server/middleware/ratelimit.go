@@ -47,6 +47,15 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		remaining := int64(limit)
 		ttl := int64(0)
 
+		// Ensure script
+		scriptExists, _ := redis.Client.ScriptExists(c.Context(), redis.RateLimitScriptSHA1).Result()
+		if !scriptExists[0] {
+			if err := redis.ReloadScripts(); err != nil {
+				return err
+			}
+			log.Info("ratelimit, redis: reloaded scripts")
+		}
+
 		// Create RateLimiter instance
 		redisKey := hex.EncodeToString(h.Sum(nil))
 		if result, err := redis.Client.EvalSha(c.Context(), redis.RateLimitScriptSHA1, []string{}, redisKey, duration.Seconds(), limit, 1).Result(); err != nil {
