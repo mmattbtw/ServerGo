@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: 7tv-goapi-sa
+  namespace: 7tv
+automountServiceAccountToken: true
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: 7tv-goapi-role
+  namespace: 7tv
+rules:
+  - apiGroups: ["", "extensions", "apps"]
+    verbs: ["get", "patch"]
+    resources: ["statefulsets"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: 7tv-goapi-rolebinding
+  namespace: 7tv
+subjects:
+  - kind: ServiceAccount
+    name: 7tv-goapi-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: 7tv-goapi-role

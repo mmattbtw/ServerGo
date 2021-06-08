@@ -8,7 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
-	dgo "github.com/bwmarrin/discordgo"
+	dgo "github.com/SevenTV/discordgo"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )

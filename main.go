@@ -96,7 +96,7 @@ func Cleanup() {
 	tasks.Cleanup()
 
 	// Logout from discord
-	_ = discord.Discord.CloseWithCode(1000)
+	_ = discord.Close(false)
 }
 
 // Get all roles available and cache into the mongo context

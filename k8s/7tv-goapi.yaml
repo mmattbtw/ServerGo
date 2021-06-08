@@ -57,6 +57,8 @@ spec:
               cpu: "2"
           ports:
             - containerPort: 3000
+
+      serviceAccountName: 7tv-goapi-sa
       volumes:
         - name: config
           configMap:
