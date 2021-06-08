@@ -37,7 +37,7 @@ type Response {
 
 type Query {
   # Get audit logs
-  auditLogs(page: Int!, limit: Int!): [AuditLog!]!
+  audit_logs(page: Int!, limit: Int, types: [Int!]): [AuditLog!]!
   # Get emote by id.
   emote(id: String!): Emote
   # Get emotes by user id.
@@ -190,7 +190,7 @@ type User {
   # Get the reports on this uer. Requries Permission.
   reports: [Report]
   # Get the logs on this user. Requries Permission.
-  audit_entries: [String!]
+  audit_entries: [AuditLog!]
   # Get the bans on this user. Requries Permission.
   bans: [Ban!]
   # Get whether the user is banned
