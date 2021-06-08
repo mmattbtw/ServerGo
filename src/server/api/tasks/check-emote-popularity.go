@@ -19,7 +19,7 @@ import (
 func CheckEmotesPopularity(ctx context.Context) error {
 	// Acquire lock. We won't allow any other pod to execute this concurrently
 	lockCtx := context.Background()
-	lock, err := redis.GetLocker().Obtain(lockCtx, "lock:task:check-emotes-popularity", time.Hour*1+time.Second*30, &redislock.Options{
+	lock, err := redis.GetLocker().Obtain(lockCtx, "lock:task:check-emotes-popularity", time.Hour*6+time.Second*30, &redislock.Options{
 		RetryStrategy: redislock.ExponentialBackoff(time.Second*5, time.Minute*10),
 	})
 	if err != nil {
@@ -28,7 +28,7 @@ func CheckEmotesPopularity(ctx context.Context) error {
 
 	// Create ticker
 	// This is the interval between how often emote popularities should refresh
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(6 * time.Hour)
 	log.Info("Task=CheckEmotesPopularity, starting now")
 
 	f := func() error {
