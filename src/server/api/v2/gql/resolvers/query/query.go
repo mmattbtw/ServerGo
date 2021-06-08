@@ -67,10 +67,56 @@ func GenerateSelectedFieldMap(ctx context.Context, max int) (*SelectedField, boo
 
 func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 	Page  int32
-	Limit int32
+	Limit *int32
+	Types *[]int32
 }) ([]*auditResolver, error) {
+	var logs []*datastructure.AuditLog
 
-	return nil, nil
+	// Find audit logs
+	var limit int32 = 150
+	if args.Limit != nil {
+		limit = *args.Limit
+	}
+
+	query := bson.M{}
+	if args.Types != nil && len(*args.Types) > 0 {
+		query["type"] = bson.M{
+			"$in": *args.Types,
+		}
+	}
+	fmt.Println("query:", query)
+
+	if err := cache.Find(ctx, "audit", "", query, &logs, &options.FindOptions{
+		Limit: utils.Int64Pointer(int64(math.Min(250, float64(limit)))),
+		Sort: bson.M{
+			"_id": -1,
+		},
+	}); err != nil {
+		log.Errorf("mongo, err=%v", err)
+		return nil, err
+	}
+	fmt.Println("logs", logs)
+
+	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
+	if failed {
+		return nil, resolvers.ErrDepth
+	}
+
+	resolvers := make([]*auditResolver, len(logs))
+	for i, l := range logs {
+		resolver, err := GenerateAuditResolver(ctx, l, field.Children)
+		if err != nil {
+			log.Errorf("GenerateAuditResolver, err=%v", err)
+			return nil, err
+		}
+		if resolver == nil {
+			continue
+		}
+
+		resolvers[i] = resolver
+	}
+
+	return resolvers, nil
 }
 
 func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*UserResolver, error) {
@@ -437,6 +483,11 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 	Page  *int32
 	Limit *int32
 }) ([]*UserResolver, error) {
+	usr, _ := ctx.Value(utils.UserKey).(*datastructure.User)
+	if usr == nil || !usr.HasPermission(datastructure.RolePermissionManageUsers) {
+		return nil, resolvers.ErrAccessDenied
+	}
+
 	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
 		return nil, resolvers.ErrDepth

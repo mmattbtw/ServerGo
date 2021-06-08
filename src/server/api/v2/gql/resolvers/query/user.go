@@ -13,6 +13,7 @@ import (
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -443,23 +444,37 @@ func (r *UserResolver) Banned() bool {
 	return redis.Client.HGet(r.ctx, "user:bans", r.v.ID.Hex()).Val() != ""
 }
 
-func (r *UserResolver) AuditEntries() (*[]string, error) {
-	u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
-	if !ok || (u.Rank != datastructure.UserRankAdmin && u.Rank != datastructure.UserRankModerator) {
-		return nil, resolvers.ErrAccessDenied
+func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
+	// u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
+
+	var logs []*datastructure.AuditLog
+	if err := cache.Find(r.ctx, "audit", "", bson.M{
+		"target.type": "users",
+		"target.id":   r.v.ID,
+	}, &logs, &options.FindOptions{
+		Sort: bson.M{
+			"_id": -1,
+		},
+		Limit: utils.Int64Pointer(64),
+	}); err != nil {
+		log.Errorf("mongo, err=%v", err)
+		return nil, resolvers.ErrInternalServer
 	}
 
-	if r.v.AuditEntries == nil {
-		return nil, nil
-	}
-	e := *r.v.AuditEntries
-	logs := make([]string, len(e))
-	var err error
-	for i, l := range e {
-		logs[i], err = json.MarshalToString(l)
-		if err != nil {
-			return nil, err
+	resolvers := make([]*auditResolver, len(logs))
+	for i, l := range logs {
+		if l == nil {
+			continue
 		}
+
+		resolver, err := GenerateAuditResolver(r.ctx, l, r.fields)
+		if err != nil {
+			log.Errorf("GenerateAuditResolver, err=%v", err)
+			continue
+		}
+
+		resolvers[i] = resolver
 	}
-	return &logs, nil
+
+	return &resolvers, nil
 }
