@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/SevenTV/ServerGo/src/cache"
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
@@ -551,4 +552,13 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 		}
 	}
 	return resolvers, nil
+}
+
+func (*QueryResolver) FeaturedBroadcast(ctx context.Context) (string, error) {
+	channel := configure.Config.GetString("featured_broadcast")
+	if channel == "" {
+		return "", fmt.Errorf("No Featured Broadcast")
+	}
+
+	return channel, nil
 }

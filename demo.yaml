@@ -44,6 +44,8 @@ aws_session_token: ""
 aws_region: "eu-central-1"
 aws_cdn_bucket: ""
 
+featured_broadcast: ""
+
 # Discord Credentials
 discord:
   # Webhook, for logging activity to a discord channel
