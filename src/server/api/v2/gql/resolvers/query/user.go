@@ -320,12 +320,19 @@ func (r *UserResolver) EditorIn() ([]*UserResolver, error) {
 }
 
 func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
+	usr, usrOK := r.ctx.Value(utils.UserKey).(*datastructure.User)
 	if r.v.Emotes == nil {
 		return nil, nil
 	}
 	emotes := *r.v.Emotes
 	result := []*EmoteResolver{}
 	for _, e := range emotes {
+		if utils.BitField.HasBits(int64(e.Visibility), int64(datastructure.EmoteVisibilityPrivate)) || utils.BitField.HasBits(int64(e.Visibility), int64(datastructure.EmoteVisibilityUnlisted)) {
+			if !usrOK || (!usr.HasPermission(datastructure.RolePermissionEmoteEditAll) && e.OwnerID != usr.ID) {
+				continue
+			}
+		}
+
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["emotes"].Children)
 		if err != nil {
 			log.Errorf("generation, err=%v", err)
@@ -339,9 +346,16 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 }
 
 func (r *UserResolver) OwnedEmotes() ([]*EmoteResolver, error) {
+	usr, usrOK := r.ctx.Value(utils.UserKey).(*datastructure.User)
 	emotes := *r.v.OwnedEmotes
 	result := []*EmoteResolver{}
 	for _, e := range emotes {
+		if utils.BitField.HasBits(int64(e.Visibility), int64(datastructure.EmoteVisibilityPrivate)) || utils.BitField.HasBits(int64(e.Visibility), int64(datastructure.EmoteVisibilityUnlisted)) {
+			if !usrOK || !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
+				continue
+			}
+		}
+
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["owned_emotes"].Children)
 		if err != nil {
 			log.Errorf("generation, err=%v", err)
