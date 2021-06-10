@@ -16,7 +16,7 @@ local c
 for i=1,length/2,1 do
 	oid = ARGV[i*2+2]
 	ojson = ARGV[i*2+3]
-	redis.call("SET", objectKey .. ":" .. oid, ojson, "EX", 3600)
+	redis.call("SET", objectKey .. ":" .. oid, ojson, "EX", 600)
 	redis.call('ZADD', objectKey, now, oid)
 	if i ~= 1 then 
 		queryString = queryString .. " " .. oid
@@ -25,19 +25,19 @@ for i=1,length/2,1 do
 	end
 end
 
-local clearBefore = now - 3600
+local clearBefore = now - 600
 
 redis.call('ZREMRANGEBYSCORE', queryKey, 0, clearBefore)
 redis.call('ZREMRANGEBYSCORE', objectKey, 0, clearBefore)
-redis.call("EXPIRE", objectKey, 3600)
+redis.call("EXPIRE", objectKey, 600)
 if ciKey ~= nil then
 	redis.call('ZREMRANGEBYSCORE', ciKey, 0, clearBefore)
 	redis.call('ZADD', ciKey, now, sha)
-	redis.call("EXPIRE", ciKey, 3600)
+	redis.call("EXPIRE", ciKey, 600)
 end
 
-redis.call("SET", queryKey .. ":" .. sha, queryString, "EX", 3600)
+redis.call("SET", queryKey .. ":" .. sha, queryString, "EX", 600)
 redis.call('ZADD', queryKey, now, sha)
-redis.call("EXPIRE", queryKey, 3600)
+redis.call("EXPIRE", queryKey, 600)
 
 return 1

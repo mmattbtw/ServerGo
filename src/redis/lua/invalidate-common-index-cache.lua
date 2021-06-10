@@ -4,7 +4,7 @@ local queryKey = KEYS[1]
 local commonIndexKey = KEYS[2]
 local now = ARGV[1]
 
-local clearBefore = now - 3600
+local clearBefore = now - 600
 redis.call('ZREMRANGEBYSCORE', commonIndexKey, 0, clearBefore)
 
 local queries = redis.call("ZRANGE", commonIndexKey, 0, -1)

@@ -9,12 +9,12 @@ local oid = ARGV[2]
 local ojson = ARGV[3]
 
 if invalidateKey ~= "" then
-    if redis.call("SET", invalidateKey, 1, "NX", "EX", 3600) == nil then
+    if redis.call("SET", invalidateKey, 1, "NX", "EX", 600) == nil then
         return 0
     end
 end
 
-local clearBefore = now - 3600
+local clearBefore = now - 600
 redis.call('ZREMRANGEBYSCORE', queryKey, 0, clearBefore)
 
 local queries = redis.call("ZRANGE", queryKey, 0, -1)
@@ -33,7 +33,7 @@ if ojson == "" then
     redis.call("DEL", objectKey .. ":" .. oid)
     redis.call("ZREM", objectKey, oid)
 else
-    redis.call("SET", objectKey .. ":" .. oid, ojson, "EX", 3600)
+    redis.call("SET", objectKey .. ":" .. oid, ojson, "EX", 600)
     redis.call("ZADD", objectKey, now, oid)
 end
 
