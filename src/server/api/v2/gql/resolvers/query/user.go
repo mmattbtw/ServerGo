@@ -323,8 +323,9 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 	if r.v.Emotes == nil {
 		return nil, nil
 	}
-	emotes := *r.v.Emotes
+	emotes := datastructure.UserUtil.GetAliasedEmotes(r.v)
 	result := []*EmoteResolver{}
+
 	for _, e := range emotes {
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["emotes"].Children)
 		if err != nil {

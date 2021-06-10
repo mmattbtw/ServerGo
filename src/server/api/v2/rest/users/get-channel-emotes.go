@@ -40,6 +40,10 @@ func GetChannelEmotesRoute(router fiber.Router) {
 				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
+			// Find aliases and replace
+			channel.Emotes = &emotes
+			emotes = datastructure.UserUtil.GetAliasedEmotes(channel)
+
 			// Find IDs of emote owners
 			ownerUserIDMap := make(map[*primitive.ObjectID]int)
 			ownerIDs := []*primitive.ObjectID{}

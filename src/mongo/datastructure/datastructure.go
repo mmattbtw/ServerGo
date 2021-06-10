@@ -82,15 +82,16 @@ type User struct {
 	TokenVersion string               `json:"token_version" bson:"token_version"`
 
 	// Twitch Data
-	TwitchID        string    `json:"twitch_id" bson:"id"`
-	DisplayName     string    `json:"display_name" bson:"display_name"`
-	Login           string    `json:"login" bson:"login"`
-	BroadcasterType string    `json:"broadcaster_type" bson:"broadcaster_type"`
-	ProfileImageURL string    `json:"profile_image_url" bson:"profile_image_url"`
-	OfflineImageURL string    `json:"offline_image_url" bson:"offline_image_url"`
-	Description     string    `json:"description" bson:"description"`
-	CreatedAt       time.Time `json:"twitch_created_at" bson:"twitch_created_at"`
-	ViewCount       int32     `json:"view_count" bson:"view_count"`
+	TwitchID        string            `json:"twitch_id" bson:"id"`
+	DisplayName     string            `json:"display_name" bson:"display_name"`
+	Login           string            `json:"login" bson:"login"`
+	BroadcasterType string            `json:"broadcaster_type" bson:"broadcaster_type"`
+	ProfileImageURL string            `json:"profile_image_url" bson:"profile_image_url"`
+	OfflineImageURL string            `json:"offline_image_url" bson:"offline_image_url"`
+	Description     string            `json:"description" bson:"description"`
+	CreatedAt       time.Time         `json:"twitch_created_at" bson:"twitch_created_at"`
+	ViewCount       int32             `json:"view_count" bson:"view_count"`
+	EmoteAlias      map[string]string `json:"-" bson:"emote_alias"` // Emote Alias - backend only
 
 	// Relational Data
 	Emotes       *[]*Emote    `json:"emotes" bson:"-"`
