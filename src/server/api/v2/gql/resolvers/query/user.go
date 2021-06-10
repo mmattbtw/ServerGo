@@ -275,6 +275,18 @@ func (r *UserResolver) EmoteIDs() []string {
 	return ids
 }
 
+func (r *UserResolver) EmoteAliases() [][]string {
+	result := make([][]string, len(r.v.EmoteAlias))
+
+	i := 0
+	for id, name := range r.v.EmoteAlias {
+		result[i] = []string{id, name}
+		i++
+	}
+
+	return result
+}
+
 func (r *UserResolver) EditorIDs() []string {
 	ids := make([]string, len(r.v.EditorIDs))
 	for i, id := range r.v.EditorIDs {

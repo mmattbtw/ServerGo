@@ -104,19 +104,21 @@ type EmoteResponse struct {
 
 func CreateUserResponse(user *datastructure.User) *UserResponse {
 	response := UserResponse{
-		ID:          user.ID.Hex(),
-		Login:       user.Login,
-		DisplayName: user.DisplayName,
-		Role:        datastructure.GetRole(user.RoleID),
+		ID:           user.ID.Hex(),
+		Login:        user.Login,
+		DisplayName:  user.DisplayName,
+		Role:         datastructure.GetRole(user.RoleID),
+		EmoteAliases: user.EmoteAlias,
 	}
 
 	return &response
 }
 
 type UserResponse struct {
-	ID          string             `json:"id"`
-	TwitchID    string             `json:"twitch_id"`
-	Login       string             `json:"login"`
-	DisplayName string             `json:"display_name"`
-	Role        datastructure.Role `json:"role"`
+	ID           string             `json:"id"`
+	TwitchID     string             `json:"twitch_id"`
+	Login        string             `json:"login"`
+	DisplayName  string             `json:"display_name"`
+	Role         datastructure.Role `json:"role"`
+	EmoteAliases map[string]string  `json:"emote_aliases"`
 }

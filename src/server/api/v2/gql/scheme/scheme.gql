@@ -169,6 +169,8 @@ type User {
   role: Role!
   # emotes of this user
   emote_ids: [String!]!
+  # emote aliases of this user
+  emote_aliases: [[String!]!]!
   # editor ids for this user
   editor_ids: [String!]!
   # date of creation
