@@ -560,5 +560,15 @@ func (*QueryResolver) FeaturedBroadcast(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("No Featured Broadcast")
 	}
 
+	// test
+	stream, err := api_proxy.GetTwitchStreams(ctx, channel)
+	if err != nil {
+		log.Errorf("query, could not get live status of featured broadcast %v, err=%v", channel, err)
+	}
+
+	if len(stream.Data) == 0 || stream.Data[0].Type != "live" {
+		return "", fmt.Errorf("Featured Broadcast Not Live")
+	}
+
 	return channel, nil
 }
