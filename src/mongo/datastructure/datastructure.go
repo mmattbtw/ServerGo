@@ -238,11 +238,11 @@ const (
 	AuditLogTypeUserBan
 	AuditLogTypeUserEdit
 	AuditLogTypeUserChannelEmoteAdd
-	AuditLogTypeUserChannelEmoteEdit
 	AuditLogTypeUserChannelEmoteRemove
 	AuditLogTypeUserUnban
 	AuditLogTypeUserChannelEditorAdd
 	AuditLogTypeUserChannelEditorRemove
+	AuditLogTypeUserChannelEmoteEdit
 
 	AuditLogTypeAppMaintenanceMode int32 = 51
 	AuditLogTypeAppRouteLock       int32 = iota
