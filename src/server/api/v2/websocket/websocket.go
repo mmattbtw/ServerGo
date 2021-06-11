@@ -148,13 +148,11 @@ func WebSocket(app fiber.Router) {
 
 					subscription := data.Type // The subscription that the client wants to create
 
-					c.Stat.Subscriptions = append(c.Stat.Subscriptions, data)
 					c.Register(ctx)
 
 					switch subscription {
 					case WebSocketSubscriptionChannelEmotes: // Subscribe: CHANNEL EMOTES
-						channel := data.Params["channel"]
-						go createChannelEmoteSubscription(ctx, c, channel)
+						go createChannelEmoteSubscription(ctx, c, data)
 
 					default: // Unknown Subscription
 						c.SendClosure(1003, "Unknown Subscription Type")
