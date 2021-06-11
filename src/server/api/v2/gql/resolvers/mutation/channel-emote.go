@@ -299,7 +299,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 	}
 
 	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
-		Type:      datastructure.AuditLogTypeUserChannelEmoteAdd,
+		Type:      datastructure.AuditLogTypeUserChannelEmoteEdit,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes:   logChanges,

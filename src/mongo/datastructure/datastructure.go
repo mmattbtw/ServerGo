@@ -238,6 +238,7 @@ const (
 	AuditLogTypeUserBan
 	AuditLogTypeUserEdit
 	AuditLogTypeUserChannelEmoteAdd
+	AuditLogTypeUserChannelEmoteEdit
 	AuditLogTypeUserChannelEmoteRemove
 	AuditLogTypeUserUnban
 	AuditLogTypeUserChannelEditorAdd
