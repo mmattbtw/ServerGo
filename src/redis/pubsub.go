@@ -3,8 +3,6 @@ package redis
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/go-redis/redis/v8"
 )
 
 // Publish to a redis channel
@@ -23,18 +21,37 @@ func Publish(ctx context.Context, channel string, data interface{}) error {
 }
 
 // Subscribe to a channel on Redis
-func Subscribe(ctx context.Context, ch chan []byte, subscribeTo ...string) *redis.PubSub {
-	topic := Client.Subscribe(ctx, subscribeTo...)
-	channel := topic.Channel() // Get a channel for this subscription
+func Subscribe(ctx context.Context, ch chan []byte, subscribeTo ...string) {
+	subsMtx.Lock()
+	defer subsMtx.Unlock()
+	localSub := &redisSub{ch}
+	for _, e := range subscribeTo {
+		if _, ok := subs[e]; !ok {
+			_ = sub.Subscribe(ctx, e)
+		}
+		subs[e] = append(subs[e], localSub)
+	}
 
 	go func() {
-		for m := range channel { // Begin listening for messages
-
-			ch <- []byte(m.Payload) // Send to subscriber
+		<-ctx.Done()
+		subsMtx.Lock()
+		defer subsMtx.Unlock()
+		for _, e := range subscribeTo {
+			for i, v := range subs[e] {
+				if v == localSub {
+					if i != len(subs[e])-1 {
+						subs[e][i] = subs[e][len(subs[e])-1]
+					}
+					subs[e] = subs[e][:len(subs[e])-1]
+					if len(subs[e]) == 0 {
+						delete(subs, e)
+						sub.Unsubscribe(context.Background(), e)
+					}
+					break
+				}
+			}
 		}
 	}()
-
-	return topic
 }
 
 type PubSubPayloadUserEmotes struct {

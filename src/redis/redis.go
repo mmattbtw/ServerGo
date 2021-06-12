@@ -3,12 +3,14 @@ package redis
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobuffalo/packr/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -22,6 +24,37 @@ func init() {
 	}
 
 	Client = redis.NewClient(options)
+
+	sub = Client.Subscribe(context.Background())
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.WithField("err", err).Fatal("panic in subs")
+			}
+		}()
+		ch := sub.Channel()
+		var (
+			msg     *redis.Message
+			payload []byte
+		)
+		for {
+			msg = <-ch
+			payload = []byte(msg.Payload) // dont change we want to copy the memory due to concurrency.
+			subsMtx.Lock()
+			for _, s := range subs[msg.Channel] {
+				go func(s *redisSub) {
+					defer func() {
+						if err := recover(); err != nil {
+							log.WithField("err", err).Error("panic in subs")
+						}
+					}()
+					s.ch <- payload
+				}(s)
+			}
+			subsMtx.Unlock()
+		}
+	}()
+
 	ReloadScripts()
 }
 
@@ -95,6 +128,16 @@ func ReloadScripts() error {
 
 var Client *redis.Client
 
+var (
+	sub     *redis.PubSub
+	subs    = map[string][]*redisSub{}
+	subsMtx = sync.Mutex{}
+)
+
+type redisSub struct {
+	ch chan []byte
+}
+
 var lockerClient *redislock.Client
 
 func GetLocker() *redislock.Client {
@@ -110,6 +153,8 @@ type Message = redis.Message
 type StringCmd = redis.StringCmd
 
 type StringStringMapCmd = redis.StringStringMapCmd
+
+type PubSub = redis.PubSub
 
 type Z = redis.Z
 

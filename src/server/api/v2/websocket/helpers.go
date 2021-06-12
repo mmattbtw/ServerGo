@@ -30,8 +30,7 @@ type eventCallback struct {
 func (e *eventCallback) start(ctx context.Context) {
 	rCh := make(chan []byte)
 	key := fmt.Sprintf("users:%v:emotes", e.userID)
-	sub := redis.Subscribe(ctx, rCh, key)
-	defer sub.Close()
+	redis.Subscribe(ctx, rCh, key)
 
 	for {
 		select {
