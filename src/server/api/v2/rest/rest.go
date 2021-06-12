@@ -2,7 +2,6 @@ package rest
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/emotes"
@@ -37,10 +36,6 @@ func RestV2(app fiber.Router) fiber.Router {
 
 		var platforms []*WebExtPlatform
 		configure.Config.UnmarshalKey("webext.platforms", &platforms)
-
-		for _, p := range platforms {
-			fmt.Println(p.ID)
-		}
 
 		j, err := json.Marshal(platforms)
 		if err != nil {
