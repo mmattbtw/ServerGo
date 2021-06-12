@@ -1,6 +1,10 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/emotes"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/users"
 	"github.com/gofiber/fiber/v2"
@@ -28,5 +32,33 @@ func RestV2(app fiber.Router) fiber.Router {
 	users.GetUser(userGroup)
 	users.GetChannelEmotesRoute(userGroup)
 
+	restGroup.Get("/webext", func(c *fiber.Ctx) error {
+		// result := &WebExtResult{}
+
+		var platforms []*WebExtPlatform
+		configure.Config.UnmarshalKey("webext.platforms", &platforms)
+
+		for _, p := range platforms {
+			fmt.Println(p.ID)
+		}
+
+		j, err := json.Marshal(platforms)
+		if err != nil {
+			return c.Status(500).SendString("Error decoding the config")
+		}
+
+		return c.Send(j)
+	})
+
 	return nil
+}
+
+type WebExtResult struct {
+	Platforms []*WebExtPlatform `json:"platforms"`
+}
+
+type WebExtPlatform struct {
+	ID         string `mapstructure:"id" json:"id"`
+	VersionTag string `mapstructure:"version_tag" json:"version_tag"`
+	New        bool   `mapstructure:"new" json:"new"`
 }
