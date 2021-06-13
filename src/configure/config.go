@@ -3,10 +3,12 @@ package configure
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
 	nested "github.com/antonfisher/nested-logrus-formatter"
+	"github.com/fsnotify/fsnotify"
 	"github.com/kr/pretty"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
@@ -143,4 +145,9 @@ func init() {
 	c := ServerCfg{}
 	checkErr(Config.Unmarshal(&c))
 	log.Debugf("Current configurations: \n%# v", pretty.Formatter(c))
+
+	Config.WatchConfig()
+	Config.OnConfigChange(func(_ fsnotify.Event) {
+		fmt.Println("Config has changed")
+	})
 }
