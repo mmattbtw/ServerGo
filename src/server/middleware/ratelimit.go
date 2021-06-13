@@ -60,7 +60,9 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		redisKey := hex.EncodeToString(h.Sum(nil))
 		if result, err := redis.Client.EvalSha(c.Context(), redis.RateLimitScriptSHA1, []string{}, redisKey, duration.Seconds(), limit, 1).Result(); err != nil {
 			log.Errorf("ratelimit, err=%v", err)
-			return err
+
+			c.Set("X-RateLimit-Error", err.Error())
+			return c.Next()
 		} else {
 			a := make([]int64, 3)
 			for i, v := range result.([]interface{}) {
