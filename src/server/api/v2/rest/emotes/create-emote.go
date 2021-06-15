@@ -257,8 +257,8 @@ func CreateEmoteRoute(router fiber.Router) {
 					ogFilePath,
 					"-coalesce",
 					"-resize", fmt.Sprintf("%dx%d", width, height),
-					"-quality", "100",
-					"-define", "webp:lossless=true,auto-filter=true,method=6",
+					"-quality", "75",
+					"-define", "webp:lossless=true,auto-filter=true,method=4",
 					outFile,
 				}...)
 
