@@ -139,7 +139,7 @@ type Emote {
   # date of creation
   created_at: String!
   # Get audit log entries for this emote.
-  audit_entries: [String!]!
+  audit_entries: [AuditLog!]
   # Get the channels the emote is added to
   channels: [User]
   # Get the owner of this emote.

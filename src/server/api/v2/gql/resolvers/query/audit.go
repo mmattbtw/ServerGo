@@ -143,6 +143,7 @@ func resolveTarget(ctx context.Context, t *datastructure.Target) (string, error)
 		s, decodeError = json.MarshalToString(&targetUser)
 	case "emotes":
 		decodeError = cur.Decode(&targetEmote)
+		s, decodeError = json.MarshalToString(&targetEmote)
 	}
 	if decodeError != nil {
 		return "", decodeError

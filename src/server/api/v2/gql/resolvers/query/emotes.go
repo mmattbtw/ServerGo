@@ -12,6 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -171,20 +172,43 @@ func (r *EmoteResolver) Owner() (*UserResolver, error) {
 	return resolver, nil
 }
 
-func (r *EmoteResolver) AuditEntries() ([]string, error) {
-	if r.v.AuditEntries == nil {
-		return nil, nil
-	}
-	e := *r.v.AuditEntries
-	logs := make([]string, len(e))
-	var err error
-	for i, l := range e {
-		logs[i], err = json.MarshalToString(l)
-		if err != nil {
+func (r *EmoteResolver) AuditEntries() (*[]*auditResolver, error) {
+	var logs []*datastructure.AuditLog
+	if cur, err := mongo.Database.Collection("audit").Find(r.ctx, bson.M{
+		"target.type": "emotes",
+		"target.id":   r.v.ID,
+	}, &options.FindOptions{
+		Sort: bson.M{
+			"_id": -1,
+		},
+		Limit: utils.Int64Pointer(20),
+	}); err != nil {
+		log.Errorf("mongo, err=%v", err)
+		return nil, resolvers.ErrInternalServer
+	} else {
+		err := cur.All(r.ctx, &logs)
+		if err != nil && err != mongo.ErrNoDocuments {
+			log.Errorf("mongo, err=%v", cur.Err())
 			return nil, err
 		}
 	}
-	return logs, nil
+
+	resolvers := make([]*auditResolver, len(logs))
+	for i, l := range logs {
+		if l == nil {
+			continue
+		}
+
+		resolver, err := GenerateAuditResolver(r.ctx, l, r.fields)
+		if err != nil {
+			log.Errorf("GenerateAuditResolver, err=%v", err)
+			continue
+		}
+
+		resolvers[i] = resolver
+	}
+
+	return &resolvers, nil
 }
 
 func (r *EmoteResolver) Channels() (*[]*UserResolver, error) {
