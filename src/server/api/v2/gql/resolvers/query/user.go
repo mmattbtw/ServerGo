@@ -458,20 +458,24 @@ func (r *UserResolver) Banned() bool {
 }
 
 func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
-	// u, ok := r.ctx.Value(utils.UserKey).(*datastructure.User)
-
 	var logs []*datastructure.AuditLog
-	if err := cache.Find(r.ctx, "audit", "", bson.M{
+	if cur, err := mongo.Database.Collection("audit").Find(r.ctx, bson.M{
 		"target.type": "users",
 		"target.id":   r.v.ID,
-	}, &logs, &options.FindOptions{
+	}, &options.FindOptions{
 		Sort: bson.M{
 			"_id": -1,
 		},
-		Limit: utils.Int64Pointer(64),
+		Limit: utils.Int64Pointer(30),
 	}); err != nil {
 		log.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
+	} else {
+		err := cur.All(r.ctx, &logs)
+		if err != nil && err != mongo.ErrNoDocuments {
+			log.Errorf("mongo, err=%v", cur.Err())
+			return nil, err
+		}
 	}
 
 	resolvers := make([]*auditResolver, len(logs))

@@ -2,12 +2,15 @@ package query_resolvers
 
 import (
 	"context"
+	"time"
 
-	"github.com/SevenTV/ServerGo/src/cache"
+	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type auditResolver struct {
@@ -33,11 +36,35 @@ func (r *auditResolver) Type() int32 {
 	return r.v.Type
 }
 
+func (r *auditResolver) Timestamp() string {
+	return r.v.ID.Timestamp().Format(time.RFC3339)
+}
+
+func (r *auditResolver) ActionUserID() string {
+	return r.v.CreatedBy.Hex()
+}
+
+func (r *auditResolver) ActionUser() (*UserResolver, error) {
+	resolver, err := GenerateUserResolver(r.ctx, nil, &r.v.CreatedBy, r.fields)
+	if err != nil {
+		return nil, err
+	}
+
+	return resolver, nil
+}
+
 func (r *auditResolver) Target() (*auditTarget, error) {
-	return &auditTarget{
+	target := &auditTarget{
 		ID:   r.v.Target.ID.Hex(),
 		Type: r.v.Target.Type,
-	}, nil
+	}
+	if data, err := resolveTarget(r.ctx, r.v.Target); err != nil {
+		return nil, err
+	} else {
+		target.Data = data
+	}
+
+	return target, nil
 }
 
 func (r *auditResolver) Changes() []*auditChange {
@@ -92,17 +119,33 @@ func shouldSkipLegacyChangeStructure(t int32, c *datastructure.AuditLogChange) b
 	return false
 }
 
-func resolveTarget(ctx context.Context, t *auditTarget) (string, error) {
-	var result interface{}
-	if err := cache.FindOne(ctx, t.Type, "", bson.M{
+func resolveTarget(ctx context.Context, t *datastructure.Target) (string, error) {
+	var targetUser auditTargetUser
+	var targetEmote auditTargetEmote
+
+	cur := mongo.Database.Collection(t.Type).FindOne(ctx, bson.M{
 		"_id": t.ID,
-	}, &result); err != nil {
-		return "", err
+	})
+	if cur.Err() != nil {
+		if cur.Err() == mongo.ErrNoDocuments {
+			return "", nil
+		} else {
+			log.Errorf("mongo, err=%v", cur.Err())
+			return "", resolvers.ErrInternalServer
+		}
 	}
 
-	s, err := json.MarshalToString(result)
-	if err != nil {
-		return "", err
+	var decodeError error
+	var s string
+	switch t.Type {
+	case "users":
+		decodeError = cur.Decode(&targetUser)
+		s, decodeError = json.MarshalToString(&targetUser)
+	case "emotes":
+		decodeError = cur.Decode(&targetEmote)
+	}
+	if decodeError != nil {
+		return "", decodeError
 	}
 
 	return s, nil
@@ -115,5 +158,17 @@ type auditChange struct {
 
 type auditTarget struct {
 	ID   string `json:"id"`
+	Data string `json:"data"`
 	Type string `json:"type"`
+}
+
+type auditTargetUser struct {
+	ID          primitive.ObjectID `bson:"_id" json:"id"`
+	Login       string             `bson:"login" json:"login"`
+	DisplayName string             `bson:"display_name" json:"display_name"`
+}
+
+type auditTargetEmote struct {
+	ID   primitive.ObjectID `bson:"_id" id:"id"`
+	Name string             `bson:"name" json:"name"`
 }

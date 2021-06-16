@@ -91,13 +91,17 @@ input ChannelEmoteInput {
 
 type AuditLog {
   id: String!
+  timestamp: String!
   type: Int!
+  action_user_id: String!
+  action_user: UserPartial
   target: AuditLogTarget!
   changes: [AuditLogChange!]!
 }
 
 type AuditLogTarget {
   id: String!
+  data: String!
   type: String!
 }
 

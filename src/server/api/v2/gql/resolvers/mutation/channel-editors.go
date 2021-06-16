@@ -114,7 +114,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 	}
 
 	_, err = mongo.Database.Collection("audit").InsertOne(ctx, &datastructure.AuditLog{
-		Type:      datastructure.AuditLogTypeUserChannelEditorRemove,
+		Type:      datastructure.AuditLogTypeUserChannelEditorAdd,
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &channelID, Type: "users"},
 		Changes: []*datastructure.AuditLogChange{

@@ -196,7 +196,7 @@ type AuditLog struct {
 	Target    *Target            `json:"target" bson:"target"`
 	Changes   []*AuditLogChange  `json:"changes" bson:"changes"`
 	Reason    *string            `json:"reason" bson:"reason"`
-	CreatedBy primitive.ObjectID `json:"action_user" bson:"action_user"`
+	CreatedBy primitive.ObjectID `json:"action_user_id" bson:"action_user"`
 }
 
 type Target struct {
@@ -224,35 +224,74 @@ type Report struct {
 }
 
 const (
-	AuditLogTypeEmoteCreate int32 = 1
-	AuditLogTypeEmoteDelete int32 = iota
-	AuditLogTypeEmoteDisable
-	AuditLogTypeEmoteEdit
-	AuditLogTypeEmoteUndoDelete
+	oldAuditLogTypeEmoteCreate int32 = 1
+	oldAuditLogTypeEmoteDelete int32 = iota
+	oldAuditLogTypeEmoteDisable
+	oldAuditLogTypeEmoteEdit
+	oldAuditLogTypeEmoteUndoDelete
 
-	AuditLogTypeAuthIn  int32 = 21
-	AuditLogTypeAuthOut int32 = iota
+	oldAuditLogTypeAuthIn  int32 = 21
+	oldAuditLogTypeAuthOut int32 = iota
 
-	AuditLogTypeUserCreate int32 = 31
-	AuditLogTypeUserDelete int32 = iota
-	AuditLogTypeUserBan
-	AuditLogTypeUserEdit
-	AuditLogTypeUserChannelEmoteAdd
-	AuditLogTypeUserChannelEmoteRemove
-	AuditLogTypeUserUnban
-	AuditLogTypeUserChannelEditorAdd
-	AuditLogTypeUserChannelEditorRemove
-	AuditLogTypeUserChannelEmoteEdit
+	oldAuditLogTypeUserCreate int32 = 31
+	oldAuditLogTypeUserDelete int32 = iota
+	oldAuditLogTypeUserBan
+	oldAuditLogTypeUserEdit
+	oldAuditLogTypeUserChannelEmoteAdd
+	oldAuditLogTypeUserChannelEmoteRemove
+	oldAuditLogTypeUserUnban
+	oldAuditLogTypeUserChannelEditorAdd
+	oldAuditLogTypeUserChannelEditorRemove
+	oldAuditLogTypeUserChannelEmoteEdit
 
-	AuditLogTypeAppMaintenanceMode int32 = 51
-	AuditLogTypeAppRouteLock       int32 = iota
-	AuditLogTypeAppLogsView
-	AuditLogTypeAppScale
-	AuditLogTypeAppNodeCreate
-	AuditLogTypeAppNodeDelete
-	AuditLogTypeAppNodeJoin
-	AuditLogTypeAppNodeUnref
+	oldAuditLogTypeAppMaintenanceMode int32 = 51
+	oldAuditLogTypeAppRouteLock       int32 = iota
+	oldAuditLogTypeAppLogsView
+	oldAuditLogTypeAppScale
+	oldAuditLogTypeAppNodeCreate
+	oldAuditLogTypeAppNodeDelete
+	oldAuditLogTypeAppNodeJoin
+	oldAuditLogTypeAppNodeUnref
 
-	AuditLogTypeReport      int32 = 71
-	AuditLogTypeReportClear int32 = iota
+	oldAuditLogTypeReport      int32 = 71
+	oldAuditLogTypeReportClear int32 = iota
+)
+
+const (
+	// Emotes (1-19)
+	AuditLogTypeEmoteCreate     = 1
+	AuditLogTypeEmoteDelete     = 2
+	AuditLogTypeEmoteDisable    = 3
+	AuditLogTypeEmoteEdit       = 4
+	AuditLogTypeEmoteUndoDelete = 4
+
+	// Auth (20-29)
+	AuditLogTypeAuthIn  = 20
+	AuditLogTypeAuthOut = 21
+
+	// Users (30-69)
+	AuditLogTypeUserCreate              = 30
+	AuditLogTypeUserDelete              = 31
+	AuditLogTypeUserBan                 = 32
+	AuditLogTypeUserEdit                = 33
+	AuditLogTypeUserChannelEmoteAdd     = 34
+	AuditLogTypeUserChannelEmoteRemove  = 35
+	AuditLogTypeUserUnban               = 36
+	AuditLogTypeUserChannelEditorAdd    = 37
+	AuditLogTypeUserChannelEditorRemove = 38
+	AuditLogTypeUserChannelEmoteEdit    = 39
+
+	// Admin (70-89)
+	AuditLogTypeAppMaintenanceMode = 70
+	AuditLogTypeAppRouteLock       = 71
+	AuditLogTypeAppLogsView        = 72
+	AuditLogTypeAppScale           = 73
+	AuditLogTypeAppNodeCreate      = 74
+	AuditLogTypeAppNodeDelete      = 75
+	AuditLogTypeAppNodeJoin        = 75
+	AuditLogTypeAppNodeUnref       = 76
+
+	// Reports (90-99)
+	AuditLogTypeReport      = 90
+	AuditLogTypeReportClear = 91
 )
