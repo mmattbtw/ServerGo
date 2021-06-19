@@ -13,8 +13,8 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v8 v8.7.1
 	github.com/gobuffalo/packr/v2 v2.8.1
-	github.com/gofiber/fiber/v2 v2.11.0
-	github.com/gofiber/websocket/v2 v2.0.3
+	github.com/gofiber/fiber/v2 v2.13.0
+	github.com/gofiber/websocket/v2 v2.0.6
 	github.com/google/uuid v1.2.0
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
 	github.com/hashicorp/go-multierror v1.1.1
@@ -30,7 +30,6 @@ require (
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
-	github.com/valyala/fasthttp v1.26.0 // indirect
 	go.mongodb.org/mongo-driver v1.5.0
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
