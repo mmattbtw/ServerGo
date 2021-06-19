@@ -27,7 +27,7 @@ func GetCache(ctx context.Context, collection, sha1 string) ([]interface{}, erro
 	}
 	resp, ok := res.([]interface{})
 	if !ok {
-		log.Errorf("redis resp, resp=%v", res)
+		log.WithField("resp", res).Error("redis bad resp expected array")
 		return nil, errInvalidResp
 	}
 	return resp, nil
@@ -69,7 +69,7 @@ func SetCache(ctx context.Context, collection, sha1, commonIndex string, args ..
 	}
 	resp, ok := s.(int64)
 	if !ok {
-		log.Errorf("redis resp, resp=%v", s)
+		log.WithField("resp", s).Error("invalid redis resp expected int64")
 		return 0, errInvalidResp
 	}
 	return resp, nil
@@ -101,7 +101,7 @@ func InvalidateCache(ctx context.Context, invalidateKey, collection, objectID, c
 	}
 	resp, ok := s.(int64)
 	if !ok {
-		log.Errorf("redis resp, resp=%v", s)
+		log.WithField("resp", s).Error("invalid redis resp expected int64")
 		return 0, errInvalidResp
 	}
 	return resp, nil
@@ -127,7 +127,7 @@ func InvalidateCommonIndexCache(ctx context.Context, collection, commonIndex str
 	}
 	resp, ok := s.(int64)
 	if !ok {
-		log.Errorf("redis resp, resp=%v", s)
+		log.WithField("resp", s).Error("invalid redis resp expected int64")
 		return 0, errInvalidResp
 	}
 	return resp, nil

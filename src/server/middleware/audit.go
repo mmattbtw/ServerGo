@@ -16,7 +16,7 @@ func AuditRoute(r AuditedRoute) func(*fiber.Ctx) error {
 		if auditEntry != nil {
 			_, err := mongo.Database.Collection("audit").InsertOne(c.Context(), auditEntry)
 			if err != nil {
-				log.Errorf("audit, err=%v", err)
+				log.WithError(err).Error("audit")
 			}
 		}
 

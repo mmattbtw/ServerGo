@@ -8,6 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/hashicorp/go-multierror"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -71,7 +72,7 @@ func (r *auditResolver) Changes() []*auditChange {
 	changes := make([]*auditChange, len(r.v.Changes))
 	for i, c := range r.v.Changes {
 		// Handle legacy Malformatted logs
-		if skip := shouldSkipLegacyChangeStructure(r.v.Type, c); skip == true {
+		if skip := shouldSkipLegacyChangeStructure(r.v.Type, c); skip {
 			c.OldValue = nil
 			c.NewValue = nil
 		}
@@ -79,7 +80,8 @@ func (r *auditResolver) Changes() []*auditChange {
 		old, err1 := json.MarshalToString(c.OldValue)
 		new, err2 := json.MarshalToString(c.NewValue)
 		if err1 != nil || err2 != nil {
-			log.Errorf("AuditLogResolver, err1=%v, err2=%v", err1, err2)
+			log.WithError(multierror.Append(err1, err2)).Error("AuditLogResolver")
+			continue
 		}
 
 		changes[i] = &auditChange{
@@ -126,11 +128,12 @@ func resolveTarget(ctx context.Context, t *datastructure.Target) (string, error)
 	cur := mongo.Database.Collection(t.Type).FindOne(ctx, bson.M{
 		"_id": t.ID,
 	})
-	if cur.Err() != nil {
-		if cur.Err() == mongo.ErrNoDocuments {
+	err := cur.Err()
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
 			return "", nil
 		} else {
-			log.Errorf("mongo, err=%v", cur.Err())
+			log.WithError(err).Error("mongo")
 			return "", resolvers.ErrInternalServer
 		}
 	}
@@ -140,10 +143,14 @@ func resolveTarget(ctx context.Context, t *datastructure.Target) (string, error)
 	switch t.Type {
 	case "users":
 		decodeError = cur.Decode(&targetUser)
-		s, decodeError = json.MarshalToString(&targetUser)
+		if decodeError == nil {
+			s, decodeError = json.MarshalToString(&targetUser)
+		}
 	case "emotes":
 		decodeError = cur.Decode(&targetEmote)
-		s, decodeError = json.MarshalToString(&targetEmote)
+		if decodeError == nil {
+			s, decodeError = json.MarshalToString(&targetEmote)
+		}
 	}
 	if decodeError != nil {
 		return "", decodeError

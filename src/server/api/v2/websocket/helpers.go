@@ -41,7 +41,7 @@ func (e *eventCallback) start(ctx context.Context) {
 			// Get new emote list
 			var d redis.PubSubPayloadUserEmotes
 			if err := json.Unmarshal(b, &d); err != nil {
-				log.Errorf("websocket, err=%v", err)
+				log.WithError(err).Error("websocket")
 				continue
 			}
 

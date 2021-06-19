@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/fsnotify/fsnotify"
 	"github.com/kr/pretty"
 	log "github.com/sirupsen/logrus"
@@ -66,19 +65,16 @@ func initLog() {
 		log.SetLevel(l)
 		log.SetReportCaller(true)
 	}
-	log.SetFormatter(&nested.Formatter{
-		HideKeys:    true,
-		FieldsOrder: []string{"component", "category"},
-	})
 }
 
 func checkErr(err error) {
 	if err != nil {
-		panic(err)
+		log.WithError(err).Fatal("config")
 	}
 }
 
 func init() {
+	log.SetFormatter(&log.JSONFormatter{})
 	// Default config
 	b, _ := json.Marshal(defaultConf)
 	defaultConfig := bytes.NewReader(b)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/auth"
@@ -59,8 +58,6 @@ func GetUsers(ctx context.Context, oauth string, ids []string, logins []string) 
 			"login": temp2,
 		})
 
-		u, _ := url.Parse(fmt.Sprintf("https://api.twitch.tv/helix/users?%s", params))
-
 		var token string
 		var err error
 
@@ -73,14 +70,19 @@ func GetUsers(ctx context.Context, oauth string, ids []string, logins []string) 
 			token = oauth
 		}
 
-		resp, err := http.DefaultClient.Do(&http.Request{
-			Method: "GET",
-			URL:    u,
-			Header: http.Header{
-				"Client-Id":     []string{configure.Config.GetString("twitch_client_id")},
-				"Authorization": []string{fmt.Sprintf("Bearer %s", token)},
-			},
-		})
+		req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("https://api.twitch.tv/helix/users?%s", params), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Add("Client-Id", configure.Config.GetString("twitch_client_id"))
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -101,18 +103,15 @@ func GetUsers(ctx context.Context, oauth string, ids []string, logins []string) 
 	}
 
 	if oauth != "" && len(ids) == 0 && len(logins) == 0 {
-		u, _ := url.Parse("https://api.twitch.tv/helix/users")
+		req, err := http.NewRequestWithContext(ctx, "GET", "https://api.twitch.tv/helix/users", nil)
+		if err != nil {
+			return nil, err
+		}
 
-		var err error
+		req.Header.Add("Client-Id", configure.Config.GetString("twitch_client_id"))
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", oauth))
 
-		resp, err := http.DefaultClient.Do(&http.Request{
-			Method: "GET",
-			URL:    u,
-			Header: http.Header{
-				"Client-Id":     []string{configure.Config.GetString("twitch_client_id")},
-				"Authorization": []string{fmt.Sprintf("Bearer %s", oauth)},
-			},
-		})
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, err
 		}

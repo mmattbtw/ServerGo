@@ -50,7 +50,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		pl := &PayloadJWT{}
 		if err := jwt.Verify(token, pl); err != nil {
-			log.Errorf("jwt, err=%v", err)
+			log.WithError(err).Error("jwt")
 			if !required {
 				return c.Next()
 			}
@@ -95,7 +95,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 					"error":  "Invalid Token",
 				})
 			}
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			if !required {
 				return c.Next()
 			}
@@ -109,7 +109,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		err = res.Decode(user)
 		if err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			if !required {
 				return c.Next()
 			}
@@ -121,7 +121,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		reason, err := redis.Client.HGet(c.Context(), "user:bans", user.ID.Hex()).Result()
 		if err != nil && err != redis.ErrNil {
-			log.Errorf("redis, err=%v", err)
+			log.WithError(err).Error("redis")
 			if !required {
 				return c.Next()
 			}

@@ -59,12 +59,12 @@ func query(ctx context.Context, collection, sha1 string, output interface{}) ([]
 
 	items, ok := d[0].(string)
 	if !ok {
-		log.Errorf("invalid redis, resp=%s", spew.Sdump(d))
+		log.WithField("resp", spew.Sdump(d)).Error("redis bad response, expected string")
 		return nil, redis.ErrNil
 	}
 	missingItems, ok := d[1].([]interface{})
 	if !ok {
-		log.Errorf("invalid redis, resp=%s", spew.Sdump(d))
+		log.WithField("resp", spew.Sdump(d)).Error("redis bad response, expected array")
 		return nil, redis.ErrNil
 	}
 
@@ -76,7 +76,7 @@ func query(ctx context.Context, collection, sha1 string, output interface{}) ([]
 	for i, v := range missingItems {
 		s, ok := v.(string)
 		if !ok {
-			log.Errorf("invalid redis, resp=%s", spew.Sdump(d))
+			log.WithField("resp", spew.Sdump(d)).Error("redis bad response, expected string")
 			return nil, redis.ErrNil
 		}
 		if mItems[i], err = primitive.ObjectIDFromHex(s); err != nil {
@@ -102,7 +102,7 @@ func Find(ctx context.Context, collection, commonIndex string, q interface{}, ou
 	missingIDs, err := query(ctx, collection, sha1, &val)
 	if err != nil {
 		if err != redis.ErrNil {
-			log.Errorf("redis, err=%v", err)
+			log.WithError(err).Error("redis")
 		}
 		// MongoQuery
 		cur, err := mongo.Database.Collection(collection).Find(ctx, q, opts...)
@@ -120,7 +120,8 @@ func Find(ctx context.Context, collection, commonIndex string, q interface{}, ou
 		for i, v := range out {
 			oid, ok := v["_id"].(primitive.ObjectID)
 			if !ok {
-				return fmt.Errorf("invalid mongo, resp=%s", spew.Sdump(out))
+				log.WithField("data", spew.Sdump(out)).Error("invalid resp mongo")
+				return fmt.Errorf("invalid resp mongo")
 			}
 			args[2*i] = oid.Hex()
 			args[2*i+1], err = json.MarshalToString(v)
@@ -153,7 +154,8 @@ func Find(ctx context.Context, collection, commonIndex string, q interface{}, ou
 		for i, v := range results {
 			oid, ok := v["_id"].(primitive.ObjectID)
 			if !ok {
-				return fmt.Errorf("invalid mongo, resp=%s", spew.Sdump(results))
+				log.WithField("data", spew.Sdump(results)).Error("invalid resp mongo")
+				return fmt.Errorf("invalid resp mongo")
 			}
 			args[2*i] = oid.Hex()
 			args[2*i+1], err = json.MarshalToString(v)
@@ -188,7 +190,7 @@ func FindOne(ctx context.Context, collection, commonIndex string, q interface{},
 	_, err = query(ctx, collection, sha1, &val)
 	if err != nil {
 		if err != redis.ErrNil {
-			log.Errorf("redis, err=%v", err)
+			log.WithError(err).Error("redis")
 		}
 		// MongoQuery
 		res := mongo.Database.Collection(collection).FindOne(ctx, q, opts...)
@@ -204,7 +206,8 @@ func FindOne(ctx context.Context, collection, commonIndex string, q interface{},
 
 		oid, ok := out["_id"].(primitive.ObjectID)
 		if !ok {
-			return fmt.Errorf("invalid mongo, resp=%s", spew.Sdump(out))
+			log.WithField("data", spew.Sdump(out)).Error("invalid resp mongo")
+			return fmt.Errorf("invalid resp mongo")
 		}
 
 		data, err := json.MarshalToString(out)
@@ -261,7 +264,7 @@ func CacheGetRequest(ctx context.Context, uri string, cacheDuration time.Duratio
 		RetryStrategy: redislock.ExponentialBackoff(4, 750),
 	})
 	if err != nil {
-		log.Errorf("CacheGetRequest, err=%v", err)
+		log.WithError(err).Error("CacheGetRequest")
 		return nil, err
 	}
 	defer func() {

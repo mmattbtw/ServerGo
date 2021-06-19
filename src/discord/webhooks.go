@@ -31,7 +31,7 @@ func SendEmoteCreate(emote datastructure.Emote, actor datastructure.User) {
 		},
 	})
 	if err != nil {
-		log.Errorf("discord, SendEmoteCreate, err=%v", err)
+		log.WithError(err).Error("discord SendEmoteCreate")
 		return
 	}
 }
@@ -79,7 +79,7 @@ func SendEmoteEdit(emote datastructure.Emote, actor datastructure.User, logs []*
 		},
 	})
 	if err != nil {
-		log.Errorf("discord, SendEmoteEdit, err=%v", err)
+		log.WithError(err).Error("discord SendEmoteEdit")
 		return
 	}
 }
@@ -96,19 +96,25 @@ func SendEmoteDelete(emote datastructure.Emote, actor datastructure.User, reason
 		},
 	})
 	if err != nil {
-		log.Errorf("discord, SendEmoteDelete, err=%v", err)
+		log.WithError(err).Error("discord SendEmoteDelete")
 		return
 	}
 }
 
 func SendPopularityCheckUpdateNotice(wg *sync.WaitGroup) {
-	d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: "**[routine]** ⚙️ updating emote popularities...",
 	})
+	if err != nil {
+		log.WithError(err).Error("task failed")
+	}
 
 	wg.Wait()
 
-	d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err = d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: "**[routine]** ⚙️ successfully updated emote popularities!",
 	})
+	if err != nil {
+		log.WithError(err).Error("task failed")
+	}
 }

@@ -39,7 +39,10 @@ func RestV2(app fiber.Router) fiber.Router {
 		// result := &WebExtResult{}
 
 		var platforms []*WebExtPlatform
-		configure.Config.UnmarshalKey("webext.platforms", &platforms)
+		err := configure.Config.UnmarshalKey("webext.platforms", &platforms)
+		if err != nil {
+			return c.Status(500).SendString("Error decoding the config")
+		}
 
 		j, err := json.Marshal(platforms)
 		if err != nil {

@@ -115,7 +115,7 @@ func (u *User) HasPermission(flag int64) bool {
 	}
 
 	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
-		log.Errorf("HasPermission, err=flag is not power of two (%s)", fmt.Sprint(flag))
+		log.WithField("flag", flag).Error("flag is not power of two")
 		return false
 	}
 
@@ -225,39 +225,39 @@ type Report struct {
 	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
 }
 
-const (
-	oldAuditLogTypeEmoteCreate int32 = 1
-	oldAuditLogTypeEmoteDelete int32 = iota
-	oldAuditLogTypeEmoteDisable
-	oldAuditLogTypeEmoteEdit
-	oldAuditLogTypeEmoteUndoDelete
+// const (
+// 	oldAuditLogTypeEmoteCreate int32 = 1
+// 	oldAuditLogTypeEmoteDelete int32 = iota
+// 	oldAuditLogTypeEmoteDisable
+// 	oldAuditLogTypeEmoteEdit
+// 	oldAuditLogTypeEmoteUndoDelete
 
-	oldAuditLogTypeAuthIn  int32 = 21
-	oldAuditLogTypeAuthOut int32 = iota
+// 	oldAuditLogTypeAuthIn  int32 = 21
+// 	oldAuditLogTypeAuthOut int32 = iota
 
-	oldAuditLogTypeUserCreate int32 = 31
-	oldAuditLogTypeUserDelete int32 = iota
-	oldAuditLogTypeUserBan
-	oldAuditLogTypeUserEdit
-	oldAuditLogTypeUserChannelEmoteAdd
-	oldAuditLogTypeUserChannelEmoteRemove
-	oldAuditLogTypeUserUnban
-	oldAuditLogTypeUserChannelEditorAdd
-	oldAuditLogTypeUserChannelEditorRemove
-	oldAuditLogTypeUserChannelEmoteEdit
+// 	oldAuditLogTypeUserCreate int32 = 31
+// 	oldAuditLogTypeUserDelete int32 = iota
+// 	oldAuditLogTypeUserBan
+// 	oldAuditLogTypeUserEdit
+// 	oldAuditLogTypeUserChannelEmoteAdd
+// 	oldAuditLogTypeUserChannelEmoteRemove
+// 	oldAuditLogTypeUserUnban
+// 	oldAuditLogTypeUserChannelEditorAdd
+// 	oldAuditLogTypeUserChannelEditorRemove
+// 	oldAuditLogTypeUserChannelEmoteEdit
 
-	oldAuditLogTypeAppMaintenanceMode int32 = 51
-	oldAuditLogTypeAppRouteLock       int32 = iota
-	oldAuditLogTypeAppLogsView
-	oldAuditLogTypeAppScale
-	oldAuditLogTypeAppNodeCreate
-	oldAuditLogTypeAppNodeDelete
-	oldAuditLogTypeAppNodeJoin
-	oldAuditLogTypeAppNodeUnref
+// 	oldAuditLogTypeAppMaintenanceMode int32 = 51
+// 	oldAuditLogTypeAppRouteLock       int32 = iota
+// 	oldAuditLogTypeAppLogsView
+// 	oldAuditLogTypeAppScale
+// 	oldAuditLogTypeAppNodeCreate
+// 	oldAuditLogTypeAppNodeDelete
+// 	oldAuditLogTypeAppNodeJoin
+// 	oldAuditLogTypeAppNodeUnref
 
-	oldAuditLogTypeReport      int32 = 71
-	oldAuditLogTypeReportClear int32 = iota
-)
+// 	oldAuditLogTypeReport      int32 = 71
+// 	oldAuditLogTypeReportClear int32 = iota
+// )
 
 const (
 	// Emotes (1-19)

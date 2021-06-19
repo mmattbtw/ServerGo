@@ -88,7 +88,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -101,7 +101,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 				if err == mongo.ErrNoDocuments {
 					return nil, resolvers.ErrAccessDenied
 				}
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -175,8 +175,9 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 			return nil, err
 		}
 
-		if doc.Err() != nil {
-			log.Errorf("mongo, err=%v, id=%s", doc.Err(), id.Hex())
+		err = doc.Err()
+		if err != nil {
+			log.WithError(err).WithField("id", id).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -189,7 +190,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 		})
 
 		if err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 		}
 
 		go discord.SendEmoteEdit(*emote, *usr, logChanges, args.Reason)

@@ -93,7 +93,7 @@ func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 			"_id": -1,
 		},
 	}); err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, err
 	}
 	fmt.Println("logs", logs)
@@ -107,7 +107,7 @@ func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 	for i, l := range logs {
 		resolver, err := GenerateAuditResolver(ctx, l, field.Children)
 		if err != nil {
-			log.Errorf("GenerateAuditResolver, err=%v", err)
+			log.WithError(err).Error("GenerateAuditResolver")
 			return nil, err
 		}
 		if resolver == nil {
@@ -140,7 +140,7 @@ func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*User
 			if err == mongo.ErrNoDocuments {
 				return nil, nil
 			}
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	} else {
@@ -215,7 +215,7 @@ func (*QueryResolver) Emotes(ctx context.Context, args struct{ List []string }) 
 				"$in": ids,
 			},
 		}, &emotes); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	}
@@ -262,16 +262,6 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	hasQuery := len(query) > 0
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
-	// Pagination
-	page := int64(1)
-	if args.Page != nil && *args.Page > 1 {
-		page = int64(*args.Page)
-	}
-	pageSize := limit
-	if args.PageSize != nil {
-		pageSize = int64(*args.PageSize)
-	}
-
 	// Get actor user
 	usr, _ := ctx.Value(utils.UserKey).(*datastructure.User)
 
@@ -309,8 +299,37 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		}
 	}
 
+	// Pagination
+	page := int64(1)
+	if args.Page != nil && *args.Page > 1 {
+		page = int64(*args.Page)
+	}
+	pageSize := limit
+	if args.PageSize != nil {
+		pageSize = int64(*args.PageSize)
+	}
+
 	// Define aggregation pipeline
-	pipeline := mongo.Pipeline{}
+	pipeline := mongo.Pipeline{
+		bson.D{
+			bson.E{
+				Key:   "$match",
+				Value: match,
+			},
+		}, // Match query
+		bson.D{
+			bson.E{
+				Key:   "$skip",
+				Value: (page - 1) * pageSize,
+			},
+		}, // Paginate
+		bson.D{
+			bson.E{
+				Key:   "$limit",
+				Value: math.Max(0, math.Min(float64(pageSize), float64(limit))),
+			},
+		}, // Set limit
+	}
 
 	// Get sorting direction
 	var order int32 = 1
@@ -333,26 +352,37 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		// Popularity Sort - Channels Added
 		case "popularity":
 			// Sort by channel count
-			pipeline = append(pipeline, []bson.D{
-				{primitive.E{Key: "$sort", Value: bson.D{
-					{Key: "channel_count", Value: -order},
-				}}},
-			}...)
+			pipeline = append(mongo.Pipeline{
+				bson.D{
+					bson.E{
+						Key: "$sort",
+						Value: bson.D{
+							bson.E{
+								Key:   "channel_count",
+								Value: -order,
+							},
+						},
+					},
+				},
+			}, pipeline...)
 
 		// Creation Date Sort
 		case "age":
-			pipeline = append(pipeline, bson.D{primitive.E{Key: "$sort", Value: bson.D{
-				{Key: "_id", Value: order},
-			}}})
+			pipeline = append(mongo.Pipeline{
+				bson.D{
+					bson.E{
+						Key: "$sort",
+						Value: bson.D{
+							bson.E{
+								Key:   "_id",
+								Value: order,
+							},
+						},
+					},
+				},
+			}, pipeline...)
 		}
 	}
-
-	// Match & Limit
-	pipeline = append(pipeline, []bson.D{
-		{primitive.E{Key: "$match", Value: match}},                                                    // Match query
-		{primitive.E{Key: "$skip", Value: (page - 1) * pageSize}},                                     // Paginate
-		{primitive.E{Key: "$limit", Value: math.Max(0, math.Min(float64(pageSize), float64(limit)))}}, // Set limit
-	}...)
 
 	// If a query is specified, add sorting
 	if hasQuery {
@@ -382,17 +412,15 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	}
 
 	// Determine the full collection size
-	{
-		f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
+	f := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
 
-		// Count documents in the collection
-		count, err := cache.GetCollectionSize(ctx, "emotes", match)
-		if err != nil {
-			return nil, err
-		}
-
-		f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
+	// Count documents in the collection
+	count, err := cache.GetCollectionSize(ctx, "emotes", match)
+	if err != nil {
+		return nil, err
 	}
+
+	f.Response().Header.Add("X-Collection-Size", fmt.Sprint(count))
 
 	// Query the DB
 	cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, pipeline, opts)
@@ -401,7 +429,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		err = cur.All(ctx, &emotes)
 	}
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -527,7 +555,7 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 		err = cur.All(ctx, &users)
 	}
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -563,11 +591,11 @@ func (*QueryResolver) FeaturedBroadcast(ctx context.Context) (string, error) {
 	// test
 	stream, err := api_proxy.GetTwitchStreams(ctx, channel)
 	if err != nil {
-		log.Errorf("query, could not get live status of featured broadcast %v, err=%v", channel, err)
+		log.WithError(err).WithField("channel", channel).Error("query could not get live status of featured broadcast")
 	}
 
 	if len(stream.Data) == 0 || stream.Data[0].Type != "live" {
-		return "", fmt.Errorf("Featured Broadcast Not Live")
+		return "", fmt.Errorf("featured broadcast not live")
 	}
 
 	return channel, nil

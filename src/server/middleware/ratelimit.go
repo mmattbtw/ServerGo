@@ -15,7 +15,6 @@ import (
 )
 
 type RateLimiter struct {
-	request  *fiber.Ctx
 	RedisKey string
 
 	Identifier string
@@ -59,8 +58,7 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		// Create RateLimiter instance
 		redisKey := hex.EncodeToString(h.Sum(nil))
 		if result, err := redis.Client.EvalSha(c.Context(), redis.RateLimitScriptSHA1, []string{}, redisKey, duration.Seconds(), limit, 1).Result(); err != nil {
-			log.Errorf("ratelimit, err=%v", err)
-
+			log.WithError(err).Error("ratelimit")
 			c.Set("X-RateLimit-Error", err.Error())
 			return c.Next()
 		} else {
@@ -92,7 +90,7 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 	}
 }
 
-type rateLimitScriptReply struct {
-	Count int `json:"count"`
-	TTL   int `json:"ttl"`
-}
+// type rateLimitScriptReply struct {
+// 	Count int `json:"count"`
+// 	TTL   int `json:"ttl"`
+// }
