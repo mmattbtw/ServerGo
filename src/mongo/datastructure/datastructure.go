@@ -300,7 +300,7 @@ const (
 
 type Badge struct {
 	ID    primitive.ObjectID
-	Name  string       `json:"name"`
-	URLs  [2][3]string `json:"urls"`
-	Users []int32      `json:"users"`
+	Name  string               `json:"name"`
+	URLs  [2][3]string         `json:"urls"`
+	Users []primitive.ObjectID `json:"users"`
 }
