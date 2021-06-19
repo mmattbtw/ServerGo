@@ -11,22 +11,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/SevenTV/ServerGo/src/configure"
-	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 type Server struct {
 	app      *fiber.App
 	listener net.Listener
-}
-
-type CustomLogger struct{}
-
-func (*CustomLogger) Write(data []byte) (n int, err error) {
-	log.Infoln(utils.B2S(data))
-	return len(data), nil
 }
 
 func New() *Server {
@@ -45,11 +35,7 @@ func New() *Server {
 		listener: l,
 	}
 
-	server.app.Use(logger.New(logger.Config{
-		Output: &CustomLogger{},
-	}))
-
-	server.app.Use(recover.New())
+	server.app.Use(middleware.Logger())
 
 	server.app.Use(func(c *fiber.Ctx) error {
 		c.Set("X-Node-Name", configure.NodeName)
