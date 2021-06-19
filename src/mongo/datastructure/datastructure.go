@@ -82,16 +82,17 @@ type User struct {
 	TokenVersion string               `json:"token_version" bson:"token_version"`
 
 	// Twitch Data
-	TwitchID        string            `json:"twitch_id" bson:"id"`
-	DisplayName     string            `json:"display_name" bson:"display_name"`
-	Login           string            `json:"login" bson:"login"`
-	BroadcasterType string            `json:"broadcaster_type" bson:"broadcaster_type"`
-	ProfileImageURL string            `json:"profile_image_url" bson:"profile_image_url"`
-	OfflineImageURL string            `json:"offline_image_url" bson:"offline_image_url"`
-	Description     string            `json:"description" bson:"description"`
-	CreatedAt       time.Time         `json:"twitch_created_at" bson:"twitch_created_at"`
-	ViewCount       int32             `json:"view_count" bson:"view_count"`
-	EmoteAlias      map[string]string `json:"-" bson:"emote_alias"` // Emote Alias - backend only
+	TwitchID        string              `json:"twitch_id" bson:"id"`
+	DisplayName     string              `json:"display_name" bson:"display_name"`
+	Login           string              `json:"login" bson:"login"`
+	BroadcasterType string              `json:"broadcaster_type" bson:"broadcaster_type"`
+	ProfileImageURL string              `json:"profile_image_url" bson:"profile_image_url"`
+	OfflineImageURL string              `json:"offline_image_url" bson:"offline_image_url"`
+	Description     string              `json:"description" bson:"description"`
+	CreatedAt       time.Time           `json:"twitch_created_at" bson:"twitch_created_at"`
+	ViewCount       int32               `json:"view_count" bson:"view_count"`
+	EmoteAlias      map[string]string   `json:"-" bson:"emote_alias"` // Emote Alias - backend only
+	Badge           *primitive.ObjectID `json:"badge" bson:"badge"`   // User's badge, if any
 
 	// Relational Data
 	Emotes       *[]*Emote    `json:"emotes" bson:"-"`
@@ -124,12 +125,13 @@ func (u *User) HasPermission(flag int64) bool {
 }
 
 type Role struct {
-	ID       primitive.ObjectID `json:"id" bson:"_id"`
-	Name     string             `json:"name" bson:"name"`
-	Position int32              `json:"position" bson:"position"`
-	Color    int32              `json:"color" bson:"color"`
-	Allowed  int64              `json:"allowed" bson:"allowed"`
-	Denied   int64              `json:"denied" bson:"denied"`
+	ID       primitive.ObjectID  `json:"id" bson:"_id"`
+	Name     string              `json:"name" bson:"name"`
+	Position int32               `json:"position" bson:"position"`
+	Color    int32               `json:"color" bson:"color"`
+	Allowed  int64               `json:"allowed" bson:"allowed"`
+	Denied   int64               `json:"denied" bson:"denied"`
+	Badge    *primitive.ObjectID `json:"badge" bson:"badge"`
 }
 
 // Get a cached role by ID
@@ -295,3 +297,10 @@ const (
 	AuditLogTypeReport      = 90
 	AuditLogTypeReportClear = 91
 )
+
+type Badge struct {
+	ID    primitive.ObjectID
+	Name  string       `json:"name"`
+	URLs  [2][3]string `json:"urls"`
+	Users []int32      `json:"users"`
+}
