@@ -142,7 +142,7 @@ func CreateBadgeResponse(badge *datastructure.Badge, users []*datastructure.User
 	// Generate URLs
 	urls := make([][]string, 3)
 	for i := 1; i <= 3; i++ {
-		a := make([]string, 3)
+		a := make([]string, 2)
 		a[0] = fmt.Sprintf("%d", i)
 		a[1] = utils.GetBadgeCdnURL(badge.ID.Hex(), int8(i))
 
