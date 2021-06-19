@@ -3,6 +3,8 @@ package tasks
 import (
 	"context"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var taskCtx context.Context = context.Background()
@@ -13,7 +15,9 @@ func Start() {
 	taskCtx = ctx
 	taskCancelCtx = cancel
 
-	CheckEmotesPopularity(taskCtx)
+	if err := CheckEmotesPopularity(taskCtx); err != nil {
+		log.WithError(err).Error("failed to check popularity")
+	}
 }
 
 func Cleanup() {

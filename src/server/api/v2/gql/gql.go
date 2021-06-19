@@ -39,7 +39,7 @@ func GQL(app fiber.Router) fiber.Router {
 	s, err := box.FindString("scheme.gql")
 
 	if err != nil {
-		panic(err)
+		log.WithError(err).Fatal("gql failed")
 	}
 
 	schema := graphql.MustParseSchema(s, &RootResolver{

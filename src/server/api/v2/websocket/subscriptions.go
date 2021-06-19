@@ -10,7 +10,7 @@ import (
 func createChannelEmoteSubscription(ctx context.Context, c *Conn, data WebSocketSubscription) {
 	channel := data.Params["channel"]
 	for _, s := range c.Stat.Subscriptions {
-		if strings.ToLower(s.Params["channel"]) == strings.ToLower(channel) {
+		if strings.EqualFold(s.Params["channel"], channel) {
 			return
 		}
 	}

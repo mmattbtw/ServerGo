@@ -71,7 +71,7 @@ func (r *auditResolver) Changes() []*auditChange {
 	changes := make([]*auditChange, len(r.v.Changes))
 	for i, c := range r.v.Changes {
 		// Handle legacy Malformatted logs
-		if skip := shouldSkipLegacyChangeStructure(r.v.Type, c); skip == true {
+		if skip := shouldSkipLegacyChangeStructure(r.v.Type, c); skip {
 			c.OldValue = nil
 			c.NewValue = nil
 		}
@@ -140,10 +140,14 @@ func resolveTarget(ctx context.Context, t *datastructure.Target) (string, error)
 	switch t.Type {
 	case "users":
 		decodeError = cur.Decode(&targetUser)
-		s, decodeError = json.MarshalToString(&targetUser)
+		if decodeError == nil {
+			s, decodeError = json.MarshalToString(&targetUser)
+		}
 	case "emotes":
 		decodeError = cur.Decode(&targetEmote)
-		s, decodeError = json.MarshalToString(&targetEmote)
+		if decodeError == nil {
+			s, decodeError = json.MarshalToString(&targetEmote)
+		}
 	}
 	if decodeError != nil {
 		return "", decodeError

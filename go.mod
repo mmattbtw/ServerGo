@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	github.com/andybalholm/brotli v1.0.3 // indirect
-	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/bsm/redislock v0.7.0
 	github.com/bwmarrin/discordgo v0.23.2

@@ -15,7 +15,6 @@ import (
 )
 
 type RateLimiter struct {
-	request  *fiber.Ctx
 	RedisKey string
 
 	Identifier string
@@ -92,7 +91,7 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 	}
 }
 
-type rateLimitScriptReply struct {
-	Count int `json:"count"`
-	TTL   int `json:"ttl"`
-}
+// type rateLimitScriptReply struct {
+// 	Count int `json:"count"`
+// 	TTL   int `json:"ttl"`
+// }

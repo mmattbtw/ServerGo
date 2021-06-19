@@ -40,17 +40,32 @@ func CheckEmotesPopularity(ctx context.Context) error {
 
 		// Create a pipeline for ranking emotes by channel count
 		popCheck := mongo.Pipeline{
-			{primitive.E{Key: "$lookup", Value: bson.M{
-				"from":         "users",
-				"localField":   "_id",
-				"foreignField": "emotes",
-				"as":           "channels",
-			}}},
-			{primitive.E{Key: "$addFields", Value: bson.M{
-				"channel_count":     "$channel_count",
-				"channel_count_new": bson.M{"$size": "$channels"},
-			}}},
-			{primitive.E{Key: "$unset", Value: "channels"}},
+			bson.D{
+				bson.E{
+					Key: "$lookup",
+					Value: bson.M{
+						"from":         "users",
+						"localField":   "_id",
+						"foreignField": "emotes",
+						"as":           "channels",
+					},
+				},
+			},
+			bson.D{
+				bson.E{
+					Key: "$addFields",
+					Value: bson.M{
+						"channel_count":     "$channel_count",
+						"channel_count_new": bson.M{"$size": "$channels"},
+					},
+				},
+			},
+			bson.D{
+				bson.E{
+					Key:   "$unset",
+					Value: "channels",
+				},
+			},
 		}
 		cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, popCheck)
 		if err != nil {
