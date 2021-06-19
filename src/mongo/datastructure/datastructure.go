@@ -299,8 +299,8 @@ const (
 )
 
 type Badge struct {
-	ID    primitive.ObjectID
-	Name  string               `json:"name"`
-	URLs  [2][3]string         `json:"urls"`
-	Users []primitive.ObjectID `json:"users"`
+	ID      primitive.ObjectID   `json:"id" bson:"_id"`
+	Tooltip string               `json:"tooltip"`
+	Name    string               `json:"name"`
+	Users   []primitive.ObjectID `json:"users"`
 }
