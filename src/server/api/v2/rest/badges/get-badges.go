@@ -39,7 +39,7 @@ func GetBadges(router fiber.Router) {
 			if err := cache.Find(c.Context(), "users", "", bson.M{
 				"_id": bson.M{"$in": baj.Users},
 			}, &users); err != nil {
-				log.Errorf("mongo, could not fetch users for badge %v, err=%v", baj.Name)
+				log.WithError(err).WithField("badge", baj.Name).Errorf("mongo")
 				continue
 			}
 

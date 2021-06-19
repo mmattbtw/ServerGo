@@ -48,12 +48,12 @@ func init() {
 	}
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		panic(err)
+		log.WithError(err).Fatal("mongo")
 	}
 
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		panic(err)
+		log.WithError(err).Fatal("mongo")
 	}
 
 	Database = client.Database(configure.Config.GetString("mongo_db"))
@@ -69,8 +69,7 @@ func init() {
 		{Keys: bson.M{"channel_count_checked_at": 1}},
 	})
 	if err != nil {
-		log.Errorf("mongodb, err=%v", err)
-		return
+		log.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Database.Collection("users").Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -80,8 +79,7 @@ func init() {
 		{Keys: bson.M{"editors": 1}},
 	})
 	if err != nil {
-		log.Errorf("mongodb, err=%v", err)
-		return
+		log.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Database.Collection("bans").Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -90,8 +88,7 @@ func init() {
 		{Keys: bson.M{"active": 1}},
 	})
 	if err != nil {
-		log.Errorf("mongodb, err=%v", err)
-		return
+		log.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Database.Collection("audit").Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -100,8 +97,7 @@ func init() {
 		{Keys: bson.M{"target.id": 1}},
 	})
 	if err != nil {
-		log.Errorf("mongodb, err=%v", err)
-		return
+		log.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Database.Collection("reports").Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -110,16 +106,14 @@ func init() {
 		{Keys: bson.M{"target.id": 1}},
 	})
 	if err != nil {
-		log.Errorf("mongodb, err=%v", err)
-		return
+		log.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Database.Collection("badges").Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 	if err != nil {
-		log.Errorf("mongodb, err=%v", err)
-		return
+		log.WithError(err).Fatal("mongo")
 	}
 
 	opts := options.ChangeStream().SetFullDocument(options.UpdateLookup)
@@ -129,7 +123,7 @@ func init() {
 			ctx := context.TODO()
 			userChangeStream, err := Database.Collection(col).Watch(ctx, mongo.Pipeline{}, opts)
 			if err != nil {
-				panic(err)
+				log.WithError(err).Fatal("mongo")
 			}
 			go func() {
 				for userChangeStream.Next(ctx) {
@@ -160,7 +154,7 @@ func HexIDSliceToObjectID(arr []string) []primitive.ObjectID {
 func changeStream(ctx context.Context, collection string, data bson.M) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Errorf("recovered, err=%v", err)
+			log.WithField("error", err).Error("mongo change stream")
 		}
 	}()
 	// spew.Dump(data)
@@ -180,7 +174,8 @@ func changeStream(ctx context.Context, collection string, data bson.M) {
 			subscriber.Channel <- event
 		}
 	} else {
-		fmt.Println(err)
+		log.WithError(err).Error("mongo change stream")
+		return
 	}
 
 	var commonIndex string
@@ -192,7 +187,7 @@ func changeStream(ctx context.Context, collection string, data bson.M) {
 		document := data["fullDocument"].(bson.M)
 		dataString, err := jsoniter.MarshalToString(document)
 		if err != nil {
-			log.Errorf("json, err=%v", err)
+			log.WithError(err).Error("mongo change stream")
 			return
 		}
 		ojson = dataString
@@ -200,7 +195,7 @@ func changeStream(ctx context.Context, collection string, data bson.M) {
 
 	_, err := redis.InvalidateCache(ctx, fmt.Sprintf("cached:events:%s", eventID), collection, oid, commonIndex, ojson)
 	if err != nil {
-		log.Errorf("redis, err=%s", err)
+		log.WithError(err).Error("mongo change stream")
 	}
 }
 

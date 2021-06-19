@@ -102,13 +102,19 @@ func SendEmoteDelete(emote datastructure.Emote, actor datastructure.User, reason
 }
 
 func SendPopularityCheckUpdateNotice(wg *sync.WaitGroup) {
-	d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err := d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: "**[routine]** ⚙️ updating emote popularities...",
 	})
+	if err != nil {
+		log.WithError(err).Error("task failed")
+	}
 
 	wg.Wait()
 
-	d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
+	_, err = d.WebhookExecute(*webhookID, *webhookToken, true, &dgo.WebhookParams{
 		Content: "**[routine]** ⚙️ successfully updated emote popularities!",
 	})
+	if err != nil {
+		log.WithError(err).Error("task failed")
+	}
 }
