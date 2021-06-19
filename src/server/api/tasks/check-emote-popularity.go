@@ -70,6 +70,7 @@ func CheckEmotesPopularity(ctx context.Context) error {
 		cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, popCheck)
 		if err != nil {
 			log.Errorf("mongo, err=%v", err)
+			return err
 		}
 
 		countedEmotes := []*channelCountUpdate{}
