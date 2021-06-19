@@ -114,6 +114,14 @@ func init() {
 		return
 	}
 
+	_, err = Database.Collection("badges").Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.M{"name": 1}},
+	})
+	if err != nil {
+		log.Errorf("mongodb, err=%v", err)
+		return
+	}
+
 	opts := options.ChangeStream().SetFullDocument(options.UpdateLookup)
 
 	for _, v := range []string{"users", "emotes", "bans", "reports", "audit"} {

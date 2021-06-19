@@ -3,6 +3,7 @@ package restutil
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -16,7 +17,7 @@ type ErrorResponse struct {
 
 func (e *ErrorResponse) Send(c *fiber.Ctx, placeholders ...string) error {
 	if len(placeholders) > 0 {
-		e.Message = fmt.Sprintf(e.Message, placeholders)
+		e.Message = fmt.Sprintf(e.Message, strings.Join(placeholders, ", "))
 	}
 
 	b, _ := json.Marshal(e)
@@ -30,10 +31,11 @@ func createErrorResponse(status int, message string) *ErrorResponse {
 }
 
 var (
-	ErrUnknownEmote   = func() *ErrorResponse { return createErrorResponse(404, "Unknown Emote") }
-	ErrUnknownUser    = func() *ErrorResponse { return createErrorResponse(404, "Unknown User") }
-	MalformedObjectId = func() *ErrorResponse { return createErrorResponse(400, "Malformed Object ID") }
-	ErrInternalServer = func() *ErrorResponse { return createErrorResponse(500, "Internal Server Error (%s)") }
+	ErrUnknownEmote       = func() *ErrorResponse { return createErrorResponse(404, "Unknown Emote") }
+	ErrUnknownUser        = func() *ErrorResponse { return createErrorResponse(404, "Unknown User") }
+	MalformedObjectId     = func() *ErrorResponse { return createErrorResponse(400, "Malformed Object ID") }
+	ErrInternalServer     = func() *ErrorResponse { return createErrorResponse(500, "Internal Server Error (%s)") }
+	ErrMissingQueryParams = func() *ErrorResponse { return createErrorResponse(500, "Missing Query Params (%s)") }
 )
 
 func CreateEmoteResponse(emote *datastructure.Emote, owner *datastructure.User) EmoteResponse {
@@ -121,4 +123,47 @@ type UserResponse struct {
 	DisplayName  string             `json:"display_name"`
 	Role         datastructure.Role `json:"role"`
 	EmoteAliases map[string]string  `json:"emote_aliases"`
+}
+
+func CreateBadgeResponse(badge *datastructure.Badge, users []*datastructure.User, idType string) *BadgeResponse {
+	// Select user ID type
+	userIDs := make([]string, len(users))
+	for i, u := range users {
+		switch idType {
+		case "object_id":
+			userIDs[i] = u.ID.Hex()
+		case "twitch_id":
+			userIDs[i] = u.TwitchID
+		case "login":
+			userIDs[i] = u.Login
+		}
+	}
+
+	// Generate URLs
+	urls := make([][]string, 3)
+	for i := 1; i <= 3; i++ {
+		a := make([]string, 3)
+		a[0] = fmt.Sprintf("%d", i)
+		a[1] = utils.GetBadgeCdnURL(badge.ID.Hex(), int8(i))
+
+		urls[i-1] = a
+	}
+
+	response := &BadgeResponse{
+		ID:      badge.ID.Hex(),
+		Name:    badge.Name,
+		Tooltip: badge.Tooltip,
+		Users:   userIDs,
+		URLs:    urls,
+	}
+
+	return response
+}
+
+type BadgeResponse struct {
+	ID      string     `json:"id"`
+	Name    string     `json:"name"`
+	Tooltip string     `json:"tooltip"`
+	URLs    [][]string `json:"urls"`
+	Users   []string   `json:"users"`
 }
