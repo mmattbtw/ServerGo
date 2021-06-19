@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/badges"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/emotes"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/users"
 	"github.com/gofiber/fiber/v2"
@@ -30,6 +31,9 @@ func RestV2(app fiber.Router) fiber.Router {
 	userGroup := restGroup.Group("/users")
 	users.GetUser(userGroup)
 	users.GetChannelEmotesRoute(userGroup)
+
+	badgeGroup := restGroup.Group("/badges")
+	badges.GetBadges(badgeGroup)
 
 	restGroup.Get("/webext", func(c *fiber.Ctx) error {
 		// result := &WebExtResult{}

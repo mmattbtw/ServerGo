@@ -16,36 +16,74 @@ This file documments the public REST API for interfacing with 7TV.
 ## Routes
 
 ### Get User
+Get a single user
+
 > GET `/users/:user`
 
 ### Get Emote
+Get a single emote
+
 > GET `/emotes/:emote`
 
 > Returns: `Emote Object`
 
-Get a single emote
-
 ### Get Channel Emotes
+Get a user's active channel emotes
+
 > GET `/users/:user/emotes`
 
 > Returns: `List of Emote Objects`
 
-
-Get a user's active channel emotes
-
 ### Get Global Emotes
+Get all current global emotes.
+
 > GET `/emotes/global`
 
 > Returns: `List of Emote Objects`
 
-Get all current global emotes.
-
 ### Get Badges
+Get all active badges
+
 > GET `/badges`
 
-> Returns: `List of Badge Objects`
+> Query: `user_identifier: "object_id", "twitch_id", or "login"`
 
-Get all active badges
+> Returns: `List of Badge Objects`
+<details>
+<summary>View Payload Example</summary>
+
+```json
+{
+	"badges": [
+		{
+			"id": "60cd6255a4531e54f76d4bd4",
+			"name": "Admin",
+			"tooltip": "7TV Admin",
+			"urls": [
+				[
+					"1",
+					"https://cdn.7tv.app/badge/60cd6255a4531e54f76d4bd4/1x",
+					""
+				],
+				[
+					"2",
+					"https://cdn.7tv.app/badge/60cd6255a4531e54f76d4bd4/2x",
+					""
+				],
+				[
+					"3",
+					"https://cdn.7tv.app/badge/60cd6255a4531e54f76d4bd4/3x",
+					""
+				]
+			],
+			"users": [
+				"24377667"
+			]
+		}
+	]
+}
+```
+</details>
 
 ### Add Channel Emote
 > PUT `/users/:user/emotes/:emote`
