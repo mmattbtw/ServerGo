@@ -31,7 +31,7 @@ func (*emoteUtil) AddSizeMetadata(emote *Emote) ([4]int16, [4]int16, error) {
 		// Fetch emote data from the CDN
 		res, err := http.Get(url)
 		if err != nil {
-			log.Errorf("utils, AddSizeMetadata(), err=%v", err)
+			log.WithError(err).Error("http")
 			return width, height, err
 		}
 

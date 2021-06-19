@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -40,21 +39,37 @@ func CheckEmotesPopularity(ctx context.Context) error {
 
 		// Create a pipeline for ranking emotes by channel count
 		popCheck := mongo.Pipeline{
-			{primitive.E{Key: "$lookup", Value: bson.M{
-				"from":         "users",
-				"localField":   "_id",
-				"foreignField": "emotes",
-				"as":           "channels",
-			}}},
-			{primitive.E{Key: "$addFields", Value: bson.M{
-				"channel_count":     "$channel_count",
-				"channel_count_new": bson.M{"$size": "$channels"},
-			}}},
-			{primitive.E{Key: "$unset", Value: "channels"}},
+			bson.D{
+				bson.E{
+					Key: "$lookup",
+					Value: bson.M{
+						"from":         "users",
+						"localField":   "_id",
+						"foreignField": "emotes",
+						"as":           "channels",
+					},
+				},
+			},
+			bson.D{
+				bson.E{
+					Key: "$addFields",
+					Value: bson.M{
+						"channel_count":     "$channel_count",
+						"channel_count_new": bson.M{"$size": "$channels"},
+					},
+				},
+			},
+			bson.D{
+				bson.E{
+					Key:   "$unset",
+					Value: "channels",
+				},
+			},
 		}
 		cur, err := mongo.Database.Collection("emotes").Aggregate(ctx, popCheck)
 		if err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
+			return err
 		}
 
 		countedEmotes := []*channelCountUpdate{}
@@ -91,20 +106,19 @@ func CheckEmotesPopularity(ctx context.Context) error {
 				// Update unchecked with channel count data
 				_, err := mongo.Database.Collection("emotes").BulkWrite(ctx, ops)
 				if err != nil {
-					log.Errorf("mongo, was unable to update channel count of "+fmt.Sprint(len(countedEmotes))+" emotes, err=%v", err)
+					log.WithError(err).WithField("count", len(countedEmotes)).Error("mongo was unable to update channel count emotes")
 				}
 			}
-		} else if err != nil {
-			log.Errorf("mongo, was unable to aggregate channel count of emotes, err=%v", err)
 		}
+		log.WithError(err).WithField("count", len(countedEmotes)).Error("mongo was unable to update channel count emotes")
 
-		return nil
+		return err
 	}
 
 	defer func() {
 		log.Info("Task=CheckEmotesPopularity, giving up lock, another pod will take over.")
 		if err := lock.Release(lockCtx); err != nil {
-			log.Errorf("CheckEmotesPopularity, failed to release lock, err=%v", err)
+			log.WithError(err).Error("CheckEmotesPopularity, failed to release lock")
 		}
 
 		ticker.Stop()
@@ -118,14 +132,14 @@ func CheckEmotesPopularity(ctx context.Context) error {
 			case <-ticker.C:
 				// Refresh lock
 				if err := lock.Refresh(ctx, time.Hour*6, &redislock.Options{}); err != nil {
-					log.Errorf("CheckEmotesPopularity, could not refresh lock, err=%v", err)
+					log.WithError(err).Error("CheckEmotesPopularity, could not refresh lock")
 				}
 
 				// Run the check
 				go func() {
 					err := f()
 					if err != nil {
-						log.Errorf("CheckEmotesPopularity, err=%v", err)
+						log.WithError(err).Error("CheckEmotesPopularity")
 						ticker.Stop()
 					}
 

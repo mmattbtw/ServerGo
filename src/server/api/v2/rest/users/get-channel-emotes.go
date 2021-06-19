@@ -45,15 +45,15 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			emotes = datastructure.UserUtil.GetAliasedEmotes(channel)
 
 			// Find IDs of emote owners
-			ownerUserIDMap := make(map[*primitive.ObjectID]int)
-			ownerIDs := []*primitive.ObjectID{}
+			ownerUserIDMap := make(map[primitive.ObjectID]int)
+			ownerIDs := []primitive.ObjectID{}
 			for _, emote := range emotes {
-				if &emote.OwnerID == nil || ownerUserIDMap[&emote.OwnerID] == 1 {
+				if ownerUserIDMap[emote.OwnerID] == 1 {
 					continue
 				}
 
-				ownerUserIDMap[&emote.OwnerID] = 1
-				ownerIDs = append(ownerIDs, &emote.OwnerID)
+				ownerUserIDMap[emote.OwnerID] = 1
+				ownerIDs = append(ownerIDs, emote.OwnerID)
 			}
 
 			// Map IDs to struct

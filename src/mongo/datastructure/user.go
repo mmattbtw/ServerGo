@@ -18,7 +18,6 @@ func (*userUtil) GetAliasedEmotes(user *User) []*Emote {
 		alias := user.EmoteAlias[e.ID.Hex()]
 		if alias != "" {
 			e.Name = alias // Set new name as alias
-		} else {
 		}
 
 		result[i] = e

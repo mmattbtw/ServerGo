@@ -2,8 +2,12 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
+
+	jsoniter "github.com/json-iterator/go"
+	log "github.com/sirupsen/logrus"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Publish to a redis channel
 func Publish(ctx context.Context, channel string, data interface{}) error {
@@ -45,7 +49,9 @@ func Subscribe(ctx context.Context, ch chan []byte, subscribeTo ...string) {
 					subs[e] = subs[e][:len(subs[e])-1]
 					if len(subs[e]) == 0 {
 						delete(subs, e)
-						sub.Unsubscribe(context.Background(), e)
+						if err := sub.Unsubscribe(context.Background(), e); err != nil {
+							log.WithError(err).Error("failed to unsubscribe")
+						}
 					}
 					break
 				}

@@ -47,7 +47,7 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -80,7 +80,7 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 		Reason:    args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	return &response{
@@ -112,7 +112,7 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", id.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -136,7 +136,7 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownUser
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -169,7 +169,7 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 		Reason:    args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	return &response{

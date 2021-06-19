@@ -1,83 +1,70 @@
 # Log Level
-level: "info"
-
+level: info
 # Redis Settings
-redis_uri: "redis://username:password@url/db"
-
+redis_uri: redis://username:password@url/db
 # MongoDB Settings
-mongo_uri: "mongodb://username:password@url:port/?authSource=db"
-mongo_db: "db"
-
+mongo_uri: mongodb://username:password@url:port/?authSource=db
+mongo_db: db
 # HTTP Server Settings
-conn_uri: "0.0.0.0:8080"
-conn_type: "tcp"
-
+conn_uri: 0.0.0.0:8080
+conn_type: tcp
 # URL to the web-app
-website_url: "https://example.com/"
-
+website_url: https://example.com/
 # Cookie settings
-cookie_domain: "example.com"
+cookie_domain: example.com
 cookie_secure: true
-
 # Twitch Credentials
-twitch_redirect_uri: "https://example.com/twitch/login/callback"
-twitch_client_id: ""
-twitch_client_secret: ""
-
+twitch_redirect_uri: https://example.com/twitch/login/callback
+twitch_client_id: 
+twitch_client_secret: 
 # The temporary file storage folder, used whilst uploading emotes
-temp_file_store: "./tmp"
-
+temp_file_store: ./tmp
 # JSON Web Token Secret
 # For signing and validating user access tokens
-jwt_secret: ""
-
+jwt_secret: 
 # Define Rate Limits
 limits:
   meta:
     channel_emote_slots: 150
-
 # AWS/S3 Credentials
-aws_akid: ""
-aws_endpoint: ""
-aws_secret_key: ""
-aws_session_token: ""
-aws_region: "eu-central-1"
-aws_cdn_bucket: ""
-
-featured_broadcast: ""
-
+aws_akid: 
+aws_endpoint: 
+aws_secret_key: 
+aws_session_token: 
+aws_region: eu-central-1
+aws_cdn_bucket: 
+featured_broadcast: 
 # Discord Credentials
 discord:
   # Webhook, for logging activity to a discord channel
   # 0: webhook id
   # 1: webhook token
-  webhook: ["<webhook_id>", "<webhook_token>"] 
-
+  webhook: [<webhook_id>, <webhook_token>] 
 chatterino:
-  version: "7.3.2"
+  version: 7.3.2
   stable:
     win:
-      download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe"
-      portable_download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Portable.zip"
-      updateexe: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe"
+      download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe
+      portable_download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Portable.zip
+      updateexe: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe
     linux:
-      download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino-x86_64.AppImage"
-      portable_download: ""
-      updateexe: ""
+      download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino-x86_64.AppImage
+      portable_download: 
+      updateexe: 
     macos:
-      download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg"
-      portable_download: ""
-      updateexe: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg"
+      download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg
+      portable_download: 
+      updateexe: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg
   beta:
     win:
-      download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe"
-      portable_download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Portable.zip"
-      updateexe: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe"
+      download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe
+      portable_download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Portable.zip
+      updateexe: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.Installer.exe
     linux:
-      download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino-x86_64.AppImage"
-      portable_download: ""
-      updateexe: ""
+      download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino-x86_64.AppImage
+      portable_download: 
+      updateexe: 
     macos:
-      download: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg"
-      portable_download: ""
-      updateexe: "https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg"
+      download: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg
+      portable_download: 
+      updateexe: https://github.com/SevenTV/chatterino7/releases/download/7.3.2/Chatterino.dmg

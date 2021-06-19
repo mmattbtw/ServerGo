@@ -31,7 +31,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 			"_id": emoteID,
 		}, emote); err != nil {
 			if err != mongo.ErrNoDocuments {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			return nil, nil
@@ -49,7 +49,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 				"target.id":   emote.ID,
 				"target.type": "emotes",
 			}, emote.AuditEntries); err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -76,7 +76,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 			"target.id":   emote.ID,
 			"target.type": "emotes",
 		}, emote.Reports); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -102,7 +102,7 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 					"$in": ids,
 				},
 			}, &reporters); err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			for _, u := range reporters {
@@ -183,12 +183,12 @@ func (r *EmoteResolver) AuditEntries() (*[]*auditResolver, error) {
 		},
 		Limit: utils.Int64Pointer(20),
 	}); err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	} else {
 		err := cur.All(r.ctx, &logs)
 		if err != nil && err != mongo.ErrNoDocuments {
-			log.Errorf("mongo, err=%v", cur.Err())
+			log.WithError(err).Error("mongo")
 			return nil, err
 		}
 	}
@@ -201,7 +201,7 @@ func (r *EmoteResolver) AuditEntries() (*[]*auditResolver, error) {
 
 		resolver, err := GenerateAuditResolver(r.ctx, l, r.fields)
 		if err != nil {
-			log.Errorf("GenerateAuditResolver, err=%v", err)
+			log.WithError(err).Error("GenerateAuditResolver")
 			continue
 		}
 

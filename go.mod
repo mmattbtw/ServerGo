@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	github.com/andybalholm/brotli v1.0.3 // indirect
-	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/bsm/redislock v0.7.0
 	github.com/bwmarrin/discordgo v0.23.2
@@ -18,6 +17,7 @@ require (
 	github.com/gofiber/websocket/v2 v2.0.3
 	github.com/google/uuid v1.2.0
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.10
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/klauspost/compress v1.13.0 // indirect

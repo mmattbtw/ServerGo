@@ -41,7 +41,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -64,7 +64,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -113,7 +113,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -144,7 +144,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 	}
 
 	if doc.Err() != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -158,7 +158,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	// Push event to redis
@@ -203,7 +203,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -224,7 +224,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -292,7 +292,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 	}
 
 	if doc.Err() != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -304,7 +304,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		Reason:    args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	// Push event to redis
@@ -346,7 +346,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -369,7 +369,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -424,7 +424,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 	}
 
 	if doc.Err() != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -438,7 +438,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	// Push event to redis

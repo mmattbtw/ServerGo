@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -30,7 +29,7 @@ type AuthResp struct {
 	TokenType   string `json:"token_type"`
 }
 
-var InvalidRespTwitch = fmt.Errorf("invalid resp from twitch")
+var ErrInvalidRespTwitch = fmt.Errorf("invalid resp from twitch")
 
 func GetAuth(ctx context.Context) (string, error) {
 	mutex.Lock()
@@ -51,11 +50,12 @@ func GetAuth(ctx context.Context) (string, error) {
 		"client_secret": configure.Config.GetString("twitch_client_secret"),
 		"grant_type":    "client_credentials",
 	})
-	u, _ := url.Parse(fmt.Sprintf("https://id.twitch.tv/oauth2/token?%s", params))
-	resp, err := http.DefaultClient.Do(&http.Request{
-		Method: "POST",
-		URL:    u,
-	})
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("https://id.twitch.tv/oauth2/token?%s", params), nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -67,8 +67,8 @@ func GetAuth(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode > 200 {
-		log.Errorf("invalid, resp from twitch, resp=%s", utils.B2S(data))
-		return "", InvalidRespTwitch
+		log.WithField("resp", utils.B2S(data)).Error("twitch")
+		return "", ErrInvalidRespTwitch
 	}
 
 	resData := AuthResp{}
@@ -81,7 +81,7 @@ func GetAuth(ctx context.Context) (string, error) {
 	expiry := time.Second * time.Duration(int64(float64(resData.ExpiresIn)*0.75))
 
 	if err := redis.Client.SetNX(ctx, "twitch:auth", auth, expiry).Err(); err != nil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 	}
 
 	go func() {
