@@ -67,7 +67,7 @@ func GetAuth(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode > 200 {
-		log.Errorf("invalid, resp from twitch, resp=%s", utils.B2S(data))
+		log.WithField("resp", utils.B2S(data)).Error("twitch")
 		return "", InvalidRespTwitch
 	}
 
@@ -81,7 +81,7 @@ func GetAuth(ctx context.Context) (string, error) {
 	expiry := time.Second * time.Duration(int64(float64(resData.ExpiresIn)*0.75))
 
 	if err := redis.Client.SetNX(ctx, "twitch:auth", auth, expiry).Err(); err != nil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 	}
 
 	go func() {

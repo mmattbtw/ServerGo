@@ -57,12 +57,12 @@ func Expire(bucket, key string, number int) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("1.unable to expire object %q from bucket %q, %v", key, bucket, err)
+		return fmt.Errorf("unable to expire object %q from bucket %q, %v", key, bucket, err)
 	}
 
 	err = svc.WaitUntilObjectExists(&s3.HeadObjectInput{Bucket: aws.String(bucket), Key: aws.String(obj)})
 	if err != nil {
-		return fmt.Errorf("2.unable to expire object %q from bucket %q, %v", key, bucket, err)
+		return fmt.Errorf("unable to expire object %q from bucket %q, %v", key, bucket, err)
 	}
 
 	return DeleteFile(bucket, fmt.Sprintf("%s/%vx", key, number), false)

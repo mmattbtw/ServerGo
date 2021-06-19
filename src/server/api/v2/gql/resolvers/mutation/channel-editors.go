@@ -45,7 +45,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -55,7 +55,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", editorID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -78,7 +78,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -109,7 +109,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 	}
 
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -123,7 +123,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 	return query_resolvers.GenerateUserResolver(ctx, newChannel, &newChannel.ID, field.Children)
 }
@@ -153,7 +153,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 
 	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
 	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
+		log.WithError(err).Error("redis")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -176,7 +176,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -207,7 +207,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 	}
 
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -221,7 +221,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	return query_resolvers.GenerateUserResolver(ctx, newChannel, &newChannel.ID, field.Children)

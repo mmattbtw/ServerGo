@@ -71,7 +71,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			// The temp directory where the emote will be created
 			fileDir := fmt.Sprintf("%s/%s", configure.Config.GetString("temp_file_store"), id.String())
 			if err := os.MkdirAll(fileDir, 0777); err != nil {
-				log.Errorf("mkdir, err=%v", err)
+				log.WithError(err).Error("mkdir")
 				return 500, errInternalServer, nil
 			}
 			ogFilePath := fmt.Sprintf("%v/og", fileDir) // The original file's path in temp
@@ -132,7 +132,7 @@ func CreateEmoteRoute(router fiber.Router) {
 
 					osFile, err := os.Create(ogFilePath)
 					if err != nil {
-						log.Errorf("file, err=%v", err)
+						log.WithError(err).Error("file")
 						return 500, errInternalServer, nil
 					}
 
@@ -145,13 +145,13 @@ func CreateEmoteRoute(router fiber.Router) {
 						}
 
 						if err != nil && err != io.EOF {
-							log.Errorf("read, err=%v", err)
+							log.WithError(err).Error("read")
 							return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "We failed to read the file.")), nil
 						}
 						_, err2 := osFile.Write(data[:n])
 						if err2 != nil {
 							osFile.Close()
-							log.Errorf("write, err=%v", err)
+							log.WithError(err).Error("write")
 							return 500, errInternalServer, nil
 						}
 						if err == io.EOF {
@@ -174,7 +174,7 @@ func CreateEmoteRoute(router fiber.Router) {
 						if err == mongo.ErrNoDocuments {
 							return 403, utils.S2B(fmt.Sprintf(errAccessDenied, "You don't have permission to do that.")), nil
 						}
-						log.Errorf("mongo, err=%v", err)
+						log.WithError(err).Error("mongo")
 						return 500, errInternalServer, nil
 					}
 				}
@@ -183,7 +183,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			// Get uploaded image file into an image.Image
 			ogFile, err := os.Open(ogFilePath)
 			if err != nil {
-				log.Errorf("could not open original file, err=%v", err)
+				log.WithError(err).Error("could not open original file")
 				return 500, errInternalServer, nil
 			}
 			ogHeight := 0
@@ -192,7 +192,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			case "jpg":
 				img, err := jpeg.Decode(ogFile)
 				if err != nil {
-					log.Errorf("could not decode jpeg, err=%v", err)
+					log.WithError(err).Error("could not decode jpeg")
 					return 500, errInternalServer, nil
 				}
 				ogWidth = img.Bounds().Dx()
@@ -200,7 +200,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			case "png":
 				img, err := png.Decode(ogFile)
 				if err != nil {
-					log.Errorf("could not decode png, err=%v", err)
+					log.WithError(err).Error("could not decode png")
 					return 500, errInternalServer, nil
 				}
 				ogWidth = img.Bounds().Dx()
@@ -208,7 +208,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			case "gif":
 				g, err := gif.DecodeAll(ogFile)
 				if err != nil {
-					log.Errorf("could not decode gif, err=%v", err)
+					log.WithError(err).Error("could not decode gif")
 					return 500, errInternalServer, nil
 				}
 
@@ -224,7 +224,7 @@ func CreateEmoteRoute(router fiber.Router) {
 					ogWidth = int(wand.GetImageWidth())
 					ogHeight = int(wand.GetImageHeight())
 				} else {
-					log.Errorf("could not decode webp, err=%v", err)
+					log.WithError(err).Error("could not decode webp")
 					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, err.Error())), nil
 				}
 			default:
@@ -273,7 +273,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				}()
 				err := cmd.Run() // Run the command
 				if err != nil {
-					log.Errorf("cmd, err=%v", err)
+					log.WithError(err).Error("cmd")
 					return 500, errInternalServer, nil
 				}
 			}
@@ -295,18 +295,18 @@ func CreateEmoteRoute(router fiber.Router) {
 			res, err := mongo.Database.Collection("emotes").InsertOne(c.Context(), emote)
 
 			if err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return 500, errInternalServer, nil
 			}
 
 			_id, ok := res.InsertedID.(primitive.ObjectID)
 			if !ok {
-				log.Errorf("mongo, id=%v", res.InsertedID)
+				log.WithField("resp", res.InsertedID).Error("bad resp from mongo")
 				_, err := mongo.Database.Collection("emotes").DeleteOne(c.Context(), bson.M{
 					"_id": res.InsertedID,
 				})
 				if err != nil {
-					log.Errorf("mongo, err=%v", err)
+					log.WithError(err).Error("mongo")
 				}
 				return 500, errInternalServer, nil
 			}
@@ -319,13 +319,13 @@ func CreateEmoteRoute(router fiber.Router) {
 					defer wg.Done()
 					data, err := os.ReadFile(path[0] + ".webp")
 					if err != nil {
-						log.Errorf("read, err=%v", err)
+						log.WithError(err).Error("read")
 						errored = true
 						return
 					}
 
 					if err := aws.UploadFile(configure.Config.GetString("aws_cdn_bucket"), fmt.Sprintf("emote/%s/%s", _id.Hex(), path[1]), data, &mime); err != nil {
-						log.Errorf("aws, err=%v", err)
+						log.WithError(err).Error("aws")
 						errored = true
 					}
 				}(path)
@@ -338,7 +338,7 @@ func CreateEmoteRoute(router fiber.Router) {
 					"_id": _id,
 				})
 				if err != nil {
-					log.Errorf("mongo, err=%v, id=%s", err, _id.Hex())
+					log.WithError(err).WithField("id", id).Error("mongo")
 				}
 				return 500, errInternalServer, nil
 			}
@@ -351,7 +351,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				},
 			})
 			if err != nil {
-				log.Errorf("mongo, err=%v, id=%s", err, _id.Hex())
+				log.WithError(err).WithField("id", id).Error("mongo")
 			}
 
 			go discord.SendEmoteCreate(*emote, *usr)

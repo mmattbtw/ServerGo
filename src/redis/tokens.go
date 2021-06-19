@@ -22,7 +22,7 @@ func AuthTokenValues(ctx context.Context, token string) (string, error) {
 	}
 	resp, ok := res.(string)
 	if !ok {
-		log.Errorf("redis resp, resp=%v", res)
+		log.WithField("resp", res).Error("invalid redis resp expected string")
 		return "", errInvalidResp
 	}
 	return resp, nil

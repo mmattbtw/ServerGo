@@ -129,7 +129,7 @@ func init() {
 				for userChangeStream.Next(ctx) {
 					data := bson.M{}
 					if err := userChangeStream.Decode(&data); err != nil {
-						log.Errorf("mongo change stream, err=%v, col=%s", err, col)
+						log.WithError(err).WithField("col", col).Error("mongo change stream")
 						continue
 					}
 					changeStream(ctx, col, data)

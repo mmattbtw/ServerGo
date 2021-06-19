@@ -61,7 +61,7 @@ func GQL(app fiber.Router) fiber.Router {
 			return err
 		}
 		if err != nil {
-			log.Errorf("gql req, err=%v", err)
+			log.WithError(err).Error("gql")
 			return c.Status(400).JSON(fiber.Map{
 				"status":  400,
 				"message": "Invalid GraphQL Request. (" + err.Error() + ")",
@@ -69,7 +69,7 @@ func GQL(app fiber.Router) fiber.Router {
 		}
 
 		if err != nil {
-			log.Errorf("session, err=%v", err)
+			log.WithError(err).Error("session")
 			return c.Status(500).JSON(fiber.Map{
 				"status":  500,
 				"message": "Failed to get session from store.",

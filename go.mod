@@ -17,6 +17,7 @@ require (
 	github.com/gofiber/websocket/v2 v2.0.3
 	github.com/google/uuid v1.2.0
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.10
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/klauspost/compress v1.13.0 // indirect

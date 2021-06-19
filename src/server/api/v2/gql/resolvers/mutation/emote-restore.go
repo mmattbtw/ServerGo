@@ -47,7 +47,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -60,7 +60,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 				if err == mongo.ErrNoDocuments {
 					return nil, resolvers.ErrAccessDenied
 				}
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -76,7 +76,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 	})
 
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -89,7 +89,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 			obj := fmt.Sprintf("emote/%s", emote.ID.Hex())
 			err := aws.Unexpire(configure.Config.GetString("aws_cdn_bucket"), obj, i)
 			if err != nil {
-				log.Errorf("aws, err=%v, obj=%s", err, obj)
+				log.WithError(err).WithField("obj", obj).Error("aws")
 			}
 		}(i)
 	}
@@ -105,7 +105,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		},
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -119,7 +119,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 	}
 
 	return &response{

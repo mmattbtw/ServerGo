@@ -36,7 +36,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			"_id": userID,
 		}, user); err != nil {
 			if err != mongo.ErrNoDocuments {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			return nil, nil
@@ -53,7 +53,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			"owner":  user.ID,
 			"status": datastructure.EmoteStatusLive,
 		}, user.OwnedEmotes); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 		ems := *user.OwnedEmotes
@@ -72,7 +72,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 				},
 				"target.type": "emotes",
 			}, &logs); err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 
@@ -98,7 +98,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 					"$in": user.EmoteIDs,
 				},
 			}, user.Emotes); err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			ems := *user.Emotes
@@ -116,7 +116,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 					},
 					"target.type": "emotes",
 				}, &logs); err != nil {
-					log.Errorf("mongo, err=%v", err)
+					log.WithError(err).Error("mongo")
 					return nil, resolvers.ErrInternalServer
 				}
 				for _, l := range logs {
@@ -139,7 +139,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 				"$in": utils.Ternary(len(user.EditorIDs) > 0, user.EditorIDs, []primitive.ObjectID{}).([]primitive.ObjectID),
 			},
 		}, user.Editors); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	}
@@ -150,11 +150,11 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		if cur, err := mongo.Database.Collection("users").Find(ctx, bson.M{
 			"editors": user.ID,
 		}); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		} else {
 			if err = cur.All(ctx, user.EditorIn); err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -167,7 +167,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			"target.id":   user.ID,
 			"target.type": "users",
 		}, user.EditorIn); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -193,7 +193,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 					"$in": ids,
 				},
 			}, &reporters); err != nil {
-				log.Errorf("mongo, err=%v", err)
+				log.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			for _, u := range reporters {
@@ -210,7 +210,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			"user_id": user.ID,
 		})
 		if err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -256,7 +256,7 @@ func (r *UserResolver) Role() (*RoleResolver, error) {
 
 	res, err := GenerateRoleResolver(r.ctx, &role, roleID, nil)
 	if err != nil {
-		log.Errorf("generation, err=%v", err)
+		log.WithError(err).Error("generation")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -305,7 +305,7 @@ func (r *UserResolver) Editors() ([]*UserResolver, error) {
 	for _, e := range editors {
 		r, err := GenerateUserResolver(r.ctx, e, nil, r.fields["editors"].Children)
 		if err != nil {
-			log.Errorf("generation, err=%v", err)
+			log.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -321,7 +321,7 @@ func (r *UserResolver) EditorIn() ([]*UserResolver, error) {
 	for _, e := range editors {
 		r, err := GenerateUserResolver(r.ctx, e, nil, r.fields["editor_in"].Children)
 		if err != nil {
-			log.Errorf("generation, err=%v", err)
+			log.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -341,7 +341,7 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 	for _, e := range emotes {
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["emotes"].Children)
 		if err != nil {
-			log.Errorf("generation, err=%v", err)
+			log.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -357,7 +357,7 @@ func (r *UserResolver) OwnedEmotes() ([]*EmoteResolver, error) {
 	for _, e := range emotes {
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["owned_emotes"].Children)
 		if err != nil {
-			log.Errorf("generation, err=%v", err)
+			log.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -468,12 +468,12 @@ func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
 		},
 		Limit: utils.Int64Pointer(30),
 	}); err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	} else {
 		err := cur.All(r.ctx, &logs)
 		if err != nil && err != mongo.ErrNoDocuments {
-			log.Errorf("mongo, err=%v", cur.Err())
+			log.WithError(err).Error("mongo")
 			return nil, err
 		}
 	}
@@ -486,7 +486,7 @@ func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
 
 		resolver, err := GenerateAuditResolver(r.ctx, l, r.fields)
 		if err != nil {
-			log.Errorf("GenerateAuditResolver, err=%v", err)
+			log.WithError(err).Error("GenerateAuditResolver")
 			continue
 		}
 

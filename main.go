@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -26,13 +25,13 @@ import (
 )
 
 func init() {
-	log.Infoln("Application Starting...")
+	log.Infoln("starting")
 }
 
 func main() {
 	configCode := configure.Config.GetInt("exit_code")
 	if configCode > 125 || configCode < 0 {
-		log.Warnf("Invalid exit code specified in config (%v), using 0 as new exit code.", configCode)
+		log.WithField("requested_exit_code", configCode).Warn("invalid exit code specified in config using 0 as new exit code")
 		configCode = 0
 	}
 
@@ -43,7 +42,7 @@ func main() {
 
 	go func() {
 		sig := <-c
-		log.Infof("sig=%v, gracefully shutting down...", sig)
+		log.WithField("sig", sig).Info("stop issued")
 
 		start := time.Now().UnixNano()
 
@@ -56,12 +55,12 @@ func main() {
 		go func() {
 			defer wg.Done()
 			if err := s.Shutdown(); err != nil {
-				log.Errorf("failed to shutdown server, err=%v", err)
+				log.WithError(err).Error("failed to shutdown server")
 			}
 		}()
 		wg.Wait()
 
-		log.Infof("Shutdown took, %.2fms", float64(time.Now().UnixNano()-start)/10e5)
+		log.WithField("duration", float64(time.Now().UnixNano()-start)/10e5).Infof("shutdown")
 		os.Exit(configCode)
 	}()
 
@@ -69,19 +68,19 @@ func main() {
 		for {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			log.Debugf("Alloc = %vM\tTotalAlloc = %vM\tSys = %vM\tNumGC = %v", m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+			log.WithField("alloc", m.Alloc).WithField("total_alloc", m.TotalAlloc).WithField("sys", m.Sys).WithField("numgc", m.NumGC).Debug("stats")
 			time.Sleep(5 * time.Second)
 		}
 	}()
 
-	log.Infoln("Application Started.")
+	log.Infoln("started")
 
 	// Get and cache roles
 	roles, err := GetAllRoles(context.Background())
 	if err != nil {
-		log.Errorf("could not get roles, %s", err)
+		log.WithError(err).Error("could not get roles")
 	}
-	log.Infof("Retrieved %s roles", fmt.Sprint(len(roles)))
+	log.WithField("count", len(roles)).Infof("retrieved roles")
 
 	go tasks.Start()
 

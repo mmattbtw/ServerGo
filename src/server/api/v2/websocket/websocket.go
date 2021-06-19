@@ -238,7 +238,7 @@ func (c *Conn) SendClosure(code int, message string) {
 	b := websocket.FormatCloseMessage(code, message)
 
 	if err := c.WriteMessage(websocket.CloseMessage, b); err != nil {
-		log.Errorf("WebSocket, err=failed to write closure message, %v", err)
+		log.WithError(err).Error("websocket failed to write closure message")
 	}
 	c.Close()
 	c.Stat.Lock.Unlock()
@@ -256,7 +256,7 @@ func (c *Conn) Register(ctx context.Context) {
 	}
 
 	if err := redis.Client.HSet(ctx, c.Stat.RedisKey, data).Err(); err != nil {
-		log.Errorf("WebSocket, err=could not register socket, %v", err)
+		log.WithError(err).Error("websocket could not register socket")
 	}
 	redis.Client.Expire(ctx, c.Stat.RedisKey, time.Second*90)
 }
@@ -278,7 +278,7 @@ func (c *Conn) sendMessage(message *WebSocketMessageOutbound) {
 	c.Stat.Lock.Lock()
 
 	if err := c.WriteJSON(message); err != nil {
-		log.Errorf("WebSocket, err=failed to write json message, %v", err)
+		log.WithError(err).Error("websocket failed to write json message")
 	}
 	c.Stat.Lock.Unlock()
 }

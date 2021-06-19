@@ -93,7 +93,7 @@ func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 			"_id": -1,
 		},
 	}); err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, err
 	}
 	fmt.Println("logs", logs)
@@ -107,7 +107,7 @@ func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 	for i, l := range logs {
 		resolver, err := GenerateAuditResolver(ctx, l, field.Children)
 		if err != nil {
-			log.Errorf("GenerateAuditResolver, err=%v", err)
+			log.WithError(err).Error("GenerateAuditResolver")
 			return nil, err
 		}
 		if resolver == nil {
@@ -140,7 +140,7 @@ func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*User
 			if err == mongo.ErrNoDocuments {
 				return nil, nil
 			}
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	} else {
@@ -215,7 +215,7 @@ func (*QueryResolver) Emotes(ctx context.Context, args struct{ List []string }) 
 				"$in": ids,
 			},
 		}, &emotes); err != nil {
-			log.Errorf("mongo, err=%v", err)
+			log.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	}
@@ -429,7 +429,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		err = cur.All(ctx, &emotes)
 	}
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -555,7 +555,7 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 		err = cur.All(ctx, &users)
 	}
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		log.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -591,11 +591,11 @@ func (*QueryResolver) FeaturedBroadcast(ctx context.Context) (string, error) {
 	// test
 	stream, err := api_proxy.GetTwitchStreams(ctx, channel)
 	if err != nil {
-		log.Errorf("query, could not get live status of featured broadcast %v, err=%v", channel, err)
+		log.WithError(err).WithField("channel", channel).Error("query could not get live status of featured broadcast")
 	}
 
 	if len(stream.Data) == 0 || stream.Data[0].Type != "live" {
-		return "", fmt.Errorf("Featured Broadcast Not Live")
+		return "", fmt.Errorf("featured broadcast not live")
 	}
 
 	return channel, nil

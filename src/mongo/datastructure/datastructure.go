@@ -115,7 +115,7 @@ func (u *User) HasPermission(flag int64) bool {
 	}
 
 	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
-		log.Errorf("HasPermission, err=flag is not power of two (%s)", fmt.Sprint(flag))
+		log.WithField("flag", flag).Error("flag is not power of two")
 		return false
 	}
 

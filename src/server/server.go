@@ -106,7 +106,7 @@ func New() *Server {
 	go func() {
 		err = server.app.Listener(server.listener)
 		if err != nil {
-			log.Errorf("failed to start http server, err=%v", err)
+			log.WithError(err).Fatal("failed to start http server")
 		}
 	}()
 
