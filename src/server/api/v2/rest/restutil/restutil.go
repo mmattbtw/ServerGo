@@ -35,7 +35,7 @@ var (
 	ErrUnknownUser        = func() *ErrorResponse { return createErrorResponse(404, "Unknown User") }
 	MalformedObjectId     = func() *ErrorResponse { return createErrorResponse(400, "Malformed Object ID") }
 	ErrInternalServer     = func() *ErrorResponse { return createErrorResponse(500, "Internal Server Error (%s)") }
-	ErrMissingQueryParams = func() *ErrorResponse { return createErrorResponse(500, "Missing Query Params (%s)") }
+	ErrMissingQueryParams = func() *ErrorResponse { return createErrorResponse(400, "Missing Query Params (%s)") }
 )
 
 func CreateEmoteResponse(emote *datastructure.Emote, owner *datastructure.User) EmoteResponse {
