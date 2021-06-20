@@ -51,7 +51,7 @@ func GetBadges(router fiber.Router) {
 		if err != nil {
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
-		return c.Status(501).Send(b)
+		return c.Status(200).Send(b)
 	})
 }
 
