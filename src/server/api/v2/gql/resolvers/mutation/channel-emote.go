@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
@@ -82,9 +81,8 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 			}
 		}
 
-		maxEmoteSlots := configure.Config.GetInt("limits.meta.channel_emote_slots")
-		if (len(channel.EmoteIDs) + 1) > maxEmoteSlots {
-			return nil, resolvers.ErrEmoteSlotLimitReached
+		if (len(channel.EmoteIDs) + 1) > int(channel.GetEmoteSlots()) {
+			return nil, resolvers.ErrEmoteSlotLimitReached(channel.GetEmoteSlots())
 		}
 	}
 
@@ -259,7 +257,13 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 				return nil, resolvers.ErrInvalidName
 			}
 
-			set[fmt.Sprintf("emote_alias.%v", emoteID.Hex())] = alias
+			if len(channel.EmoteAlias) == 0 {
+				set["emote_alias"] = bson.M{
+					emoteID.Hex(): alias,
+				}
+			} else {
+				set[fmt.Sprintf("emote_alias.%v", emoteID.Hex())] = alias
+			}
 		}
 
 		logChanges = append(logChanges, &datastructure.AuditLogChange{
