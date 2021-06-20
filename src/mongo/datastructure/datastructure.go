@@ -173,8 +173,7 @@ const (
 	RolePermissionManageUsers                      // 256 - (Elevated) Allows managing users
 	RolePermissionManageEditors                    // 512 - Allows adding and removing editors from own channel
 
-	RolePermissionAll     int64 = (1 << iota) - 1                                                                                                        // Sum of all permissions combined
-	RolePermissionDefault int64 = (RolePermissionEmoteCreate | RolePermissionEmoteEditOwned | RolePermissionCreateReports | RolePermissionManageEditors) // Default permissions for users without a role
+	RolePermissionAll int64 = (1 << iota) - 1
 )
 
 const (
