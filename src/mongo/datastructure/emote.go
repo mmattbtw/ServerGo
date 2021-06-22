@@ -21,10 +21,6 @@ func (*emoteUtil) AddSizeMetadata(emote *Emote) ([4]int16, [4]int16, error) {
 	width := [4]int16{0, 0, 0, 0}
 	height := [4]int16{0, 0, 0, 0}
 
-	if !MagickOK {
-		InitMagickWand()
-	}
-
 	for i := int8(1); i <= 4; i++ {
 		url := utils.GetCdnURL(emote.ID.Hex(), i)
 
@@ -65,19 +61,17 @@ func (*emoteUtil) AddSizeMetadata(emote *Emote) ([4]int16, [4]int16, error) {
 
 func (*emoteUtil) GetFilesMeta(fileDir string) [][]string {
 	// Define sizes to be generated
+	// File path, emote size, emote width/height, quality factor
 	return [][]string{
-		{fmt.Sprintf("%s/1x", fileDir), "1x", "96x32", "20"},
-		{fmt.Sprintf("%s/2x", fileDir), "2x", "144x48", "35"},  // Upscale: 1x * 1.5
-		{fmt.Sprintf("%s/3x", fileDir), "3x", "228x76", "40"},  // Upscale: 2x * 1.585
-		{fmt.Sprintf("%s/4x", fileDir), "4x", "384x128", "60"}, // Upscale: 3x * 1.685
+		{fmt.Sprintf("%s/1x", fileDir), "1x", "96x32", "100"},
+		{fmt.Sprintf("%s/2x", fileDir), "2x", "144x48", "90"},
+		{fmt.Sprintf("%s/3x", fileDir), "3x", "228x76", "90"},
+		{fmt.Sprintf("%s/4x", fileDir), "4x", "384x128", "95"},
 	}
 }
 
 var EmoteUtil emoteUtil
 
-var MagickOK bool = false
-
-func InitMagickWand() {
+func init() {
 	imagick.Initialize()
-	MagickOK = true
 }
