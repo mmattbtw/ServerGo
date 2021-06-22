@@ -50,10 +50,10 @@ spec:
               name: config
           resources:
             requests:
-              memory: "250M"
+              memory: "1Gi"
               cpu: "500m"
             limits:
-              memory: "2G"
+              memory: "2Gi"
               cpu: "2"
           ports:
             - containerPort: 3000
