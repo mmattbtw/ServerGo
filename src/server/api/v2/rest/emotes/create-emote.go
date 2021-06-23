@@ -258,7 +258,6 @@ func CreateEmoteRoute(router fiber.Router) {
 				if err := mw.ReadImage(ogFilePath); err != nil {
 					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Couldn't read original image: %s", err)), nil
 				}
-				delay := mw.GetImageDelay()
 
 				// Merge all frames with coalesce
 				aw := mw.CoalesceImages()
@@ -272,9 +271,6 @@ func CreateEmoteRoute(router fiber.Router) {
 				mw = imagick.NewMagickWand()
 				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
 					log.WithError(err).Error("SetResourceLimit")
-				}
-				if err = mw.SetImageDelay(delay); err != nil {
-					log.WithError(err).Error("SetImageDelay")
 				}
 				defer mw.Destroy()
 
