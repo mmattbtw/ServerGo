@@ -255,6 +255,9 @@ func CreateEmoteRoute(router fiber.Router) {
 
 				// Create new boundaries for frames
 				mw := imagick.NewMagickWand() // Get magick wand & read the original image
+				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
+					log.WithError(err).Error("SetResourceLimit")
+				}
 				if err := mw.ReadImage(ogFilePath); err != nil {
 					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Couldn't read original image: %s", err)), nil
 				}
