@@ -32,6 +32,8 @@ import (
 
 const MAX_FRAME_COUNT = 4096
 const MAX_FILE_SIZE = 5000000
+const MAX_PIXEL_HEIGHT = 3000
+const MAX_PIXEL_WIDTH = 3000
 
 func CreateEmoteRoute(router fiber.Router) {
 
@@ -191,7 +193,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				img, err := jpeg.Decode(ogFile)
 				if err != nil {
 					log.WithError(err).Error("could not decode jpeg")
-					return 500, errInternalServer, nil
+					return 400, errInternalServer, nil
 				}
 				ogWidth = img.Bounds().Dx()
 				ogHeight = img.Bounds().Dy()
@@ -199,7 +201,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				img, err := png.Decode(ogFile)
 				if err != nil {
 					log.WithError(err).Error("could not decode png")
-					return 500, errInternalServer, nil
+					return 400, errInternalServer, nil
 				}
 				ogWidth = img.Bounds().Dx()
 				ogHeight = img.Bounds().Dy()
@@ -207,7 +209,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				g, err := gif.DecodeAll(ogFile)
 				if err != nil {
 					log.WithError(err).Error("could not decode gif")
-					return 500, errInternalServer, nil
+					return 400, errInternalServer, nil
 				}
 
 				// Set a cap on how many frames are allowed
@@ -223,12 +225,15 @@ func CreateEmoteRoute(router fiber.Router) {
 					ogHeight = int(wand.GetImageHeight())
 				} else {
 					log.WithError(err).Error("could not decode webp")
-					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, err.Error())), nil
+					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, err.Error())), nil
 				}
 
 				wand.Destroy()
 			default:
-				return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Unsupported File Format")), nil
+				return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "Unsupported File Format")), nil
+			}
+			if ogWidth > MAX_PIXEL_WIDTH || ogHeight > MAX_PIXEL_HEIGHT {
+				return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, fmt.Sprintf("Too Many Pixels (maximum %dx%d)", MAX_PIXEL_WIDTH, MAX_PIXEL_HEIGHT))), nil
 			}
 
 			files := datastructure.EmoteUtil.GetFilesMeta(fileDir)
