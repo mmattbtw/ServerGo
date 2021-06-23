@@ -278,6 +278,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				defer mw.Destroy()
 
 				// Add each frame to our animated image
+				mw.ResetIterator()
 				for ind := 0; ind < int(aw.GetNumberImages()); ind++ {
 					aw.SetIteratorIndex(ind)
 					img := aw.GetImage()
@@ -293,7 +294,6 @@ func CreateEmoteRoute(router fiber.Router) {
 				}
 
 				// Done - convert to WEBP
-				mw.ResetIterator()
 				q, _ := strconv.Atoi(quality)
 				if err = mw.SetImageCompressionQuality(uint(q)); err != nil {
 					log.WithError(err).Error("SetImageCompressionQuality")
