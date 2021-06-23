@@ -262,30 +262,46 @@ func CreateEmoteRoute(router fiber.Router) {
 
 				// Merge all frames with coalesce
 				aw := mw.CoalesceImages()
-				aw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500)
+				if err = aw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
+					log.WithError(err).Error("SetResourceLimit")
+				}
 				mw.Destroy()
 				defer aw.Destroy()
 
 				// Set delays
 				mw = imagick.NewMagickWand()
-				mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500)
-				mw.SetImageDelay(delay)
+				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
+					log.WithError(err).Error("SetResourceLimit")
+				}
+				if err = mw.SetImageDelay(delay); err != nil {
+					log.WithError(err).Error("SetImageDelay")
+				}
 				defer mw.Destroy()
 
 				// Add each frame to our animated image
 				for ind := 0; ind < int(aw.GetNumberImages()); ind++ {
 					aw.SetIteratorIndex(ind)
 					img := aw.GetImage()
-					img.ResizeImage(uint(width), uint(height), imagick.FILTER_LANCZOS)
-					mw.AddImage(img)
+
+					if err = img.ResizeImage(uint(width), uint(height), imagick.FILTER_LANCZOS); err != nil {
+						log.WithError(err).Errorf("ResizeImage i=%v", ind)
+						continue
+					}
+					if err = mw.AddImage(img); err != nil {
+						log.WithError(err).Error("AddImage i=%v", ind)
+					}
 					img.Destroy()
 				}
 
 				// Done - convert to WEBP
 				mw.ResetIterator()
 				q, _ := strconv.Atoi(quality)
-				mw.SetImageCompressionQuality(uint(q))
-				mw.SetImageFormat("webp")
+				if err = mw.SetImageCompressionQuality(uint(q)); err != nil {
+					log.WithError(err).Error("SetImageCompressionQuality")
+				}
+				if err = mw.SetImageFormat("webp"); err != nil {
+					log.WithError(err).Error("SetImageFormat")
+				}
 
 				// Write to file
 				err = mw.WriteImages(outFile, true)
