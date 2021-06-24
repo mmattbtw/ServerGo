@@ -1,7 +1,6 @@
 package emotes
 
 import (
-	"bufio"
 	"fmt"
 	"image/gif"
 	"image/jpeg"
@@ -9,7 +8,6 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,6 +32,8 @@ import (
 
 const MAX_FRAME_COUNT = 4096
 const MAX_FILE_SIZE = 5000000
+const MAX_PIXEL_HEIGHT = 3000
+const MAX_PIXEL_WIDTH = 3000
 
 func CreateEmoteRoute(router fiber.Router) {
 
@@ -193,7 +193,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				img, err := jpeg.Decode(ogFile)
 				if err != nil {
 					log.WithError(err).Error("could not decode jpeg")
-					return 500, errInternalServer, nil
+					return 400, errInternalServer, nil
 				}
 				ogWidth = img.Bounds().Dx()
 				ogHeight = img.Bounds().Dy()
@@ -201,7 +201,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				img, err := png.Decode(ogFile)
 				if err != nil {
 					log.WithError(err).Error("could not decode png")
-					return 500, errInternalServer, nil
+					return 400, errInternalServer, nil
 				}
 				ogWidth = img.Bounds().Dx()
 				ogHeight = img.Bounds().Dy()
@@ -209,7 +209,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				g, err := gif.DecodeAll(ogFile)
 				if err != nil {
 					log.WithError(err).Error("could not decode gif")
-					return 500, errInternalServer, nil
+					return 400, errInternalServer, nil
 				}
 
 				// Set a cap on how many frames are allowed
@@ -225,10 +225,15 @@ func CreateEmoteRoute(router fiber.Router) {
 					ogHeight = int(wand.GetImageHeight())
 				} else {
 					log.WithError(err).Error("could not decode webp")
-					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, err.Error())), nil
+					return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, err.Error())), nil
 				}
+
+				wand.Destroy()
 			default:
-				return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Unsupported File Format")), nil
+				return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, "Unsupported File Format")), nil
+			}
+			if ogWidth > MAX_PIXEL_WIDTH || ogHeight > MAX_PIXEL_HEIGHT {
+				return 400, utils.S2B(fmt.Sprintf(errInvalidRequest, fmt.Sprintf("Too Many Pixels (maximum %dx%d)", MAX_PIXEL_WIDTH, MAX_PIXEL_HEIGHT))), nil
 			}
 
 			files := datastructure.EmoteUtil.GetFilesMeta(fileDir)
@@ -242,6 +247,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				sizes := strings.Split(file[2], "x")
 				maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
 				maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
+				quality := file[3]
 				outFile := fmt.Sprintf("%v/%v.webp", fileDir, scope)
 
 				// Get calculed ratio for the size
@@ -253,25 +259,56 @@ func CreateEmoteRoute(router fiber.Router) {
 				sizeY[i] = int16(height)
 
 				// Create new boundaries for frames
-				cmd := exec.Command("convert", []string{
-					ogFilePath,
-					"-coalesce",
-					"-resize", fmt.Sprintf("%dx%d", width, height),
-					"-define", "webp:lossless=false,auto-filter=true,method=4",
-					outFile,
-				}...)
+				mw := imagick.NewMagickWand() // Get magick wand & read the original image
+				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
+					log.WithError(err).Error("SetResourceLimit")
+				}
+				if err := mw.ReadImage(ogFilePath); err != nil {
+					return 500, utils.S2B(fmt.Sprintf(errInvalidRequest, "Couldn't read original image: %s", err)), nil
+				}
 
-				// Print output to console for debugging
-				stderr, _ := cmd.StderrPipe()
-				go func() {
-					scan := bufio.NewScanner(stderr) // Create a scanner tied to stdout
-					fmt.Println("--- BEGIN " + cmd.String() + " CMD ---")
-					for scan.Scan() { // Capture stdout, appending it to cmd var and logging to console
-						fmt.Println(scan.Text())
+				// Merge all frames with coalesce
+				aw := mw.CoalesceImages()
+				if err = aw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
+					log.WithError(err).Error("SetResourceLimit")
+				}
+				mw.Destroy()
+				defer aw.Destroy()
+
+				// Set delays
+				mw = imagick.NewMagickWand()
+				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
+					log.WithError(err).Error("SetResourceLimit")
+				}
+				defer mw.Destroy()
+
+				// Add each frame to our animated image
+				mw.ResetIterator()
+				for ind := 0; ind < int(aw.GetNumberImages()); ind++ {
+					aw.SetIteratorIndex(ind)
+					img := aw.GetImage()
+
+					if err = img.ResizeImage(uint(width), uint(height), imagick.FILTER_LANCZOS); err != nil {
+						log.WithError(err).Errorf("ResizeImage i=%v", ind)
+						continue
 					}
-					fmt.Println("\n--- END CMD ---")
-				}()
-				err := cmd.Run() // Run the command
+					if err = mw.AddImage(img); err != nil {
+						log.WithError(err).Error("AddImage i=%v", ind)
+					}
+					img.Destroy()
+				}
+
+				// Done - convert to WEBP
+				q, _ := strconv.Atoi(quality)
+				if err = mw.SetImageCompressionQuality(uint(q)); err != nil {
+					log.WithError(err).Error("SetImageCompressionQuality")
+				}
+				if err = mw.SetImageFormat("webp"); err != nil {
+					log.WithError(err).Error("SetImageFormat")
+				}
+
+				// Write to file
+				err = mw.WriteImages(outFile, true)
 				if err != nil {
 					log.WithError(err).Error("cmd")
 					return 500, errInternalServer, nil
