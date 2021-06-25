@@ -3,6 +3,7 @@ package gql
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/configure"
@@ -48,8 +49,9 @@ func GQL(app fiber.Router) fiber.Router {
 	}, graphql.UseFieldResolvers())
 
 	rl := configure.Config.GetIntSlice("limits.route.gql")
+	origins := configure.Config.GetStringSlice("cors_origins")
 	gql.Use(cors.New(cors.Config{
-		AllowOrigins:  fmt.Sprintf("%v,%v,%v", configure.Config.GetString("website_url"), "chrome-extension://*", "moz-extension://*"),
+		AllowOrigins:  fmt.Sprintf("%v,%v,%v,%v", configure.Config.GetString("website_url"), strings.Join(origins, ","), "chrome-extension://*", "moz-extension://*"),
 		ExposeHeaders: "X-Collection-Size",
 		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
 	}))
