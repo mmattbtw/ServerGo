@@ -173,16 +173,18 @@ func GetRole(id *primitive.ObjectID) Role {
 }
 
 const (
-	RolePermissionEmoteCreate    int64 = 1 << iota // 1 - Allows creating emotes
-	RolePermissionEmoteEditOwned                   // 2 - Allows editing own emotes
-	RolePermissionEmoteEditAll                     // 4 - (Elevated) Allows editing all emotes
-	RolePermissionCreateReports                    // 8 - Allows creating reports
-	RolePermissionManageReports                    // 16 - (Elevated) Allows managing reports
-	RolePermissionBanUsers                         // 32 - (Elevated) Allows banning other users
-	RolePermissionAdministrator                    // 64 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
-	RolePermissionManageRoles                      // 128 - (Elevated) Allows managing roles
-	RolePermissionManageUsers                      // 256 - (Elevated) Allows managing users
-	RolePermissionManageEditors                    // 512 - Allows adding and removing editors from own channel
+	RolePermissionEmoteCreate          int64 = 1 << iota // 1 - Allows creating emotes
+	RolePermissionEmoteEditOwned                         // 2 - Allows editing own emotes
+	RolePermissionEmoteEditAll                           // 4 - (Elevated) Allows editing all emotes
+	RolePermissionCreateReports                          // 8 - Allows creating reports
+	RolePermissionManageReports                          // 16 - (Elevated) Allows managing reports
+	RolePermissionBanUsers                               // 32 - (Elevated) Allows banning other users
+	RolePermissionAdministrator                          // 64 - (Dangerous, Elevated) GRANTS ALL PERMISSIONS
+	RolePermissionManageRoles                            // 128 - (Elevated) Allows managing roles
+	RolePermissionManageUsers                            // 256 - (Elevated) Allows managing users
+	RolePermissionManageEditors                          // 512 - Allows adding and removing editors from own channel
+	RolePermissionEditEmoteGlobalState                   // 1024 - Allows editing the global state of an emote
+	RolePermissionEditApplicationMeta                    // 2048 - Allows editing global app metadata, such as the active featured broadcast
 
 	RolePermissionAll int64 = (1 << iota) - 1
 )
