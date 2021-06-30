@@ -2,6 +2,7 @@ package rest
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/badges"
@@ -38,15 +39,15 @@ func RestV2(app fiber.Router) fiber.Router {
 	restGroup.Get("/webext", func(c *fiber.Ctx) error {
 		// result := &WebExtResult{}
 
-		var platforms []*WebExtPlatform
-		err := configure.Config.UnmarshalKey("webext.platforms", &platforms)
+		var platforms []*Platform
+		err := configure.Config.UnmarshalKey("platforms", &platforms)
 		if err != nil {
 			return c.Status(500).SendString("Error decoding the config")
 		}
 
 		j, err := json.Marshal(platforms)
 		if err != nil {
-			return c.Status(500).SendString("Error decoding the config")
+			return c.Status(500).SendString(fmt.Sprintf("Error decoding the config: %v", err.Error()))
 		}
 
 		return c.Send(j)
@@ -55,12 +56,20 @@ func RestV2(app fiber.Router) fiber.Router {
 	return nil
 }
 
-type WebExtResult struct {
-	Platforms []*WebExtPlatform `json:"platforms"`
+type PlatformsResult struct {
+	Platforms []*Platform `json:"platforms"`
 }
 
-type WebExtPlatform struct {
-	ID         string `mapstructure:"id" json:"id"`
-	VersionTag string `mapstructure:"version_tag" json:"version_tag"`
-	New        bool   `mapstructure:"new" json:"new"`
+type Platform struct {
+	ID          string             `mapstructure:"id" json:"id"`
+	VersionTag  string             `mapstructure:"version_tag" json:"version_tag"`
+	New         bool               `mapstructure:"new" json:"new"`
+	Subversions *[]PlatformVariant `mapstructure:"variants" json:"variants"`
+}
+
+type PlatformVariant struct {
+	Name    string `json:"name" mapstructure:"name"`
+	Author  string `json:"author" mapstructure:"author"`
+	Version string `json:"version" mapstructure:"version"`
+	URL     string `json:"url" mapstructure:"url"`
 }
