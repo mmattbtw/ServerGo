@@ -30,6 +30,8 @@ type Mutation {
   banUser(victim_id: String!, expire_at: String, reason: String): Response
   # Unban a user. Requires permission.
   unbanUser(victim_id: String!, reason: String): Response
+  # Mark a notification as read
+  markNotificationsRead(notification_ids: [String!]!): Response
 }
 
 type Response {
@@ -229,6 +231,8 @@ type User {
   follower_count: Int!
   # Get the user's current live broadcast
   broadcast: Broadcast
+  # Get the user's unread notifications
+  notifications: [Notification]!
 }
 
 type UserPartial {
@@ -322,4 +326,27 @@ type Broadcast {
   mature: Boolean!
   started_at: String!
   user_id: String!
+}
+
+type Notification {
+  # The ID of the notification
+  id: String!
+  # Whether the notification is available to all users on the platform
+  announcement: Boolean!
+  # The title of the notification
+  title: String!
+  # The notification's formattable message parts
+  message_parts: [NotificationMessagePart!]!
+
+  # The users mentioned in this notification
+  users: [UserPartial]!
+  # The emotes mentioned in this notification
+  emotes: [Emote]!
+  # Whether the notification has been read
+  read: Boolean!
+}
+
+type NotificationMessagePart {
+  type: Int!
+  data: String!
 }

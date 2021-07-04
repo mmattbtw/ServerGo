@@ -65,6 +65,29 @@ const (
 	EmoteVisibilityAll int32 = (1 << iota) - 1
 )
 
+var EmoteVisibilitySimpleMap = map[int32]string{
+	EmoteVisibilityPrivate:                  "PRIVATE",
+	EmoteVisibilityGlobal:                   "GLOBAL",
+	EmoteVisibilityUnlisted:                 "UNLISTED",
+	EmoteVisibilityOverrideFFZ:              "OVERRIDE_FFZ",
+	EmoteVisibilityOverrideBTTV:             "OVERRIDE_BTTV",
+	EmoteVisibilityOverrideTwitchSubscriber: "OVERRIDE_TWITCH_SUBSCRIBER",
+	EmoteVisibilityOverrideTwitchGlobal:     "OVERRIDE_TWITCH_GLOBAL",
+}
+
+func (e *Emote) GetSimpleVisibility() []string {
+	simpleVis := []string{}
+	for vis, s := range EmoteVisibilitySimpleMap {
+		if !utils.BitField.HasBits(int64(e.Visibility), int64(vis)) {
+			continue
+		}
+
+		simpleVis = append(simpleVis, s)
+	}
+
+	return simpleVis
+}
+
 const (
 	EmoteStatusDeleted int32 = iota - 1
 	EmoteStatusProcessing
@@ -304,3 +327,38 @@ type Broadcast struct {
 	StartedAt    string   `json:"started_at"`
 	UserID       string   `json:"user_id"`
 }
+
+type Notification struct {
+	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Announcement bool               `json:"announcement" bson:"announcement"` // If true, the notification is global and visible to all users regardless of targets
+
+	Title        string                    `json:"title" bson:"title"`                 // The notification's heading / title
+	MessageParts []NotificationMessagePart `json:"message_parts" bson:"message_parts"` // The parts making up the notification's formatted message
+
+	Read   bool     `json:"read" bson:"read"`
+	Users  []*User  `json:"users" bson:"-"`  // The users mentioned in this notification
+	Emotes []*Emote `json:"emotes" bson:"-"` // The emotesm entioned in this notification
+}
+
+type NotificationMessagePart struct {
+	Type NotificationContentMessagePartType `json:"part_type" bson:"part_type"` // The type of this part
+
+	Text    *string             `json:"text" bson:"text"`
+	Mention *primitive.ObjectID `json:"mention" bson:"mention"`
+}
+
+type NotificationReadState struct {
+	TargetUser   primitive.ObjectID `json:"target" bson:"target"`                // The user targeted to see the notification
+	Notification primitive.ObjectID `json:"notification_id" bson:"notification"` // The notification that can be read
+	Read         bool               `json:"read" bson:"read"`                    // Whether the user read the notification
+	ReadAt       *time.Time         `json:"read_at" bson:"read_at"`              // When the notification was read
+}
+
+const (
+	NotificationMessagePartTypeText NotificationContentMessagePartType = 1 + iota
+	NotificationMessagePartTypeUserMention
+	NotificationMessagePartTypeEmoteMention
+	NotificationMessagePartTypeRoleMention
+)
+
+type NotificationContentMessagePartType int8

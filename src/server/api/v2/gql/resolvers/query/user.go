@@ -9,6 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -536,4 +537,141 @@ func (r *UserResolver) Broadcast() (*datastructure.Broadcast, error) {
 	}
 
 	return stream, nil
+}
+
+func (r *UserResolver) Notifications() ([]*NotificationResolver, error) {
+	// Find notifications readable by this user
+	var data []*datastructure.Notification
+
+	pipeline := mongo.Pipeline{
+		bson.D{ // Step 1: Match only readstates where the target is the user
+			bson.E{
+				Key: "$match",
+				Value: bson.M{
+					"target": r.v.ID,
+				},
+			},
+		},
+		bson.D{ // Step 2: Find the target notification from the other collection
+			bson.E{
+				Key: "$lookup",
+				Value: bson.M{
+					"from":         "notifications", // Target the collection containing notification data
+					"localField":   "notification",  // Use the notification field, which is the ID of the notification
+					"foreignField": "_id",           // Match with foreign collection's ObjectID
+					"as":           "notification",  // Output as "notification" field
+				},
+			},
+		},
+		bson.D{ // Step 3: Unwind the array of notifications (but this is ID match, therefore there is only 1)
+			bson.E{
+				Key:   "$unwind",
+				Value: "$notification",
+			},
+		},
+		bson.D{ // Step 4: Add the "read" field from the notification read state into the notification object
+			bson.E{
+				Key:   "$addFields",
+				Value: bson.M{"notification.read": "$read"},
+			},
+		},
+		bson.D{ // Step 5: Replace the root input with the notification that now has the readstate information :tf:
+			bson.E{
+				Key:   "$replaceWith",
+				Value: "$notification",
+			},
+		},
+	}
+	cur, err := mongo.Database.Collection("notifications_read").Aggregate(r.ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	if err := cur.All(r.ctx, &data); err != nil {
+		return nil, err
+	}
+
+	// Transform all notifications to builders
+	notifications := []actions.NotificationBuilder{}
+	for _, n := range data {
+		if n == nil {
+			continue
+		}
+
+		notifications = append(notifications, actions.Notifications.CreateFrom(*n))
+	}
+
+	if len(notifications) == 0 {
+		return []*NotificationResolver{}, nil
+	}
+
+	var (
+		mentionedUserIDs  []primitive.ObjectID
+		mentionedUsers    []*datastructure.User
+		mentionedEmoteIDs []primitive.ObjectID
+		mentionedEmotes   []*datastructure.Emote
+		tempmap           map[primitive.ObjectID]bool
+		resolvers         = []*NotificationResolver{}
+	)
+
+	for i, n := range notifications {
+		n, tempmap = n.GetMentionedUsers(r.ctx)
+		for k := range tempmap {
+			if utils.ContainsObjectID(mentionedUserIDs, k) { // Skip if the user is already added to mentions
+				continue
+			}
+			mentionedUserIDs = append(mentionedUserIDs, k)
+		}
+		n, tempmap = n.GetMentionedEmotes(r.ctx)
+		for k := range tempmap {
+			if utils.ContainsObjectID(mentionedEmoteIDs, k) { // Skip if the emote is already added to mentions
+				continue
+			}
+			mentionedEmoteIDs = append(mentionedEmoteIDs, k)
+		}
+		notifications[i] = n
+	}
+
+	if len(mentionedUserIDs) > 0 {
+		if err := cache.Find(r.ctx, "users", "", bson.M{
+			"_id": bson.M{
+				"$in": mentionedUserIDs,
+			},
+		}, &mentionedUsers); err != nil {
+			log.WithError(err).Error("mongo")
+		}
+	}
+	if len(mentionedEmoteIDs) > 0 {
+		if err := cache.Find(r.ctx, "emotes", "", bson.M{
+			"_id": bson.M{
+				"$in": mentionedEmoteIDs,
+			},
+		}, &mentionedEmotes); err != nil {
+			log.WithError(err).Error("mongo")
+		}
+	}
+
+	for _, n := range notifications {
+		for _, u := range mentionedUsers {
+			if !utils.ContainsObjectID(n.MentionedUsers, u.ID) {
+				continue
+			}
+			n.Notification.Users = append(n.Notification.Users, u)
+		}
+		for _, e := range mentionedEmotes {
+			if !utils.ContainsObjectID(n.MentionedEmotes, e.ID) {
+				continue
+			}
+			n.Notification.Emotes = append(n.Notification.Emotes, e)
+		}
+
+		notify := n.Notification
+		resolver, err := GenerateNotificationResolver(r.ctx, &notify, r.fields)
+		if err != nil {
+			log.WithError(err).Error("GenerateNotificationResolver")
+			continue
+		}
+		resolvers = append(resolvers, resolver)
+	}
+
+	return resolvers, nil
 }

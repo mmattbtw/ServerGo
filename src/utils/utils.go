@@ -6,6 +6,8 @@ import (
 	"math"
 	"reflect"
 	"unsafe"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // GenerateRandomBytes returns securely generated random bytes.
@@ -132,6 +134,16 @@ func SliceIndexOf(s []string, val string) int {
 
 func Contains(s []string, compare string) bool {
 	for _, v := range s {
+		if v == compare {
+			return true
+		}
+	}
+
+	return false
+}
+
+func ContainsObjectID(oid []primitive.ObjectID, compare primitive.ObjectID) bool {
+	for _, v := range oid {
 		if v == compare {
 			return true
 		}
