@@ -116,7 +116,7 @@ func init() {
 		log.WithError(err).Fatal("mongo")
 	}
 
-	_, err = Database.Collection("notifications").Indexes().CreateMany(ctx, []mongo.IndexModel{})
+	err = Database.CreateCollection(ctx, "notifications")
 	if err != nil {
 		log.WithError(err).Fatal("mongo")
 	}
