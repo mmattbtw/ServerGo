@@ -233,8 +233,10 @@ type User {
   follower_count: Int!
   # Get the user's current live broadcast
   broadcast: Broadcast
-  # Get the user's unread notifications
+  # Get the user's most recent notifications
   notifications: [Notification]!
+  # Get amount of unread notifications this user has
+  notification_count: Int!
 }
 
 type UserPartial {
@@ -337,6 +339,8 @@ type Notification {
   announcement: Boolean!
   # The title of the notification
   title: String!
+  # When this notification was created
+  timestamp: String!
   # The notification's formattable message parts
   message_parts: [NotificationMessagePart!]!
 
@@ -346,6 +350,8 @@ type Notification {
   emotes: [Emote]!
   # Whether the notification has been read
   read: Boolean!
+  # When this notification was read
+  read_at: String
 }
 
 type NotificationMessagePart {

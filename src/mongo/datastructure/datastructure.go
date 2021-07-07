@@ -120,14 +120,16 @@ type User struct {
 	EmoteSlots      int32               `json:"emote_slots" bson:"emote_slots"` // User's maximum channel emote slots
 
 	// Relational Data
-	Emotes       *[]*Emote    `json:"emotes" bson:"-"`
-	OwnedEmotes  *[]*Emote    `json:"owned_emotes" bson:"-"`
-	Editors      *[]*User     `json:"editors" bson:"-"`
-	Role         *Role        `json:"role" bson:"-"`
-	EditorIn     *[]*User     `json:"editor_in" bson:"-"`
-	AuditEntries *[]*AuditLog `json:"audit_entries" bson:"-"`
-	Reports      *[]*Report   `json:"reports" bson:"-"`
-	Bans         *[]*Ban      `json:"bans" bson:"-"`
+	Emotes            *[]*Emote       `json:"emotes" bson:"-"`
+	OwnedEmotes       *[]*Emote       `json:"owned_emotes" bson:"-"`
+	Editors           *[]*User        `json:"editors" bson:"-"`
+	Role              *Role           `json:"role" bson:"-"`
+	EditorIn          *[]*User        `json:"editor_in" bson:"-"`
+	AuditEntries      *[]*AuditLog    `json:"audit_entries" bson:"-"`
+	Reports           *[]*Report      `json:"reports" bson:"-"`
+	Bans              *[]*Ban         `json:"bans" bson:"-"`
+	Notifications     []*Notification `json:"-" bson:"-"`
+	NotificationCount *int64          `json:"-" bson:"-"`
 }
 
 // Get the user's maximum emote slot count
@@ -336,9 +338,10 @@ type Notification struct {
 	Title        string                    `json:"title" bson:"title"`                 // The notification's heading / title
 	MessageParts []NotificationMessagePart `json:"message_parts" bson:"message_parts"` // The parts making up the notification's formatted message
 
-	Read   bool     `json:"read" bson:"read"`
-	Users  []*User  `json:"users" bson:"-"`  // The users mentioned in this notification
-	Emotes []*Emote `json:"emotes" bson:"-"` // The emotesm entioned in this notification
+	Read   bool      `json:"read" bson:"read,omitempty"`
+	ReadAt time.Time `json:"read_at" bson:"read_at,omitempty"`
+	Users  []*User   `json:"users" bson:"-"`  // The users mentioned in this notification
+	Emotes []*Emote  `json:"emotes" bson:"-"` // The emotesm entioned in this notification
 }
 
 type NotificationMessagePart struct {

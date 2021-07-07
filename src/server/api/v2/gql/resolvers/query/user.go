@@ -48,6 +48,21 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		return nil, nil
 	}
 
+	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
+	actorCanEdit := false
+	if usr != nil {
+		actorCanEdit = usr.ID == user.ID
+
+		if !actorCanEdit {
+			for _, e := range user.EditorIDs {
+				if e == usr.ID {
+					actorCanEdit = true
+					break
+				}
+			}
+		}
+	}
+
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
 		user.OwnedEmotes = &[]*datastructure.Emote{}
 		if err := cache.Find(ctx, "emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
@@ -161,7 +176,6 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		}
 	}
 
-	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
 	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != datastructure.UserRankAdmin && usr.Rank != datastructure.UserRankModerator) && user.Reports == nil {
 		user.Reports = &[]*datastructure.Report{}
 		if err := cache.Find(ctx, "users", fmt.Sprintf("user:%s:reports", user.ID.Hex()), bson.M{
@@ -216,6 +230,85 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		}
 
 		_ = res.All(ctx, user.Bans)
+	}
+
+	if _, ok := fields["notifications"]; ok && usrValid && actorCanEdit {
+		// Find notifications readable by this user
+		pipeline := mongo.Pipeline{
+			bson.D{ // Step 1: Match only readstates where the target is the user
+				bson.E{
+					Key: "$match",
+					Value: bson.M{
+						"target": user.ID,
+					},
+				},
+			},
+			bson.D{
+				bson.E{
+					Key: "$sort",
+					Value: bson.M{
+						"_id": -1,
+					},
+				},
+			},
+			bson.D{
+				bson.E{
+					Key:   "$limit",
+					Value: 50,
+				},
+			},
+			bson.D{ // Step 2: Find the target notification from the other collection
+				bson.E{
+					Key: "$lookup",
+					Value: bson.M{
+						"from":         "notifications", // Target the collection containing notification data
+						"localField":   "notification",  // Use the notification field, which is the ID of the notification
+						"foreignField": "_id",           // Match with foreign collection's ObjectID
+						"as":           "notification",  // Output as "notification" field
+					},
+				},
+			},
+			bson.D{ // Step 3: Unwind the array of notifications (but this is ID match, therefore there is only 1)
+				bson.E{
+					Key:   "$unwind",
+					Value: "$notification",
+				},
+			},
+			bson.D{ // Step 4: Add the "read" field from the notification read state into the notification object
+				bson.E{
+					Key: "$addFields",
+					Value: bson.M{
+						"notification.read":    "$read",
+						"notification.read_at": "$read_at",
+					},
+				},
+			},
+			bson.D{ // Step 5: Replace the root input with the notification that now has the readstate information :tf:
+				bson.E{
+					Key:   "$replaceWith",
+					Value: "$notification",
+				},
+			},
+		}
+		cur, err := mongo.Database.Collection("notifications_read").Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+		if err := cur.All(ctx, &user.Notifications); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, ok := fields["notification_count"]; ok && usrValid && actorCanEdit {
+		// Get count of notifications
+		count, err := cache.GetCollectionSize(ctx, "notifications_read", bson.M{
+			"target": user.ID,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		user.NotificationCount = &count
 	}
 
 	r := &UserResolver{
@@ -540,59 +633,9 @@ func (r *UserResolver) Broadcast() (*datastructure.Broadcast, error) {
 }
 
 func (r *UserResolver) Notifications() ([]*NotificationResolver, error) {
-	// Find notifications readable by this user
-	var data []*datastructure.Notification
-
-	pipeline := mongo.Pipeline{
-		bson.D{ // Step 1: Match only readstates where the target is the user
-			bson.E{
-				Key: "$match",
-				Value: bson.M{
-					"target": r.v.ID,
-				},
-			},
-		},
-		bson.D{ // Step 2: Find the target notification from the other collection
-			bson.E{
-				Key: "$lookup",
-				Value: bson.M{
-					"from":         "notifications", // Target the collection containing notification data
-					"localField":   "notification",  // Use the notification field, which is the ID of the notification
-					"foreignField": "_id",           // Match with foreign collection's ObjectID
-					"as":           "notification",  // Output as "notification" field
-				},
-			},
-		},
-		bson.D{ // Step 3: Unwind the array of notifications (but this is ID match, therefore there is only 1)
-			bson.E{
-				Key:   "$unwind",
-				Value: "$notification",
-			},
-		},
-		bson.D{ // Step 4: Add the "read" field from the notification read state into the notification object
-			bson.E{
-				Key:   "$addFields",
-				Value: bson.M{"notification.read": "$read"},
-			},
-		},
-		bson.D{ // Step 5: Replace the root input with the notification that now has the readstate information :tf:
-			bson.E{
-				Key:   "$replaceWith",
-				Value: "$notification",
-			},
-		},
-	}
-	cur, err := mongo.Database.Collection("notifications_read").Aggregate(r.ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	if err := cur.All(r.ctx, &data); err != nil {
-		return nil, err
-	}
-
 	// Transform all notifications to builders
 	notifications := []actions.NotificationBuilder{}
-	for _, n := range data {
+	for _, n := range r.v.Notifications {
 		if n == nil {
 			continue
 		}
@@ -674,4 +717,12 @@ func (r *UserResolver) Notifications() ([]*NotificationResolver, error) {
 	}
 
 	return resolvers, nil
+}
+
+func (r *UserResolver) NotificationCount() int32 {
+	if r.v.NotificationCount == nil {
+		return 0
+	}
+
+	return int32(*r.v.NotificationCount)
 }
