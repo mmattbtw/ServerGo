@@ -159,7 +159,9 @@ type Emote {
   # Get audit log entries for this emote.
   audit_entries: [AuditLog!]
   # Get the channels the emote is added to
-  channels: [User]
+  channels(page: Int, limit: Int): [UserPartial]
+  # Get the amount of channels the emote is added to
+  channel_count: Int!
   # Get the owner of this emote.
   owner: User
   # Get the reports on emote. Requries Permission.

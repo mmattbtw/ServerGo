@@ -58,14 +58,22 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 	if emote.Channels == nil {
 		if _, ok := fields["channels"]; ok {
 			emote.Channels = &[]*datastructure.User{}
+		}
+	}
 
-			if err := cache.Find(ctx, "users", fmt.Sprintf("emotes:%s", emote.ID.Hex()), bson.M{
+	if emote.ChannelCount == nil {
+		if _, ok := fields["channel_count"]; ok {
+			// Get count of notifications
+			count, err := cache.GetCollectionSize(ctx, "users", bson.M{
 				"emotes": bson.M{
 					"$in": []primitive.ObjectID{emote.ID},
 				},
-			}, emote.Channels); err != nil {
-				return nil, resolvers.ErrInternalServer
+			})
+			if err != nil {
+				return nil, err
 			}
+
+			emote.ChannelCount = utils.Int32Pointer(int32(count))
 		}
 	}
 
@@ -156,10 +164,6 @@ func (r *EmoteResolver) CreatedAt() string {
 	return r.v.ID.Timestamp().Format(time.RFC3339)
 }
 
-func (r *EmoteResolver) ChannelCount() int32 {
-	return *r.v.ChannelCount
-}
-
 func (r *EmoteResolver) Owner() (*UserResolver, error) {
 	resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, &r.v.OwnerID, r.fields["owner"].Children)
 	if err != nil {
@@ -211,9 +215,71 @@ func (r *EmoteResolver) AuditEntries() (*[]*auditResolver, error) {
 	return &resolvers, nil
 }
 
-func (r *EmoteResolver) Channels() (*[]*UserResolver, error) {
-	if r.v.Channels == nil {
-		return nil, nil
+func (r *EmoteResolver) Channels(ctx context.Context, args struct {
+	Page  *int32
+	Limit *int32
+}) (*[]*UserResolver, error) {
+	emote := r.v
+
+	// Get queried page
+	page := int32(1)
+	if args.Page != nil {
+		page = *args.Page
+		if page < 1 {
+			page = 1
+		}
+	}
+
+	// Define limit
+	limit := int32(20)
+	if args.Limit != nil {
+		limit = *args.Limit
+		if limit < 1 || limit > 250 {
+			limit = 250
+		}
+	}
+
+	// Get the users with this emote
+	pipeline := mongo.Pipeline{
+		bson.D{
+			bson.E{
+				Key: "$match",
+				Value: bson.M{
+					"emotes": bson.M{"$in": []primitive.ObjectID{emote.ID}},
+				},
+			},
+		},
+		bson.D{bson.E{
+			Key: "$set",
+			Value: bson.M{
+				"role": bson.M{"$ifNull": bson.A{"$role", datastructure.DefaultRole.ID}},
+			},
+		}},
+		bson.D{
+			bson.E{
+				Key: "$lookup",
+				Value: bson.M{
+					"from":         "roles",
+					"localField":   "role",
+					"foreignField": "_id",
+					"as":           "_role",
+				},
+			},
+		},
+		bson.D{bson.E{Key: "$sort", Value: bson.M{"_role.position": -1}}},
+		bson.D{bson.E{Key: "$skip", Value: utils.Int64Pointer(int64((page - 1) * limit))}},
+		bson.D{bson.E{Key: "$limit", Value: utils.Int64Pointer(int64(limit))}},
+	}
+
+	if cur, err := mongo.Database.Collection("users").Aggregate(ctx, pipeline); err != nil {
+		log.WithError(err).Error("mongo")
+		return nil, resolvers.ErrInternalServer
+	} else {
+		err = cur.All(ctx, emote.Channels)
+		if err != nil {
+			log.WithError(err).Error("mongo")
+			return nil, err
+		}
 	}
 
 	u := *r.v.Channels
@@ -228,6 +294,10 @@ func (r *EmoteResolver) Channels() (*[]*UserResolver, error) {
 	}
 
 	return &users, nil
+}
+
+func (r *EmoteResolver) ChannelCount() int32 {
+	return *r.v.ChannelCount
 }
 
 func (r *EmoteResolver) Reports() (*[]*reportResolver, error) {
