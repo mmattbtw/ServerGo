@@ -10,6 +10,12 @@ conn_uri: 0.0.0.0:8080
 conn_type: tcp
 # URL to the web-app
 website_url: https://example.com/
+
+# CORS Settings (only applies to GQL.)
+
+cors_origins: []
+cors_wildcard: true
+
 # Cookie settings
 cookie_domain: example.com
 cookie_secure: true
