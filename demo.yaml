@@ -12,9 +12,12 @@ conn_type: tcp
 website_url: https://example.com/
 
 # CORS Settings (only applies to GQL.)
-
 cors_origins: []
 cors_wildcard: true
+
+# WebSocket Settings
+websocket:
+  enabled: true
 
 # Cookie settings
 cookie_domain: example.com

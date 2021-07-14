@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
@@ -49,6 +50,10 @@ func WebSocket(app fiber.Router) {
 	ws := app.Group("/ws")
 
 	ws.Use("/", func(c *fiber.Ctx) error {
+		if !configure.Config.GetBool("websocket.enabled") {
+			return c.Status(503).SendString("WebSocket is currently disabled")
+		}
+
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
