@@ -13,7 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v8 v8.11.0
 	github.com/gobuffalo/packr/v2 v2.8.1
-	github.com/gofiber/fiber/v2 v2.14.0
+	github.com/gofiber/fiber/v2 v2.15.0
 	github.com/gofiber/websocket/v2 v2.0.7
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2 // indirect
@@ -39,5 +39,3 @@ require (
 )
 
 replace github.com/graph-gophers/graphql-go => github.com/troydota/graphql-go v0.0.0-20210702180404-92fc941a47cf
-
-replace github.com/gofiber/fiber/v2 => github.com/troydota/fiber/v2 v2.6.1-0.20210702175935-00374300a53b
