@@ -2,7 +2,7 @@ name: 7TV Go API Deploy
 
 on:
   push:
-    branches: [dev]
+    branches: [stage]
 
   workflow_dispatch:
 
