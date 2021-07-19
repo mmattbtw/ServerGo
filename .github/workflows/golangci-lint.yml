@@ -8,13 +8,15 @@ on:
       - dev
   pull_request:
 jobs:
-  golangci:
+  linting:
     name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+      - uses: actions/cache@v2
+        id: cache
         with:
-          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: latest
+          path: cache
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+      - name: Linting
+        run: export GOLANGCI_LINT_CACHE=$GITHUB_WORKSPACE/cache && export GOPATH=$GITHUB_WORKSPACE/cache && wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.41.1 && $GITHUB_WORKSPACE/bin/golangci-lint run --print-resources-usage --timeout 5m0s
