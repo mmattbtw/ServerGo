@@ -29,7 +29,7 @@ type EntitlementWithBadge struct {
 // Entitlement Kind: Role
 type EntitlementWithRole struct {
 	*Entitlement
-	Data entitledrole `json:"data" bson:"data"`
+	Data EntitledRole `json:"data" bson:"data"`
 }
 
 // Entitlement Kind: EmoteSet
