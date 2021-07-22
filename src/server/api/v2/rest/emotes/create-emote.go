@@ -26,9 +26,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/troydota/imagick/imagick"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 const MAX_FRAME_COUNT = 4096
@@ -246,8 +246,8 @@ func CreateEmoteRoute(router fiber.Router) {
 			for i, file := range files {
 				scope := file[1]
 				sizes := strings.Split(file[2], "x")
-				maxWidth, _ := strconv.ParseFloat(sizes[0], 32)
-				maxHeight, _ := strconv.ParseFloat(sizes[1], 32)
+				maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
+				maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
 				quality := file[3]
 				outFile := fmt.Sprintf("%v/%v.webp", fileDir, scope)
 
@@ -289,7 +289,7 @@ func CreateEmoteRoute(router fiber.Router) {
 					aw.SetIteratorIndex(ind)
 					img := aw.GetImage()
 
-					if err = img.ResizeImage(uint(width), uint(height), imagick.FILTER_LANCZOS, 0); err != nil {
+					if err = img.ResizeImage(uint(width), uint(height), imagick.FILTER_LANCZOS); err != nil {
 						log.WithError(err).Errorf("ResizeImage i=%v", ind)
 						continue
 					}
