@@ -16,26 +16,26 @@ type Entitlement struct {
 
 // Entitlement Kind: Subscription
 type EntitlementWithSubscription struct {
-	*Entitlement
+	Entitlement
 	Data EntitledSubscription `json:"data" bson:"data"`
 }
 
 // Entitlement Kind: Badge
 type EntitlementWithBadge struct {
-	*Entitlement
+	Entitlement
 	Data EntitledBadge `json:"data" bson:"data"`
 }
 
 // Entitlement Kind: Role
 type EntitlementWithRole struct {
-	*Entitlement
+	Entitlement
 	Data EntitledRole `json:"data" bson:"data"`
 }
 
 // Entitlement Kind: EmoteSet
 type EntitlementWithEmoteSet struct {
-	*Entitlement
-	Data EntitlementEmoteSet `json:"data" bson:"data"`
+	Entitlement
+	Data EntitledEmoteSet `json:"data" bson:"data"`
 }
 
 // A string representing an Entitlement Kind
@@ -50,23 +50,23 @@ var (
 
 type EntitledSubscription struct {
 	// The ID of the subscription
-	SubscriptionID primitive.ObjectID `json:"subscription_id" bson:"subscription_id"`
+	ItemID primitive.ObjectID `json:"item_id" bson:"item_id"`
 }
 
 type EntitledBadge struct {
-	BadgeID  primitive.ObjectID `json:"badge_id" bson:"badge_id"`
+	ItemID   primitive.ObjectID `json:"item_id" bson:"item_id"`
 	Selected bool               `json:"selected" bson:"selected"`
 }
 
 type EntitledRole struct {
-	RoleID primitive.ObjectID `json:"role_id" bson:"role_id"`
+	ItemID primitive.ObjectID `json:"item_id" bson:"item_id"`
 	// Whether or not the entitlemet will cause the user's role to be overriden,
 	// even if their current role has a higher position
 	Override bool `json:"override" bson:"override"`
 }
 
-type EntitlementEmoteSet struct {
-	SetID      primitive.ObjectID   `json:"set_id" bson:"set_id"`
+type EntitledEmoteSet struct {
+	ItemID     primitive.ObjectID   `json:"item_id" bson:"item_id"`
 	UnicodeTag string               `json:"unicode_tag" bson:"unicode_tag"`
 	EmoteIDs   []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
 
