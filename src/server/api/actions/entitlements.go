@@ -74,6 +74,31 @@ func (b EntitlementBuilder) marshalData(data interface{}) EntitlementBuilder {
 	return b
 }
 
+func (b EntitlementBuilder) ReadSubscriptionData() datastructure.EntitledSubscription {
+	return b.unmarshalData().(datastructure.EntitledSubscription)
+}
+
+func (b EntitlementBuilder) ReadBadgeData() datastructure.EntitledBadge {
+	return b.unmarshalData().(datastructure.EntitledBadge)
+}
+
+func (b EntitlementBuilder) ReadRoleData() datastructure.EntitledRole {
+	return b.unmarshalData().(datastructure.EntitledRole)
+}
+
+func (b EntitlementBuilder) ReadEmoteSetData() datastructure.EntitledEmoteSet {
+	return b.unmarshalData().(datastructure.EntitledEmoteSet)
+}
+
+func (b EntitlementBuilder) unmarshalData() interface{} {
+	var data interface{}
+	if err := bson.Unmarshal(b.Entitlement.Data, &data); err != nil {
+		log.WithError(err).Error("bson")
+	}
+
+	return data
+}
+
 // Create: Get a new entitlement builder
 func (entitlements) Create() EntitlementBuilder {
 	return EntitlementBuilder{
