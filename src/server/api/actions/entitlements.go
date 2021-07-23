@@ -12,8 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Write: Save this Entitlement to persistence
 func (b EntitlementBuilder) Write(ctx context.Context) error {
-	// Create new Object ID if this is a new notification
+	// Create new Object ID if this is a new entitlement
 	if b.Entitlement.ID.IsZero() {
 		b.Entitlement.ID = primitive.NewObjectID()
 	}
@@ -74,22 +75,27 @@ func (b EntitlementBuilder) marshalData(data interface{}) EntitlementBuilder {
 	return b
 }
 
+// ReadSubscriptionData: Read the data as an Entitled Subscription
 func (b EntitlementBuilder) ReadSubscriptionData() datastructure.EntitledSubscription {
 	return b.unmarshalData().(datastructure.EntitledSubscription)
 }
 
+// ReadBadgeData: Read the data as an Entitled Badge
 func (b EntitlementBuilder) ReadBadgeData() datastructure.EntitledBadge {
 	return b.unmarshalData().(datastructure.EntitledBadge)
 }
 
+// ReadRoleData: Read the data as an Entitled Role
 func (b EntitlementBuilder) ReadRoleData() datastructure.EntitledRole {
 	return b.unmarshalData().(datastructure.EntitledRole)
 }
 
+// ReadEmoteSetData: Read the data as an Entitled Emote Set
 func (b EntitlementBuilder) ReadEmoteSetData() datastructure.EntitledEmoteSet {
 	return b.unmarshalData().(datastructure.EntitledEmoteSet)
 }
 
+// unmarshalData: Parse the data from a bson byte slice into a struct
 func (b EntitlementBuilder) unmarshalData() interface{} {
 	var data interface{}
 	if err := bson.Unmarshal(b.Entitlement.Data, &data); err != nil {
