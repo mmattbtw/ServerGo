@@ -24,10 +24,10 @@ type Entitlement struct {
 type EntitlementKind string
 
 var (
-	EntitlementKindSubscription EntitlementKind = "SUBSCRIPTION" // Subscription Entitlement
-	EntitlementKindBadge        EntitlementKind = "BADGE"        // Badge Entitlement
-	EntitlementKindRole         EntitlementKind = "ROLE"         // Role Entitlement
-	EntitlementKindEmoteSet     EntitlementKind = "EMOTE_SET"    // Emote Set Entitlement
+	EntitlementKindSubscription = EntitlementKind("SUBSCRIPTION") // Subscription Entitlement
+	EntitlementKindBadge        = EntitlementKind("BADGE")        // Badge Entitlement
+	EntitlementKindRole         = EntitlementKind("ROLE")         // Role Entitlement
+	EntitlementKindEmoteSet     = EntitlementKind("EMOTE_SET")    // Emote Set Entitlement
 )
 
 // (Data) Subscription binding in an Entitlement
