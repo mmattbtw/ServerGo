@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/troydota/imagick/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
