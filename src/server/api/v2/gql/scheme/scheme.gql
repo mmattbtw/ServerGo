@@ -36,6 +36,8 @@ type Mutation {
   markNotificationsRead(notification_ids: [String!]!): Response
   # Edit the application
   editApp(properties: MetaInput!): Response
+  # Create a new Entitlement
+  createEntitlement(kind: String!, Data: EntitlementCreateInput!): Response
 }
 
 type Response {
@@ -110,6 +112,43 @@ input ChannelEmoteInput {
 
 input MetaInput {
   featured_broadcast: String
+}
+
+enum EntitlementKind {
+  SUBSCRIPTION
+  BADGE
+  ROLE
+  EMOTE_SET
+}
+
+# Data for an Entitlement
+# Only a single field can be picked
+input EntitlementCreateInput {
+  subscription: EntitledSubscription
+}
+
+# Subscription entitlement data
+input EntitledSubscription {
+  item_id: String!
+}
+
+# Badge entitlement data
+input EntitledBadge {
+  item_id: String!
+  selected: Boolean!
+}
+
+# Role entitlement data
+input EntitledRole {
+  item_id: String!
+  override: Boolean
+}
+
+# Emote Set entitlement data
+input EntitledEmoteSet {
+  item_id: String!
+  unicode_tag: String
+  emote_ids: [String!]
 }
 
 type AuditLog {
