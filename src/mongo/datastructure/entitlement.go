@@ -1,41 +1,20 @@
 package datastructure
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Entitlement struct {
 	ID primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	// Kind represents what item this entitlement grants
 	Kind EntitlementKind `json:"kind" bson:"kind"`
 	// Data referencing the entitled item
-	Data interface{} `json:"data" bson:"data"`
+	Data bson.Raw `json:"data" bson:"data"`
 	// The user who is entitled to the item
 	UserID primitive.ObjectID `json:"user_id" bson:"user_id"`
 	// Wether this entitlement is currently inactive
 	Disabled bool `json:"disabled,omitempty" bson:"disabled,omitempty"`
-}
-
-// Entitlement Kind: Subscription
-type EntitlementWithSubscription struct {
-	Entitlement
-	Data EntitledSubscription `json:"data" bson:"data"`
-}
-
-// Entitlement Kind: Badge
-type EntitlementWithBadge struct {
-	Entitlement
-	Data EntitledBadge `json:"data" bson:"data"`
-}
-
-// Entitlement Kind: Role
-type EntitlementWithRole struct {
-	Entitlement
-	Data EntitledRole `json:"data" bson:"data"`
-}
-
-// Entitlement Kind: EmoteSet
-type EntitlementWithEmoteSet struct {
-	Entitlement
-	Data EntitledEmoteSet `json:"data" bson:"data"`
 }
 
 // A string representing an Entitlement Kind

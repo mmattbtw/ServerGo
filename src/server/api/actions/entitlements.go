@@ -5,6 +5,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,8 +13,6 @@ import (
 )
 
 func (b EntitlementBuilder) Write(ctx context.Context) error {
-	upsert := true
-
 	// Create new Object ID if this is a new notification
 	if b.Entitlement.ID.IsZero() {
 		b.Entitlement.ID = primitive.NewObjectID()
@@ -22,7 +21,7 @@ func (b EntitlementBuilder) Write(ctx context.Context) error {
 	if _, err := mongo.Database.Collection("entitlements").UpdateByID(ctx, b.Entitlement.ID, bson.M{
 		"$set": b.Entitlement,
 	}, &options.UpdateOptions{
-		Upsert: &upsert,
+		Upsert: utils.BoolPointer(true),
 	}); err != nil {
 		log.WithError(err).Error("mongo")
 		return err
@@ -47,45 +46,31 @@ func (b EntitlementBuilder) SetUserID(id primitive.ObjectID) EntitlementBuilder 
 
 // SetSubscriptionData: Add a subscription reference to the entitlement
 func (b EntitlementBuilder) SetSubscriptionData(data datastructure.EntitledSubscription) EntitlementBuilder {
-	v := datastructure.EntitlementWithSubscription{
-		Entitlement: b.Entitlement,
-		Data:        data,
-	}
-
-	b.Entitlement.Data = v
-	return b
+	return b.marshalData(data)
 }
 
 // SetBadgeData: Add a badge reference to the entitlement
 func (b EntitlementBuilder) SetBadgeData(data datastructure.EntitledBadge) EntitlementBuilder {
-	v := datastructure.EntitlementWithBadge{
-		Entitlement: b.Entitlement,
-		Data:        data,
-	}
-
-	b.Entitlement.Data = v
-	return b
+	return b.marshalData(data)
 }
 
 // SetRoleData: Add a role reference to the entitlement
 func (b EntitlementBuilder) SetRoleData(data datastructure.EntitledRole) EntitlementBuilder {
-	v := datastructure.EntitlementWithRole{
-		Entitlement: b.Entitlement,
-		Data:        data,
-	}
-
-	b.Entitlement.Data = v
-	return b
+	return b.marshalData(data)
 }
 
 // SetEmoteSetData: Add an emote set reference to the entitlement
 func (b EntitlementBuilder) SetEmoteSetData(data datastructure.EntitledEmoteSet) EntitlementBuilder {
-	v := datastructure.EntitlementWithEmoteSet{
-		Entitlement: b.Entitlement,
-		Data:        data,
+	return b.marshalData(data)
+}
+
+func (b EntitlementBuilder) marshalData(data interface{}) EntitlementBuilder {
+	d, err := bson.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("bson")
 	}
 
-	b.Entitlement.Data = v
+	b.Entitlement.Data = d
 	return b
 }
 
