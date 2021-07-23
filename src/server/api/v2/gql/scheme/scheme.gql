@@ -39,8 +39,8 @@ type Mutation {
 }
 
 type Response {
-  # Status Code 200 = success
-  status: Int!
+  # Whether or not the request succeeded
+  ok: Boolean!
   # Message in response
   message: String!
 }
