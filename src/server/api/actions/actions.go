@@ -20,3 +20,11 @@ type NotificationBuilder struct {
 }
 
 var Notifications notifications = notifications{}
+
+type entitlements struct{}
+
+type EntitlementBuilder struct {
+	Entitlement datastructure.Entitlement
+}
+
+var Entitlements = entitlements{}
