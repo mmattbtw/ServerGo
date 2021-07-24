@@ -5,6 +5,18 @@ metadata:
   namespace: 7tv
 spec:
   rules:
+
+    - host: api.7tv.app
+      http:
+        paths:
+          - path: /v2/ws
+            pathType: Exact
+            backend:
+              service:
+                name: seventv-wsapi-svc
+                port:
+                  number: 80
+
     - host: api.7tv.app
       http:
         paths:
@@ -33,7 +45,6 @@ spec:
                 name: seventv-webapp-svc
                 port:
                   number: 80
-
 
     - host: stage.7tv.app
       http:
