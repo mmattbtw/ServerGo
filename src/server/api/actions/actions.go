@@ -23,4 +23,8 @@ var Notifications notifications = notifications{}
 
 type users struct{}
 
+type UserBuilder struct {
+	User datastructure.User
+}
+
 var Users users = users{}
