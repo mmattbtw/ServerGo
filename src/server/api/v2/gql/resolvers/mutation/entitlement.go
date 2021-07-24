@@ -53,7 +53,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 		}
 
 		// Set Subscription Data to builder
-		builder.SetSubscriptionData(datastructure.EntitledSubscription{
+		builder = builder.SetSubscriptionData(datastructure.EntitledSubscription{
 			ObjectReference: itemID,
 		})
 	}
