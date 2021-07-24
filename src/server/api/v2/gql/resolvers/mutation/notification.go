@@ -49,7 +49,7 @@ func (*MutationResolver) MarkNotificationsRead(ctx context.Context, args struct 
 	}
 
 	return &response{
-		Status:  200,
+		OK:      true,
 		Message: fmt.Sprintf("Marked %d notifications as read", res.ModifiedCount),
 	}, nil
 }

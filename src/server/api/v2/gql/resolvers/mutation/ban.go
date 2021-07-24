@@ -121,7 +121,6 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 	}
 
 	return &response{
-		Status:  200,
 		Message: "success",
 	}, nil
 }
@@ -213,7 +212,6 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 	}
 
 	return &response{
-		Status:  200,
 		Message: "success",
 	}, nil
 }
