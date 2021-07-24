@@ -37,7 +37,7 @@ type Mutation {
   # Edit the application
   editApp(properties: MetaInput!): Response
   # Create a new Entitlement
-  createEntitlement(kind: String!, Data: EntitlementCreateInput!): Response
+  createEntitlement(kind: EntitlementKind!, data: EntitlementCreateInput!, user_id: String!): Response
 }
 
 type Response {
@@ -129,24 +129,24 @@ input EntitlementCreateInput {
 
 # Subscription entitlement data
 input EntitledSubscription {
-  item_id: String!
+  id: String!
 }
 
 # Badge entitlement data
 input EntitledBadge {
-  item_id: String!
+  id: String!
   selected: Boolean!
 }
 
 # Role entitlement data
 input EntitledRole {
-  item_id: String!
+  id: String!
   override: Boolean
 }
 
 # Emote Set entitlement data
 input EntitledEmoteSet {
-  item_id: String!
+  id: String!
   unicode_tag: String
   emote_ids: [String!]
 }

@@ -32,19 +32,22 @@ var (
 
 // (Data) Subscription binding in an Entitlement
 type EntitledSubscription struct {
+	ID string `json:"id" bson:"-"`
 	// The ID of the subscription
-	ItemID primitive.ObjectID `json:"item_id" bson:"item_id"`
+	ObjectReference primitive.ObjectID `json:"-" bson:"ref"`
 }
 
 // (Data) Badge binding in an Entitlement
 type EntitledBadge struct {
-	ItemID   primitive.ObjectID `json:"item_id" bson:"item_id"`
-	Selected bool               `json:"selected" bson:"selected"`
+	ID              string             `json:"id" bson:"-"`
+	ObjectReference primitive.ObjectID `json:"-" bson:"ref"`
+	Selected        bool               `json:"selected" bson:"selected"`
 }
 
 // (Data) Role binding in an Entitlement
 type EntitledRole struct {
-	ItemID primitive.ObjectID `json:"item_id" bson:"item_id"`
+	ID              string             `json:"id" bson:"-"`
+	ObjectReference primitive.ObjectID `json:"-" bson:"ref"`
 	// Whether or not the entitlemet will cause the user's role to be overriden,
 	// even if their current role has a higher position
 	Override bool `json:"override" bson:"override"`
@@ -52,9 +55,10 @@ type EntitledRole struct {
 
 // (Data) Emote Set binding in an Entitlement
 type EntitledEmoteSet struct {
-	ItemID     primitive.ObjectID   `json:"item_id" bson:"item_id"`
-	UnicodeTag string               `json:"unicode_tag" bson:"unicode_tag"`
-	EmoteIDs   []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
+	ID              string               `json:"id" bson:"-"`
+	ObjectReference primitive.ObjectID   `json:"-" bson:"ref"`
+	UnicodeTag      string               `json:"unicode_tag" bson:"unicode_tag"`
+	EmoteIDs        []primitive.ObjectID `json:"emote_ids" bson:"emotes"`
 
 	// Relational
 
