@@ -125,6 +125,9 @@ enum EntitlementKind {
 # Only a single field can be picked
 input EntitlementCreateInput {
   subscription: EntitledSubscription
+  badge: EntitledBadge
+  role: EntitledRole
+  emote_set: EntitledEmoteSet
 }
 
 # Subscription entitlement data
@@ -141,14 +144,14 @@ input EntitledBadge {
 # Role entitlement data
 input EntitledRole {
   id: String!
-  override: Boolean
+  override: Boolean!
 }
 
 # Emote Set entitlement data
 input EntitledEmoteSet {
   id: String!
-  unicode_tag: String
-  emote_ids: [String!]
+  unicode_tag: String!
+  emote_ids: [String!]!
 }
 
 type AuditLog {

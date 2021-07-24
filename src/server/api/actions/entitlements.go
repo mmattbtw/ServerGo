@@ -14,13 +14,13 @@ import (
 )
 
 // Write: Save this Entitlement to persistence
-func (b EntitlementBuilder) Write(ctx context.Context) error {
+func (b EntitlementBuilder) Write() error {
 	// Create new Object ID if this is a new entitlement
 	if b.Entitlement.ID.IsZero() {
 		b.Entitlement.ID = primitive.NewObjectID()
 	}
 
-	if _, err := mongo.Database.Collection("entitlements").UpdateByID(ctx, b.Entitlement.ID, bson.M{
+	if _, err := mongo.Database.Collection("entitlements").UpdateByID(b.ctx, b.Entitlement.ID, bson.M{
 		"$set": b.Entitlement,
 	}, &options.UpdateOptions{
 		Upsert: utils.BoolPointer(true),
@@ -33,13 +33,13 @@ func (b EntitlementBuilder) Write(ctx context.Context) error {
 }
 
 // GetUser: Fetch the user data from the user ID assigned to the entitlement
-func (b EntitlementBuilder) GetUser(ctx context.Context) (*datastructure.User, error) {
+func (b EntitlementBuilder) GetUser() (*datastructure.User, error) {
 	if b.Entitlement.UserID.IsZero() {
 		return nil, fmt.Errorf("Entitlement does not have a user assigned")
 	}
 
 	// Get user from DB
-	res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{"_id": b.Entitlement.UserID})
+	res := mongo.Collection(mongo.CollectionNameUsers).FindOne(b.ctx, bson.M{"_id": b.Entitlement.UserID})
 	if err := res.Err(); err != nil {
 		return nil, err
 	}
@@ -49,6 +49,8 @@ func (b EntitlementBuilder) GetUser(ctx context.Context) (*datastructure.User, e
 		return nil, err
 	}
 
+	role := datastructure.GetRole(user.RoleID)
+	user.Role = &role
 	b.User = &user
 	return &user, nil
 }
@@ -99,28 +101,32 @@ func (b EntitlementBuilder) marshalData(data interface{}) EntitlementBuilder {
 
 // ReadSubscriptionData: Read the data as an Entitled Subscription
 func (b EntitlementBuilder) ReadSubscriptionData() datastructure.EntitledSubscription {
-	return b.unmarshalData().(datastructure.EntitledSubscription)
+	return b.unmarshalData(datastructure.EntitledSubscription{}).(datastructure.EntitledSubscription)
 }
 
 // ReadBadgeData: Read the data as an Entitled Badge
 func (b EntitlementBuilder) ReadBadgeData() datastructure.EntitledBadge {
-	return b.unmarshalData().(datastructure.EntitledBadge)
+	return b.unmarshalData(datastructure.EntitledBadge{}).(datastructure.EntitledBadge)
 }
 
 // ReadRoleData: Read the data as an Entitled Role
 func (b EntitlementBuilder) ReadRoleData() datastructure.EntitledRole {
-	return b.unmarshalData().(datastructure.EntitledRole)
+	var e datastructure.EntitledRole
+	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
+		log.WithError(err).Error("bson")
+	}
+	return e
 }
 
 // ReadEmoteSetData: Read the data as an Entitled Emote Set
 func (b EntitlementBuilder) ReadEmoteSetData() datastructure.EntitledEmoteSet {
-	return b.unmarshalData().(datastructure.EntitledEmoteSet)
+	return b.unmarshalData(datastructure.EntitledEmoteSet{}).(datastructure.EntitledEmoteSet)
 }
 
 // unmarshalData: Parse the data from a bson byte slice into a struct
-func (b EntitlementBuilder) unmarshalData() interface{} {
-	var data interface{}
-	if err := bson.Unmarshal(b.Entitlement.Data, &data); err != nil {
+func (b EntitlementBuilder) unmarshalData(data interface{}) interface{} {
+	raw := bson.RawValue{Value: b.Entitlement.Data}
+	if err := raw.Unmarshal(&data); err != nil {
 		log.WithError(err).Error("bson")
 	}
 
@@ -128,14 +134,14 @@ func (b EntitlementBuilder) unmarshalData() interface{} {
 }
 
 // Create: Get a new entitlement builder
-func (entitlements) Create() EntitlementBuilder {
+func (entitlements) Create(ctx context.Context) EntitlementBuilder {
 	return EntitlementBuilder{
 		Entitlement: datastructure.Entitlement{},
 	}
 }
 
 // With: Get an entitledment builder tied to an entitlement
-func (entitlements) With(e datastructure.Entitlement) EntitlementBuilder {
+func (entitlements) With(ctx context.Context, e datastructure.Entitlement) EntitlementBuilder {
 	return EntitlementBuilder{
 		Entitlement: e,
 	}
@@ -143,6 +149,8 @@ func (entitlements) With(e datastructure.Entitlement) EntitlementBuilder {
 
 // --- Syncing Methods ---
 
+// Sync: Apply the Entitlement
+// For example, grant the role to the user for a Role entitlement
 func (b EntitlementBuilder) Sync() error {
 	x := map[datastructure.EntitlementKind]func() error{
 		datastructure.EntitlementKindSubscription: b.syncSubscription,
@@ -158,6 +166,8 @@ func (b EntitlementBuilder) Sync() error {
 
 	if err := f(); err != nil {
 		return err
+	} else {
+		b.Log(fmt.Sprintf("Synced successfully"))
 	}
 
 	return nil
@@ -170,8 +180,40 @@ func (b EntitlementBuilder) syncBadge() error {
 	return nil
 }
 func (b EntitlementBuilder) syncRole() error {
+	e := b.ReadRoleData()
+	role := datastructure.GetRole(&e.ObjectReference)
+	u, err := b.GetUser()
+	if err != nil {
+		return err
+	}
+
+	// If Entitled Role overrides; ignore user's current role and set new role immediately
+	canSetRole := e.Override
+	if !canSetRole && u.Role.Position < role.Position { // else check user's current role is of lower position than new role
+		canSetRole = true
+	}
+
+	if canSetRole { // Update in DB
+		_, err = mongo.Collection(mongo.CollectionNameUsers).UpdateByID(b.ctx, u.ID, bson.M{
+			"$set": bson.M{
+				"role": role.ID,
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 func (b EntitlementBuilder) syncEmoteSet() error {
 	return nil
+}
+
+func (b EntitlementBuilder) Log(str string) {
+	log.Infof("<EntitlementBuilder:%v> [Kind: %v] [User: %v] %v", b.Entitlement.ID, b.Entitlement.Kind, b.Entitlement.UserID, str)
+}
+
+func (b EntitlementBuilder) LogError(str string) {
+	log.Errorf("<EntitlementBuilder:%v> [Kind: %v] [User: %v] %v", b.Entitlement.ID, b.Entitlement.Kind, b.Entitlement.UserID, str)
 }

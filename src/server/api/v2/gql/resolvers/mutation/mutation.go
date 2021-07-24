@@ -24,8 +24,8 @@ type userInput struct {
 }
 
 type entitlementCreateInput struct {
-	Subscription *datastructure.EntitledSubscription
-	Badge        *datastructure.EntitledBadge
-	Role         *datastructure.EntitledRole
-	EmoteSet     *datastructure.EntitledEmoteSet
+	Subscription *datastructure.EntitledSubscription `json:"subscription"`
+	Badge        *datastructure.EntitledBadge        `json:"badge"`
+	Role         *datastructure.EntitledRole         `json:"role"`
+	EmoteSet     *datastructure.EntitledEmoteSet     `json:"emote_set"`
 }

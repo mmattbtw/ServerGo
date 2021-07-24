@@ -36,7 +36,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 	}
 
 	// Create an entitlement builder and assign kind+user ID
-	builder := actions.Entitlements.Create().
+	builder := actions.Entitlements.Create(ctx).
 		SetKind(args.Kind).
 		SetUserID(userID)
 
@@ -56,12 +56,44 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 		builder = builder.SetSubscriptionData(datastructure.EntitledSubscription{
 			ObjectReference: itemID,
 		})
+	case datastructure.EntitlementKindBadge:
+		if args.Data.Badge == nil {
+			return nil, fmt.Errorf("Missing Badge Data")
+		}
+		itemID, err = primitive.ObjectIDFromHex(args.Data.Badge.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		builder = builder.SetBadgeData(datastructure.EntitledBadge{
+			ObjectReference: itemID,
+			Selected:        args.Data.Badge.Selected,
+		})
+	case datastructure.EntitlementKindRole:
+		if args.Data.Role == nil {
+			return nil, fmt.Errorf("Missing Role Data")
+		}
+		itemID, err = primitive.ObjectIDFromHex(args.Data.Role.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set Role Data to builder
+		builder = builder.SetRoleData(datastructure.EntitledRole{
+			ObjectReference: itemID,
+			Override:        args.Data.Role.Override,
+		})
 	}
 
 	// Write to DB
-	if err := builder.Write(ctx); err != nil {
+	if err := builder.Write(); err != nil {
 		log.WithError(err).Error(err)
 		return nil, resolvers.ErrInternalServer
+	}
+
+	// Sync the entitlement
+	if err := builder.Sync(); err != nil {
+		builder.LogError(fmt.Sprintf("Couldn't sync entitlement: %v", err.Error()))
 	}
 
 	return &response{

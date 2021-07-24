@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -25,6 +27,7 @@ type entitlements struct{}
 
 type EntitlementBuilder struct {
 	Entitlement datastructure.Entitlement
+	ctx         context.Context
 
 	User *datastructure.User
 }
