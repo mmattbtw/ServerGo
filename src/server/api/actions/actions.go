@@ -25,6 +25,8 @@ type entitlements struct{}
 
 type EntitlementBuilder struct {
 	Entitlement datastructure.Entitlement
+
+	User *datastructure.User
 }
 
 var Entitlements = entitlements{}

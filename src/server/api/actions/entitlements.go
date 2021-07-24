@@ -32,6 +32,27 @@ func (b EntitlementBuilder) Write(ctx context.Context) error {
 	return nil
 }
 
+// GetUser: Fetch the user data from the user ID assigned to the entitlement
+func (b EntitlementBuilder) GetUser(ctx context.Context) (*datastructure.User, error) {
+	if b.Entitlement.UserID.IsZero() {
+		return nil, fmt.Errorf("Entitlement does not have a user assigned")
+	}
+
+	// Get user from DB
+	res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{"_id": b.Entitlement.UserID})
+	if err := res.Err(); err != nil {
+		return nil, err
+	}
+
+	var user datastructure.User
+	if err := res.Decode(&user); err != nil {
+		return nil, err
+	}
+
+	b.User = &user
+	return &user, nil
+}
+
 // SetKind: Change the entitlement's kind
 func (b EntitlementBuilder) SetKind(kind datastructure.EntitlementKind) EntitlementBuilder {
 	b.Entitlement.Kind = kind
