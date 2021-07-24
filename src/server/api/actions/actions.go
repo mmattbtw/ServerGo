@@ -20,3 +20,7 @@ type NotificationBuilder struct {
 }
 
 var Notifications notifications = notifications{}
+
+type users struct{}
+
+var Users users = users{}
