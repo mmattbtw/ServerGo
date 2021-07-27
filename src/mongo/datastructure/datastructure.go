@@ -209,8 +209,9 @@ const (
 	RolePermissionManageRoles                            // 128 - (Elevated) Allows managing roles
 	RolePermissionManageUsers                            // 256 - (Elevated) Allows managing users
 	RolePermissionManageEditors                          // 512 - Allows adding and removing editors from own channel
-	RolePermissionEditEmoteGlobalState                   // 1024 - Allows editing the global state of an emote
-	RolePermissionEditApplicationMeta                    // 2048 - Allows editing global app metadata, such as the active featured broadcast
+	RolePermissionEditEmoteGlobalState                   // 1024 - (Elevated) Allows editing the global state of an emote
+	RolePermissionEditApplicationMeta                    // 2048 - (Elevated) Allows editing global app metadata, such as the active featured broadcast
+	RolePermissionManageEntitlements                     // 4096 - (Elevated) Allows granting and revoking entitlements to and from users
 
 	RolePermissionAll int64 = (1 << iota) - 1
 )

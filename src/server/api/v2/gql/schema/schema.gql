@@ -36,11 +36,17 @@ type Mutation {
   markNotificationsRead(notification_ids: [String!]!): Response
   # Edit the application
   editApp(properties: MetaInput!): Response
+  # Create a new Entitlement
+  createEntitlement(kind: EntitlementKind!, data: EntitlementCreateInput!, user_id: String!): Response
+  # Delete an Entitlement
+  deleteEntitlement(id: String!): Response
 }
 
 type Response {
-  # Status Code 200 = success
+  # Deprecated: use ok to check success
   status: Int!
+  # Whether or not the request succeeded
+  ok: Boolean!
   # Message in response
   message: String!
 }
@@ -110,6 +116,45 @@ input ChannelEmoteInput {
 
 input MetaInput {
   featured_broadcast: String
+}
+
+enum EntitlementKind {
+  SUBSCRIPTION
+  BADGE
+  ROLE
+  EMOTE_SET
+}
+
+# Data for an Entitlement
+# Only a single field can be picked
+input EntitlementCreateInput {
+  subscription: EntitledSubscription
+  badge: EntitledBadge
+  role: EntitledRole
+  emote_set: EntitledEmoteSet
+}
+
+# Subscription entitlement data
+input EntitledSubscription {
+  id: String!
+}
+
+# Badge entitlement data
+input EntitledBadge {
+  id: String!
+  selected: Boolean!
+}
+
+# Role entitlement data
+input EntitledRole {
+  id: String!
+}
+
+# Emote Set entitlement data
+input EntitledEmoteSet {
+  id: String!
+  unicode_tag: String!
+  emote_ids: [String!]!
 }
 
 type AuditLog {

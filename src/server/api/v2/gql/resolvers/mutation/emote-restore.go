@@ -123,6 +123,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 	}
 
 	return &response{
+		OK:      true,
 		Status:  200,
 		Message: "success",
 	}, nil

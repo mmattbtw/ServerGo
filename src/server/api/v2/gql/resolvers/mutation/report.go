@@ -84,6 +84,7 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 	}
 
 	return &response{
+		OK:      true,
 		Status:  200,
 		Message: "success",
 	}, nil
@@ -173,6 +174,7 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 	}
 
 	return &response{
+		OK:      true,
 		Status:  200,
 		Message: "success",
 	}, nil

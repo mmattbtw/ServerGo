@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,3 +22,25 @@ type NotificationBuilder struct {
 }
 
 var Notifications notifications = notifications{}
+
+type entitlements struct{}
+
+type EntitlementBuilder struct {
+	Entitlement datastructure.Entitlement
+	ctx         context.Context
+
+	User *datastructure.User
+}
+
+var Entitlements = entitlements{}
+
+type users struct{}
+
+type UserBuilder struct {
+	User datastructure.User
+	ctx  context.Context
+
+	Entitlements []EntitlementBuilder
+}
+
+var Users users = users{}
