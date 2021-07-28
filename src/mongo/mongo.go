@@ -28,8 +28,6 @@ var ErrNoDocuments = mongo.ErrNoDocuments
 type Pipeline = mongo.Pipeline
 type WriteModel = mongo.WriteModel
 
-var ChangeStreamChan = make(chan ChangeStreamEvent)
-
 func NewUpdateOneModel() *mongo.UpdateOneModel {
 	return mongo.NewUpdateOneModel()
 }
@@ -126,29 +124,6 @@ func init() {
 		{Keys: bson.M{"user_id": 1}},
 		{Keys: bson.M{"data.ref": 1}},
 	})
-
-	opts := options.ChangeStream().SetFullDocument(options.UpdateLookup)
-
-	for _, v := range []string{"users", "emotes", "bans", "reports", "audit"} {
-		go func(col string) {
-			ctx := context.TODO()
-			userChangeStream, err := Database.Collection(col).Watch(ctx, mongo.Pipeline{}, opts)
-			if err != nil {
-				log.WithError(err).Fatal("mongo")
-			}
-			go func() {
-				for userChangeStream.Next(ctx) {
-					data := bson.M{}
-					if err := userChangeStream.Decode(&data); err != nil {
-						log.WithError(err).WithField("col", col).Error("mongo change stream")
-						continue
-					}
-					changeStream(ctx, col, data)
-				}
-			}()
-		}(v)
-	}
-
 }
 
 func Collection(name CollectionName) *mongo.Collection {
