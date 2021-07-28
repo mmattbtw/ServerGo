@@ -61,6 +61,7 @@ const (
 	EmoteVisibilityOverrideFFZ
 	EmoteVisibilityOverrideTwitchGlobal
 	EmoteVisibilityOverrideTwitchSubscriber
+	EmoteVisibilityZerowidth
 
 	EmoteVisibilityAll int32 = (1 << iota) - 1
 )
@@ -212,6 +213,7 @@ const (
 	RolePermissionEditEmoteGlobalState                   // 1024 - (Elevated) Allows editing the global state of an emote
 	RolePermissionEditApplicationMeta                    // 2048 - (Elevated) Allows editing global app metadata, such as the active featured broadcast
 	RolePermissionManageEntitlements                     // 4096 - (Elevated) Allows granting and revoking entitlements to and from users
+	RolePermissionUseZerowidthEmote                      // 8192 - Allows zero-width emotes to be enabled
 
 	RolePermissionAll int64 = (1 << iota) - 1
 )
