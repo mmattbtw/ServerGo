@@ -32,19 +32,11 @@ func GetChannelEmotesRoute(router fiber.Router) {
 
 			// Find emotes
 			var emotes []*datastructure.Emote
-			emoteFilter := bson.M{
+			if err := cache.Find(c.Context(), "emotes", "", bson.M{
 				"_id": bson.M{
 					"$in": channel.EmoteIDs,
 				},
-			}
-			if !channel.HasPermission(datastructure.RolePermissionUseZerowidthEmote) {
-				// Omit zerowidth emote if the user lacks permission to use those
-				emoteFilter["visibility"] = bson.M{
-					"$bitsAllClear": datastructure.EmoteVisibilityZerowidth,
-				}
-			}
-
-			if err := cache.Find(c.Context(), "emotes", "", emoteFilter, &emotes); err != nil {
+			}, &emotes); err != nil {
 				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
