@@ -19,7 +19,7 @@ type webhookInfo struct {
 }
 
 func init() {
-	s := configure.Config.GetStringSlice("discord.webhook.activity")
+	s := configure.Config.GetStringSlice("discord.webhooks.activity")
 	if len(s) == 2 {
 		webhooks["activity"] = webhookInfo{
 			ID:    s[0],
@@ -47,6 +47,7 @@ func toIntColor(s string) int {
 
 func SendWebhook(name string, params *dgo.WebhookParams) *dgo.Message {
 	wh, ok := webhooks[name]
+	fmt.Println("discorde", wh)
 	if !ok || (wh.ID == "" || wh.Token == "") {
 		// Discord is disabled.
 		return nil
