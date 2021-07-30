@@ -61,6 +61,7 @@ const (
 	EmoteVisibilityOverrideFFZ
 	EmoteVisibilityOverrideTwitchGlobal
 	EmoteVisibilityOverrideTwitchSubscriber
+	EmoteVisibilityZeroWidth
 
 	EmoteVisibilityAll int32 = (1 << iota) - 1
 )
@@ -143,6 +144,11 @@ func (u *User) GetEmoteSlots() int32 {
 
 // Test whether a User has a permission flag
 func (u *User) HasPermission(flag int64) bool {
+	// This function requires the users role to be queried. if it is not it will panic so we must ensure that the role is present.
+	if u.Role == nil {
+		role := GetRole(u.RoleID)
+		u.Role = &role
+	}
 	var allowed int64 = 0
 	var denied int64 = 0
 	if u != nil {
@@ -203,6 +209,7 @@ const (
 	RolePermissionEditEmoteGlobalState                   // 1024 - (Elevated) Allows editing the global state of an emote
 	RolePermissionEditApplicationMeta                    // 2048 - (Elevated) Allows editing global app metadata, such as the active featured broadcast
 	RolePermissionManageEntitlements                     // 4096 - (Elevated) Allows granting and revoking entitlements to and from users
+	RolePermissionUseZeroWidthEmote                      // 8192 - Allows zero-width emotes to be enabled
 
 	RolePermissionAll int64 = (1 << iota) - 1
 )

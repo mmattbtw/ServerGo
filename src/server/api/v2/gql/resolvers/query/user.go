@@ -30,9 +30,7 @@ type UserResolver struct {
 
 func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID *primitive.ObjectID, fields map[string]*SelectedField) (*UserResolver, error) {
 	if user == nil || user.Login == "" {
-		user = &datastructure.User{
-			Role: datastructure.DefaultRole,
-		}
+		user = &datastructure.User{}
 		if err := cache.FindOne(ctx, "users", "", bson.M{
 			"_id": userID,
 		}, user); err != nil {
@@ -44,9 +42,9 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		}
 	}
 
-	if user == nil {
-		return nil, nil
-	}
+	// i guess we need to know the user role now UHM
+	role := datastructure.GetRole(user.RoleID)
+	user.Role = &role
 
 	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
 	actorCanEdit := false
@@ -436,7 +434,12 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 	emotes := datastructure.UserUtil.GetAliasedEmotes(r.v)
 	result := []*EmoteResolver{}
 
+	zeroWidthOK := r.v.HasPermission(datastructure.RolePermissionUseZeroWidthEmote)
 	for _, e := range emotes {
+		if !zeroWidthOK && utils.BitField.HasBits(int64(e.Visibility), int64(datastructure.EmoteVisibilityZeroWidth)) {
+			continue // Skip if the emote is zero-width and user lacks permission
+		}
+
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["emotes"].Children)
 		if err != nil {
 			log.WithError(err).Error("generation")
