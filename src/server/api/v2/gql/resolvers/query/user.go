@@ -42,9 +42,12 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		}
 	}
 
-	// i guess we need to know the user role now UHM
-	role := datastructure.GetRole(user.RoleID)
-	user.Role = &role
+	// Get the user's role
+	ub, err := actions.Users.With(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	user = &ub.User
 
 	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
 	actorCanEdit := false
@@ -344,13 +347,7 @@ func (r *UserResolver) Description() string {
 }
 
 func (r *UserResolver) Role() (*RoleResolver, error) {
-	ub, err := actions.Users.With(r.ctx, r.v)
-	if err != nil {
-		return nil, err
-	}
-
-	role := ub.GetRole()
-	res, err := GenerateRoleResolver(r.ctx, &role, &role.ID, nil)
+	res, err := GenerateRoleResolver(r.ctx, r.v.Role, r.v.RoleID, nil)
 	if err != nil {
 		log.WithError(err).Error("generation")
 		return nil, resolvers.ErrInternalServer
