@@ -552,7 +552,7 @@ func (r *UserResolver) Bans() (*[]*banResolver, error) {
 }
 
 func (r *UserResolver) Banned() bool {
-	return redis.Client.HGet(r.ctx, "user:bans", r.v.ID.Hex()).Val() != ""
+	return redis.Client.HExists(r.ctx, "user:bans", r.v.ID.Hex()).Val()
 }
 
 func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {

@@ -225,7 +225,6 @@ type Ban struct {
 	ID         primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
 	UserID     *primitive.ObjectID `json:"user_id" bson:"user_id"`
 	Reason     string              `json:"reason" bson:"reason"`
-	Active     bool                `json:"active" bson:"active"`
 	IssuedByID *primitive.ObjectID `json:"issued_by_id" bson:"issued_by_id"`
 	ExpireAt   time.Time           `json:"expire_at" bson:"expire_at"`
 }
