@@ -2,6 +2,7 @@ package query_resolvers
 
 import (
 	"context"
+	"time"
 
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 )
@@ -38,7 +39,7 @@ func (r *banResolver) Reason() string {
 }
 
 func (r *banResolver) Active() bool {
-	return r.v.Active
+	return r.v.ExpireAt.After(time.Now())
 }
 
 func (r *banResolver) IssuedByID() *string {

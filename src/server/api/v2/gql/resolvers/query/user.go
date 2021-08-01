@@ -8,7 +8,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
@@ -24,6 +23,7 @@ import (
 type UserResolver struct {
 	ctx context.Context
 	v   *datastructure.User
+	ub  *actions.UserBuilder
 
 	fields map[string]*SelectedField
 }
@@ -316,6 +316,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 	r := &UserResolver{
 		ctx:    ctx,
 		v:      user,
+		ub:     &ub,
 		fields: fields,
 	}
 	return r, nil
@@ -395,6 +396,9 @@ func (r *UserResolver) CreatedAt() string {
 func (r *UserResolver) Editors() ([]*UserResolver, error) {
 	editors := *r.v.Editors
 	result := []*UserResolver{}
+	if r.ub.IsBanned() { // Omit if user is banned
+		return nil, nil
+	}
 	for _, e := range editors {
 		r, err := GenerateUserResolver(r.ctx, e, nil, r.fields["editors"].Children)
 		if err != nil {
@@ -411,6 +415,9 @@ func (r *UserResolver) Editors() ([]*UserResolver, error) {
 func (r *UserResolver) EditorIn() ([]*UserResolver, error) {
 	editors := *r.v.EditorIn
 	result := []*UserResolver{}
+	if r.ub.IsBanned() { // Omit if user is banned
+		return nil, nil
+	}
 	for _, e := range editors {
 		r, err := GenerateUserResolver(r.ctx, e, nil, r.fields["editor_in"].Children)
 		if err != nil {
@@ -428,6 +435,10 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 	if r.v.Emotes == nil {
 		return nil, nil
 	}
+	if r.ub.IsBanned() { // Omit if user is banned
+		return nil, nil
+	}
+
 	emotes := datastructure.UserUtil.GetAliasedEmotes(r.v)
 	result := []*EmoteResolver{}
 
@@ -452,6 +463,10 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 func (r *UserResolver) OwnedEmotes() ([]*EmoteResolver, error) {
 	emotes := *r.v.OwnedEmotes
 	result := []*EmoteResolver{}
+	if r.ub.IsBanned() { // Omit if user is banned
+		return nil, nil
+	}
+
 	for _, e := range emotes {
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["owned_emotes"].Children)
 		if err != nil {
@@ -552,10 +567,13 @@ func (r *UserResolver) Bans() (*[]*banResolver, error) {
 }
 
 func (r *UserResolver) Banned() bool {
-	return redis.Client.HGet(r.ctx, "user:bans", r.v.ID.Hex()).Val() != ""
+	return r.ub.IsBanned()
 }
 
 func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
+	if r.ub.IsBanned() { // Omit if user is banned
+		return nil, nil
+	}
 	var logs []*datastructure.AuditLog
 	if cur, err := mongo.Collection(mongo.CollectionNameAudit).Find(r.ctx, bson.M{
 		"target.type": "users",
@@ -595,6 +613,10 @@ func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
 }
 
 func (r *UserResolver) EmoteSlots() int32 {
+	if r.ub.IsBanned() { // Omit if user is banned
+		return 0
+	}
+
 	return r.v.GetEmoteSlots()
 }
 
