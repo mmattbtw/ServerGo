@@ -21,6 +21,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 		func(c *fiber.Ctx) error {
 			ctx := c.Context()
 			channelIdentifier := c.Params("user")
+			c.Set("Cache-Control", "max-age=30")
 
 			// Find channel user
 			var channel *datastructure.User
@@ -104,7 +105,6 @@ func GetChannelEmotesRoute(router fiber.Router) {
 				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
-			c.Set("Cache-Control", "max-age=30")
 			return c.Send(j)
 		})
 }

@@ -300,14 +300,17 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 	}
 
 	u := *r.v.Channels
-	users := make([]*UserResolver, len(u))
-	for i, usr := range u {
+	users := []*UserResolver{}
+	for _, usr := range u {
 		resolver, err := GenerateUserResolver(r.ctx, usr, &usr.ID, nil)
 		if err != nil {
 			return nil, err
 		}
+		if resolver.ub.IsBanned() {
+			continue
+		}
 
-		users[i] = resolver
+		users = append(users, resolver)
 	}
 
 	return &users, nil

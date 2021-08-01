@@ -362,6 +362,10 @@ func (r *UserResolver) Role() (*RoleResolver, error) {
 }
 
 func (r *UserResolver) EmoteIDs() []string {
+	if r.ub.IsBanned() { // Omit if user is banned
+		return []string{}
+	}
+
 	ids := make([]string, len(r.v.EmoteIDs))
 	for i, id := range r.v.EmoteIDs {
 		ids[i] = id.Hex()
@@ -397,10 +401,14 @@ func (r *UserResolver) Editors() ([]*UserResolver, error) {
 	editors := *r.v.Editors
 	result := []*UserResolver{}
 	if r.ub.IsBanned() { // Omit if user is banned
-		return nil, nil
+		return result, nil
 	}
 	for _, e := range editors {
 		r, err := GenerateUserResolver(r.ctx, e, nil, r.fields["editors"].Children)
+		if r.ub.IsBanned() { // Omit banned editors
+			continue
+		}
+
 		if err != nil {
 			log.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
@@ -416,10 +424,13 @@ func (r *UserResolver) EditorIn() ([]*UserResolver, error) {
 	editors := *r.v.EditorIn
 	result := []*UserResolver{}
 	if r.ub.IsBanned() { // Omit if user is banned
-		return nil, nil
+		return result, nil
 	}
 	for _, e := range editors {
 		r, err := GenerateUserResolver(r.ctx, e, nil, r.fields["editor_in"].Children)
+		if r.ub.IsBanned() { // Omit banned editors
+			continue
+		}
 		if err != nil {
 			log.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
