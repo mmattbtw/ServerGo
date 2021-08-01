@@ -7,6 +7,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
@@ -88,7 +89,13 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			// Create final response
 			response := make([]restutil.EmoteResponse, len(emotes))
 			for i, emote := range emotes {
-				owner := ownerMap[emote.OwnerID]
+				var owner *datastructure.User
+				if !redis.Client.HExists(ctx, "user:bans", emote.OwnerID.Hex()).Val() {
+					owner = ownerMap[emote.OwnerID]
+				} else {
+					owner = datastructure.DeletedUser
+				}
+
 				response[i] = restutil.CreateEmoteResponse(emote, owner)
 			}
 

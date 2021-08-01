@@ -8,6 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -163,6 +164,10 @@ func (r *EmoteResolver) CreatedAt() string {
 }
 
 func (r *EmoteResolver) Owner() (*UserResolver, error) {
+	if redis.Client.HExists(r.ctx, "user:bans", r.v.OwnerID.Hex()).Val() {
+		return GenerateUserResolver(r.ctx, datastructure.DeletedUser, nil, r.fields)
+	}
+
 	resolver, err := GenerateUserResolver(r.ctx, r.v.Owner, &r.v.OwnerID, r.fields["owner"].Children)
 	if err != nil {
 		return nil, err
