@@ -32,6 +32,9 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			if err != nil {
 				return restutil.ErrUnknownUser().Send(c, err.Error())
 			}
+			if ub.IsBanned() {
+				return c.SendString("[]")
+			}
 			channel = &ub.User
 
 			// Find emotes
