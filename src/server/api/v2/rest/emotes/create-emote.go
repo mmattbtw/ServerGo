@@ -32,7 +32,7 @@ import (
 )
 
 const MAX_FRAME_COUNT = 4096
-const MAX_FILE_SIZE = 5000000
+const MAX_FILE_SIZE float32 = 2500000
 const MAX_PIXEL_HEIGHT = 3000
 const MAX_PIXEL_WIDTH = 3000
 
@@ -141,8 +141,8 @@ func CreateEmoteRoute(router fiber.Router) {
 					for {
 						n, err := part.Read(data)
 						byteSize += n
-						if byteSize >= MAX_FILE_SIZE {
-							return restutil.ErrBadRequest().Send(c, "Input File Too Large")
+						if float32(byteSize) >= MAX_FILE_SIZE {
+							return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Input File Too Large. Must be <%vMB", MAX_FILE_SIZE/1000000))
 						}
 
 						if err != nil && err != io.EOF {
