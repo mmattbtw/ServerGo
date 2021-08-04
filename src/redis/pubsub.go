@@ -67,7 +67,7 @@ type PubSubPayloadUserEmotes struct {
 }
 
 type EventApiV1ChannelEmotes struct {
-	Channel string `json:"removed"`
+	Channel string `json:"channel"`
 	EmoteID string `json:"id"`
 	Name    string `json:"name"`
 	Action  string `json:"action"`
