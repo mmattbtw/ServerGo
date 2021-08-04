@@ -29,7 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"gopkg.in/gographics/imagick.v3/imagick"
 )
 
 const MAX_FRAME_COUNT = 4096
@@ -220,17 +219,6 @@ func CreateEmoteRoute(router fiber.Router) {
 				}
 
 				ogWidth, ogHeight = getGifDimensions(g)
-			case "webp":
-				wand := imagick.NewMagickWand()
-				if err := wand.ReadImageFile(ogFile); err == nil {
-					ogWidth = int(wand.GetImageWidth())
-					ogHeight = int(wand.GetImageHeight())
-				} else {
-					log.WithError(err).Error("could not decode webp")
-					return restutil.ErrBadRequest().Send(c, err.Error())
-				}
-
-				wand.Destroy()
 			default:
 				return restutil.ErrBadRequest().Send(c, "Unsupported File Format")
 			}
@@ -249,7 +237,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				sizes := strings.Split(file[2], "x")
 				maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
 				maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
-				quality := file[3]
+				quality, _ := strconv.ParseInt(file[3], 10, 2)
 				outFile := fmt.Sprintf("%v/%v.webp", fileDir, scope)
 
 				// Get calculed ratio for the size
@@ -261,24 +249,11 @@ func CreateEmoteRoute(router fiber.Router) {
 				sizeY[i] = int16(height)
 
 				// Encode with selected encoder
-				b, err := encoding.ImageMagick.Encode(ogFilePath, width, height, quality)
+				err := encoding.FFmpeg.Encode(ogFilePath, outFile, width, height, quality)
 				if err != nil {
 					log.WithField("size", scope).WithError(err).Error("could not encode image")
 					return restutil.ErrBadRequest().Send(c, err.Error())
 				}
-
-				// Write to file
-				file, err := os.Create(outFile)
-				if err != nil {
-					log.WithError(err).Error("could not write image bytes")
-					return restutil.ErrInternalServer().Send(c, err.Error())
-				}
-				_, err = file.Write(b)
-				if err != nil {
-					log.WithError(err).Error("could not write image bytes")
-					return restutil.ErrInternalServer().Send(c, err.Error())
-				}
-				file.Close()
 
 				if err != nil {
 					log.WithError(err).Error("cmd")

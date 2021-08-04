@@ -2,6 +2,7 @@ package encoding
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
@@ -12,7 +13,7 @@ type imageMagick struct{}
 
 var ImageMagick = imageMagick{}
 
-func (imageMagick) Encode(ogFilePath string, width int32, height int32, quality string) ([]byte, error) {
+func (imageMagick) Encode(ogFilePath string, outFile string, width int32, height int32, quality string) error {
 	var err error
 	// Create new boundaries for frames
 	mw := imagick.NewMagickWand() // Get magick wand & read the original image
@@ -20,7 +21,7 @@ func (imageMagick) Encode(ogFilePath string, width int32, height int32, quality 
 		log.WithError(err).Error("SetResourceLimit")
 	}
 	if err := mw.ReadImage(ogFilePath); err != nil {
-		return nil, fmt.Errorf("Input File Not Readable: %s", err)
+		return fmt.Errorf("Input File Not Readable: %s", err)
 	}
 
 	// Merge all frames with coalesce
@@ -58,10 +59,26 @@ func (imageMagick) Encode(ogFilePath string, width int32, height int32, quality 
 	q, _ := strconv.Atoi(quality)
 	if err = mw.SetImageCompressionQuality(uint(q)); err != nil {
 		log.WithError(err).Error("SetImageCompressionQuality")
+		return err
 	}
 	if err = mw.SetImageFormat("webp"); err != nil {
 		log.WithError(err).Error("SetImageFormat")
+		return err
 	}
 
-	return mw.GetImagesBlob(), nil
+	// Write to file
+	b := mw.GetImagesBlob()
+	file, err := os.Create(outFile)
+	if err != nil {
+		log.WithError(err).Error("could not write image bytes")
+		return err
+	}
+	_, err = file.Write(b)
+	if err != nil {
+		log.WithError(err).Error("could not write image bytes")
+		return err
+	}
+	file.Close()
+
+	return nil
 }
