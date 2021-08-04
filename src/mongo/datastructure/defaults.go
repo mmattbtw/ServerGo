@@ -2,6 +2,7 @@ package datastructure
 
 import (
 	"github.com/SevenTV/ServerGo/src/configure"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // The default role.
@@ -13,6 +14,9 @@ var DefaultRole *Role = &Role{
 }
 
 var DeletedUser *User = &User{
+	ID:          deletedUserID,
 	Login:       "*deleteduser",
 	DisplayName: "Deleted User",
 }
+
+var deletedUserID, _ = primitive.ObjectIDFromHex("000000000000000000000001")

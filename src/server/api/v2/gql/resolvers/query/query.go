@@ -513,7 +513,7 @@ func (*QueryResolver) ThirdPartyEmotes(ctx context.Context, args struct {
 		}
 	}
 	for _, e := range globalEmotes {
-		e.Visibility = datastructure.EmoteVisibilityGlobal
+		e.Visibility |= datastructure.EmoteVisibilityGlobal
 	}
 	emotes = append(emotes, globalEmotes...)
 
@@ -564,7 +564,7 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 	lQuery := fmt.Sprintf("(?i)%s", strings.ToLower(searchRegex.ReplaceAllString(query, "\\\\$0")))
 
 	opts := options.Find().SetSort(bson.M{
-		"login": 1,
+		"_id": -1,
 	}).SetLimit(limit).SetSkip((page - 1) * limit)
 
 	users := []*datastructure.User{}

@@ -282,7 +282,7 @@ func Twitch(app fiber.Router) fiber.Router {
 		// Check ban?
 		if reason, err := redis.Client.HGet(c.Context(), "user:bans", mongoUser.ID.Hex()).Result(); err != redis.ErrNil {
 			var ban *datastructure.Ban
-			res := mongo.Collection(mongo.CollectionNameBans).FindOne(c.Context(), bson.M{"user_id": mongoUser.ID, "active": true})
+			res := mongo.Collection(mongo.CollectionNameBans).FindOne(c.Context(), bson.M{"user_id": mongoUser.ID, "expire_at": bson.M{"$gt": time.Now()}})
 			err = res.Err()
 			if err == nil {
 				_ = res.Decode(&ban)

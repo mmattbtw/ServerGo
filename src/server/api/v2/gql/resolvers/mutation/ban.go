@@ -90,7 +90,6 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 
 	ban := &datastructure.Ban{
 		UserID:     &user.ID,
-		Active:     true,
 		Reason:     reasonN,
 		IssuedByID: &usr.ID,
 		ExpireAt:   expireAt,
@@ -183,11 +182,11 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 	}
 
 	_, err = mongo.Collection(mongo.CollectionNameBans).UpdateMany(ctx, bson.M{
-		"user_id": user.ID,
-		"active":  true,
+		"user_id":   user.ID,
+		"expire_at": bson.M{"$not": bson.M{"$eq": time.Time{}}},
 	}, bson.M{
 		"$set": bson.M{
-			"active": false,
+			"expire_at": time.Time{},
 		},
 	})
 	if err != nil {
