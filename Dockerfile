@@ -1,6 +1,6 @@
 FROM golang:1.16.5-alpine3.13 AS build_base
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git pkgconfig imagemagick-dev build-base
 
 # Set the Current Working Directory inside the container
 WORKDIR /tmp/app
@@ -14,7 +14,7 @@ RUN go mod download && go get -u github.com/gobuffalo/packr/v2/packr2
 COPY . .
 
 # Build the Go app
-RUN packr2 && apk add pkgconfig imagemagick-dev build-base && go build -o seventv
+RUN packr2 && go build -o seventv
 
 # Start fresh from a smaller image
 FROM alpine:3.14
