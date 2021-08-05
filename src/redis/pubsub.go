@@ -67,9 +67,28 @@ type PubSubPayloadUserEmotes struct {
 }
 
 type EventApiV1ChannelEmotes struct {
-	Channel string `json:"channel"`
-	EmoteID string `json:"id"`
-	Name    string `json:"name"`
-	Action  string `json:"action"`
-	Author  string `json:"author"`
+	Channel string                        `json:"channel"`
+	EmoteID string                        `json:"emote_id"`
+	Name    string                        `json:"name"`
+	Action  string                        `json:"action"`
+	Actor   string                        `json:"actor"`
+	Emote   *EventApiV1ChannelEmotesEmote `json:"emote"`
+}
+
+type EventApiV1ChannelEmotesEmote struct {
+	Name       string                            `json:"name"`
+	Visibility int32                             `json:"visibility"`
+	MIME       string                            `json:"mime"`
+	Tags       []string                          `json:"tags"`
+	Width      [4]int16                          `json:"width"`
+	Height     [4]int16                          `json:"height"`
+	Animated   bool                              `json:"animated"`
+	Owner      EventApiV1ChannelEmotesEmoteOwner `json:"owner"`
+}
+
+type EventApiV1ChannelEmotesEmoteOwner struct {
+	ID          string `json:"id"`
+	TwitchID    string `json:"twitch_id"`
+	DisplayName string `json:"display_name"`
+	Login       string `json:"login"`
 }

@@ -172,12 +172,32 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 			Actor:   usr.DisplayName,
 		})
 
+		name := emote.Name
+		if v, ok := channel.EmoteAlias[emoteID.Hex()]; ok {
+			name = v
+		}
+
 		_ = redis.Publish(context.Background(), fmt.Sprintf("events-v1:channel-emotes:%s", channel.Login), redis.EventApiV1ChannelEmotes{
 			Channel: channel.Login,
 			EmoteID: emoteID.Hex(),
-			Name:    emote.Name,
-			Action:  "added",
-			Author:  usr.DisplayName,
+			Name:    name,
+			Action:  "ADD",
+			Actor:   usr.DisplayName,
+			Emote: &redis.EventApiV1ChannelEmotesEmote{
+				Name:       emote.Name,
+				Visibility: emote.Visibility,
+				MIME:       emote.Mime,
+				Tags:       emote.Tags,
+				Width:      emote.Width,
+				Height:     emote.Height,
+				Animated:   emote.Animated,
+				Owner: redis.EventApiV1ChannelEmotesEmoteOwner{
+					ID:          emote.OwnerID.Hex(),
+					TwitchID:    emote.Owner.TwitchID,
+					DisplayName: emote.Owner.DisplayName,
+					Login:       emote.Owner.Login,
+				},
+			},
 		})
 	}()
 	return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
@@ -344,7 +364,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		})
 
 		newName := emote.Name
-		if args.Data.Alias != nil {
+		if args.Data.Alias != nil && *args.Data.Alias != "" {
 			newName = *args.Data.Alias
 		}
 
@@ -352,8 +372,23 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 			Channel: channel.Login,
 			EmoteID: emoteID.Hex(),
 			Name:    newName,
-			Action:  "renamed",
-			Author:  usr.DisplayName,
+			Action:  "UPDATE",
+			Actor:   usr.DisplayName,
+			Emote: &redis.EventApiV1ChannelEmotesEmote{
+				Name:       emote.Name,
+				Visibility: emote.Visibility,
+				MIME:       emote.Mime,
+				Tags:       emote.Tags,
+				Width:      emote.Width,
+				Height:     emote.Height,
+				Animated:   emote.Animated,
+				Owner: redis.EventApiV1ChannelEmotesEmoteOwner{
+					ID:          emote.OwnerID.Hex(),
+					TwitchID:    emote.Owner.TwitchID,
+					DisplayName: emote.Owner.DisplayName,
+					Login:       emote.Owner.Login,
+				},
+			},
 		})
 	}()
 	return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
@@ -511,8 +546,8 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 			Channel: channel.Login,
 			EmoteID: emoteID.Hex(),
 			Name:    oldName,
-			Action:  "removed",
-			Author:  usr.DisplayName,
+			Action:  "REMOVE",
+			Actor:   usr.DisplayName,
 		})
 	}()
 	return query_resolvers.GenerateUserResolver(ctx, channel, &channelID, field.Children)
