@@ -204,6 +204,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 				Width:      emote.Width,
 				Height:     emote.Height,
 				Animated:   emote.Animated,
+				URLs:       datastructure.GetEmoteURLs(*emote),
 				Owner: redis.EventApiV1ChannelEmotesEmoteOwner{
 					ID:          emote.OwnerID.Hex(),
 					TwitchID:    owner.TwitchID,
@@ -408,6 +409,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 				Width:      emote.Width,
 				Height:     emote.Height,
 				Animated:   emote.Animated,
+				URLs:       datastructure.GetEmoteURLs(*emote),
 				Owner: redis.EventApiV1ChannelEmotesEmoteOwner{
 					ID:          emote.OwnerID.Hex(),
 					TwitchID:    owner.TwitchID,

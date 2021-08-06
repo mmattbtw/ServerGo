@@ -83,6 +83,7 @@ type EventApiV1ChannelEmotesEmote struct {
 	Width      [4]int16                          `json:"width"`
 	Height     [4]int16                          `json:"height"`
 	Animated   bool                              `json:"animated"`
+	URLs       [][]string                        `json:"urls"`
 	Owner      EventApiV1ChannelEmotesEmoteOwner `json:"owner"`
 }
 
