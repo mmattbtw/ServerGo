@@ -105,6 +105,9 @@ func CreateEmoteRoute(router fiber.Router) {
 					if err != nil {
 						return restutil.ErrBadRequest().Send(c, "Couldn't parse tags")
 					}
+					if len(b) == 0 {
+						continue
+					}
 
 					emoteTags = strings.Split(utils.B2S(b), ",")
 					// Validate tags
