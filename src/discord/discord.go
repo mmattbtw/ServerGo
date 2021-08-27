@@ -47,7 +47,6 @@ func toIntColor(s string) int {
 
 func SendWebhook(name string, params *dgo.WebhookParams) *dgo.Message {
 	wh, ok := webhooks[name]
-	fmt.Println("discorde", wh)
 	if !ok || (wh.ID == "" || wh.Token == "") {
 		// Discord is disabled.
 		return nil

@@ -7,8 +7,12 @@ import (
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache"
+	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/bwmarrin/discordgo"
+	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 const baseUrlFFZ = "https://api.frankerfacez.com/v1"
@@ -22,6 +26,19 @@ func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Em
 	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*10, time.Minute*15)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode == fiber.StatusTooManyRequests {
+		// Log 429s
+		log.WithFields(log.Fields{
+			"blame_provider":      "FFZ",
+			"rl-limit-header":     resp.Header["ratelimit-limit"],
+			"rl-remaining-header": resp.Header["ratelimit-remaining"],
+			"rl-reset-header":     resp.Header["ratelimit-reset"],
+			"rl-retry-after":      resp.Header["ratelimit-retry-after"],
+		})
+		go discord.SendWebhook("alerts", &discordgo.WebhookParams{
+			Content: fmt.Sprintf("[FFZ] 429 Too Many Requests @ `%s`", uri),
+		})
 	}
 
 	// Decode response
