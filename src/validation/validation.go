@@ -8,7 +8,7 @@ import (
 
 var (
 	emoteNameRegex = regexp.MustCompile(`^[-_A-Za-z():0-9]{2,100}$`)
-	emoteTagRegex  = regexp.MustCompile(`^[a-z]{3,30}$`)
+	emoteTagRegex  = regexp.MustCompile(`^[0-9a-z]{3,30}$`)
 
 //	ValidateEmoteTag = regexp.MustCompile(`^[\\w-]{2,100}$`)
 )
