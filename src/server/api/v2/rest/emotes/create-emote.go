@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -210,6 +211,9 @@ func CreateEmoteRoute(router fiber.Router) {
 			}
 			ogHeight := 0
 			ogWidth := 0
+			framesDir := fmt.Sprintf("%s/frames", fileDir)
+			frameCount := 1
+
 			switch ext {
 			case "jpg":
 				img, err := jpeg.Decode(ogFile)
@@ -235,12 +239,39 @@ func CreateEmoteRoute(router fiber.Router) {
 				}
 
 				// Set a cap on how many frames are allowed
-				if len(g.Image) > MAX_FRAME_COUNT {
+				frameCount = len(g.Image)
+				if frameCount > MAX_FRAME_COUNT {
 					return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Maximum Frame Count Exceeded (%v)", MAX_FRAME_COUNT))
 				}
 
 				ogWidth, ogHeight = getGifDimensions(g)
 			case "webp":
+				if err := os.MkdirAll(framesDir, 0777); err != nil {
+					log.WithError(err).Error("mkdir")
+					return restutil.ErrBadRequest().Send(c, err.Error())
+				}
+
+				// Decode all frames individually
+				// This uses the webpmux tool, stopping once the index finds a nonexistent frame and yields an error
+				for i := 0; i < 55; i++ {
+					cmd := exec.CommandContext(fctx, "webpmux", []string{
+						"-get", "frame", strconv.Itoa(i),
+						ogFilePath,
+						"-o", fmt.Sprintf("%s/%d", framesDir, i),
+					}...)
+					out, err := cmd.CombinedOutput()
+
+					// Error: stop iterating frames at this point
+					// Check the output, and return 500 if it's an error other than "could not get frame"
+					if err != nil {
+						if !strings.HasPrefix(string(out), "ERROR (WEBP_MUX_NOT_FOUND): Could not get frame") {
+							log.WithError(fmt.Errorf(err.Error() + " " + string(out))).Error("webpmux")
+							return restutil.ErrInternalServer().Send(c, fmt.Sprintf("WebP decode failure @ frame %d", i))
+						}
+						break
+					}
+				}
+
 				return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Sorry, direct support for WebP uploads is not available yet."))
 			default:
 				return restutil.ErrBadRequest().Send(c, "Unsupported File Format")
