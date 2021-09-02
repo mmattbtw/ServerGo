@@ -85,32 +85,33 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 	// Assign typed data based on kind
 	var itemID primitive.ObjectID
 	switch args.Kind {
-	case datastructure.EntitlementKindSubscription:
-		if args.Data.Subscription == nil {
-			return nil, fmt.Errorf("Missing Subscription Data")
-		}
-		itemID, err = primitive.ObjectIDFromHex(args.Data.Subscription.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Set Subscription Data to builder
-		builder = builder.SetSubscriptionData(datastructure.EntitledSubscription{
-			ObjectReference: itemID,
-		})
 	case datastructure.EntitlementKindBadge:
 		if args.Data.Badge == nil {
 			return nil, fmt.Errorf("Missing Badge Data")
 		}
+
 		itemID, err = primitive.ObjectIDFromHex(args.Data.Badge.ID)
 		if err != nil {
 			return nil, err
 		}
 
+		var badge datastructure.Badge
+		if err := mongo.Collection(mongo.CollectionNameBadges).FindOne(ctx, bson.M{"_id": itemID}).Decode(&badge); err != nil {
+			log.WithError(err).Error("mongo")
+			if err == mongo.ErrNoDocuments {
+				return nil, fmt.Errorf("Unknown Badge")
+			}
+
+			return nil, err
+		}
+
 		builder = builder.SetBadgeData(datastructure.EntitledBadge{
-			ObjectReference: itemID,
+			ObjectReference: badge.ID,
 			Selected:        args.Data.Badge.Selected,
 		})
+
+		notify = notify.SetTitle("Chat Badge Acquired").
+			AddTextMessagePart(fmt.Sprintf("The badge \"%v\" has been added to your account", badge.Name))
 	case datastructure.EntitlementKindRole:
 		if args.Data.Role == nil {
 			return nil, fmt.Errorf("Missing Role Data")
@@ -147,7 +148,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 	}
 
 	// Send the notification
-	if notify.Notification.Title != "" {
+	if len(notify.Notification.MessageParts) > 0 {
 		go func() {
 			if err := notify.Write(ctx); err != nil {
 				log.WithError(err).Error("notifications")
