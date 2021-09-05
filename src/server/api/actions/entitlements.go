@@ -147,6 +147,76 @@ func (entitlements) With(ctx context.Context, e datastructure.Entitlement) Entit
 	}
 }
 
+// FetchEntitlements: gets entitlement of specified kind
+func (entitlements) FetchEntitlements(ctx context.Context, opts struct {
+	Kind            *datastructure.EntitlementKind
+	ObjectReference primitive.ObjectID
+}) ([]EntitlementBuilder, error) {
+	// Make a request to get the user's entitlements
+	var entitlements []*entitlementWithUser
+	query := bson.M{
+		"kind":     opts.Kind,
+		"disabled": bson.M{"$not": bson.M{"$eq": true}},
+	}
+	if !opts.ObjectReference.IsZero() {
+		query["data.ref"] = opts.ObjectReference
+	}
+
+	pipeline := mongo.Pipeline{
+		bson.D{bson.E{
+			Key:   "$match",
+			Value: query,
+		}},
+		bson.D{bson.E{
+			Key:   "$addFields",
+			Value: bson.M{"entitlement": "$$ROOT"},
+		}},
+		bson.D{bson.E{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "users",
+				"localField":   "user_id",
+				"foreignField": "_id",
+				"as":           "user",
+			},
+		}},
+		bson.D{bson.E{
+			Key:   "$unwind",
+			Value: "$user",
+		}},
+	}
+
+	cur, err := mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, pipeline)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	} else if err != nil {
+		log.WithError(err).Error("actions, UserBuilder, FetchEntitlements")
+		return nil, err
+	}
+
+	// Get all entitlements
+	if err := cur.All(ctx, &entitlements); err != nil {
+		return nil, err
+	}
+
+	// Wrap into Entitlement Builders
+	builders := make([]EntitlementBuilder, len(entitlements))
+	for i, e := range entitlements {
+		builders[i] = EntitlementBuilder{
+			Entitlement: *e.Entitlement,
+			ctx:         ctx,
+			User:        e.User,
+		}
+	}
+
+	return builders, nil
+}
+
+type entitlementWithUser struct {
+	*datastructure.Entitlement
+	User *datastructure.User
+}
+
 func (b EntitlementBuilder) Log(str string) {
 	log.WithFields(log.Fields{
 		"id":      b.Entitlement.ID,
