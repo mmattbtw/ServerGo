@@ -7,6 +7,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -48,24 +49,11 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUserBanned
 	}
 
-	res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{
-		"_id": channelID,
-	})
-
-	channel := &datastructure.User{}
-
-	err = res.Err()
-
-	if err == nil {
-		err = res.Decode(channel)
-	}
+	channelUB, err := actions.Users.GetByID(ctx, channelID)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, resolvers.ErrUnknownChannel
-		}
-		log.WithError(err).Error("mongo")
-		return nil, resolvers.ErrInternalServer
+		return nil, resolvers.ErrUnknownChannel
 	}
+	channel := &channelUB.User
 
 	if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
 		if channel.ID.Hex() != usr.ID.Hex() {
@@ -127,7 +115,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		}
 	}
 	// User tries to add a zero-width emote but lacks permission
-	if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityZeroWidth)) && !usr.HasPermission(datastructure.RolePermissionUseZeroWidthEmote) {
+	if utils.BitField.HasBits(int64(emote.Visibility), int64(datastructure.EmoteVisibilityZeroWidth)) && !channel.HasPermission(datastructure.RolePermissionUseZeroWidthEmote) {
 		return nil, resolvers.ErrAccessDenied
 	}
 
