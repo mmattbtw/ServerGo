@@ -65,6 +65,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			var emote *datastructure.Emote
 			var emoteName string              // The name of the emote
 			var emoteTags []string            // The emote's tags, if any
+			var emoteVisibility int32         // The starting visibility for the emote
 			var channelID *primitive.ObjectID // The channel creating this emote
 			var contentType string
 			var ext string
@@ -117,6 +118,26 @@ func CreateEmoteRoute(router fiber.Router) {
 					if ok, badTag := validation.ValidateEmoteTags(emoteTags); !ok {
 						return restutil.ErrBadRequest().Send(c, fmt.Sprintf("'%s' is not a valid tag", badTag))
 					}
+				case "visibility":
+					b, err := io.ReadAll(part)
+					if err != nil {
+						return restutil.ErrBadRequest().Send(c, "Invalid Visibility Flags")
+					}
+					if len(b) == 0 {
+						continue
+					}
+
+					i, err := strconv.Atoi(utils.B2S(b))
+					if err != nil {
+						return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Could not parse visibility: %s", err.Error()))
+					}
+					if utils.BitField.HasBits(int64(i), int64(datastructure.EmoteVisibilityPrivate)) {
+						emoteVisibility |= datastructure.EmoteVisibilityPrivate
+					}
+					if utils.BitField.HasBits(int64(i), int64(datastructure.EmoteVisibilityZeroWidth)) {
+						emoteVisibility |= datastructure.EmoteVisibilityZeroWidth
+					}
+					fmt.Println(emoteVisibility)
 				case "channel":
 					buf := make([]byte, 64)
 					n, err := part.Read(buf)
@@ -336,7 +357,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				Mime:             mime,
 				Status:           datastructure.EmoteStatusProcessing,
 				Tags:             utils.Ternary(emoteTags != nil, emoteTags, []string{}).([]string),
-				Visibility:       datastructure.EmoteVisibilityPrivate | datastructure.EmoteVisibilityUnlisted,
+				Visibility:       emoteVisibility | datastructure.EmoteVisibilityUnlisted,
 				OwnerID:          *channelID,
 				LastModifiedDate: time.Now(),
 				Width:            sizeX,
