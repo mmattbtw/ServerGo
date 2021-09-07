@@ -19,8 +19,17 @@ const baseUrlFFZ = "https://api.frankerfacez.com/v1"
 
 // Get channel emotes from the FFZ provider
 func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Emote, error) {
+	// Get Twitch User from ID
+	usr, err := GetTwitchUser(ctx, login)
+	if err != nil {
+		return nil, err
+	}
+	if usr == nil {
+		return []*datastructure.Emote{}, nil
+	}
+
 	// Set Request URI
-	uri := fmt.Sprintf("%v/rooms/%v", baseUrlFFZ, login)
+	uri := fmt.Sprintf("%v/rooms/id/%v", baseUrlFFZ, usr.ID)
 
 	// Send the request
 	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*10, time.Minute*15)
