@@ -12,7 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/gobuffalo/packr/v2 v2.8.1
-	github.com/gofiber/fiber/v2 v2.17.0
+	github.com/gofiber/fiber/v2 v2.18.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
@@ -20,7 +20,6 @@ require (
 	github.com/json-iterator/go v1.1.11
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/karrick/godirwalk v1.16.1 // indirect
-	github.com/klauspost/compress v1.13.0 // indirect
 	github.com/kr/pretty v0.3.0
 	github.com/mitchellh/panicwrap v1.0.0
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
