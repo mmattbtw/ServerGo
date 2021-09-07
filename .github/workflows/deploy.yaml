@@ -16,20 +16,23 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # Checkout repository
       - uses: actions/checkout@v2
 
-      # Build image
-      - name: Build Image
-        id: build_step
-        uses: docker/build-push-action@v1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Image
+        id: build_step
+        uses: docker/build-push-action@v2
+        with:
           push: true
-          tags: ${{ github.sha }}
-          outputs: type=docker,dest=/tmp/image.tar
+          tags: |
+            ghcr.io/seventv/servergo/prod:${{ github.sha }}
+            ghcr.io/seventv/servergo/prod:latest
 
   deploy:
     name: Deploy (Production)
@@ -51,7 +54,7 @@ jobs:
             KUBE_RESOURCE: statefulsets
             KUBE_IMAGE_PATCH: >-
               [
-                { "op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "ghcr.io/${{ env.REGISTRTY_IMAGE_NAME }}" }
+                { "op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "ghcr.io/seventv/servergo/prod:${{ github.sha }}" }
               ]
           run: |
             mkdir -p ~/.kube
