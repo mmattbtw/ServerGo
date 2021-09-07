@@ -31,8 +31,8 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/seventv/servergo/prod:${{ github.sha }}
-            ghcr.io/seventv/servergo/prod:latest
+            ghcr.io/seventv/servergo:${{ github.sha }}
+            ghcr.io/seventv/servergo:latest
 
   deploy:
     name: Deploy (Production)
@@ -54,7 +54,7 @@ jobs:
             KUBE_RESOURCE: statefulsets
             KUBE_IMAGE_PATCH: >-
               [
-                { "op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "ghcr.io/seventv/servergo/prod:${{ github.sha }}" }
+                { "op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "ghcr.io/seventv/servergo:${{ github.sha }}" }
               ]
           run: |
             mkdir -p ~/.kube
