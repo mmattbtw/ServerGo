@@ -34,31 +34,15 @@ jobs:
   deploy:
     name: Deploy (Stage)
     runs-on: self-hosted
-    needs: # Run this after build
+    needs: 
       - build
 
     steps:
-        # Checkout repository
-        - uses: actions/checkout@v2
-
-        # Deploy to k8s
-        - name: Install kubectl&
-          uses: azure/setup-kubectl@v1
-
-        - name: Apply Deployment & Rollout
-          env:
-            KUBE_CONFIG_DATA: ${{ secrets.K8S_CONFIG }}
-            KUBE_RESOURCE: statefulsets
-            KUBE_IMAGE_PATCH: >-
-              [
-                { "op": "replace", "path": "/spec/template/spec/containers/0/image", "value": "ghcr.io/seventv/servergo/stage:${{ github.sha }}" }
-              ]
-          run: |
-            mkdir -p ~/.kube
-            (echo $KUBE_CONFIG_DATA | base64 -d) >> ~/.kube/config
-            kubectl config use-context 7tv-as-deployer
-
-            kubectl apply -f k8s/stage.yaml
-            kubectl patch $KUBE_RESOURCE 7tv-stageapi --type="json" -p="$KUBE_IMAGE_PATCH"
-
-            kubectl rollout restart -n 7tv sts/7tv-stageapi
+      - name: Deploy Staged Server
+        uses: fifsky/ssh-action@master
+        with:
+          command: docker pull ghcr.io/seventv/autodeploy:latest && docker run --net=host -v /opt/autodeploy/config.yaml:/app/config.yaml -v /opt/autodeploy/private.key:/app/private.key ghcr.io/seventv/autodeploy:latest --service server-stage --tag ${{ github.sha }}
+          host: ${{ secrets.DEPLOY_HOST }}
+          user: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
