@@ -4,18 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache"
-	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
-	"github.com/bwmarrin/discordgo"
-	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
 )
-
-const baseUrlFFZ = "https://api.frankerfacez.com/v1"
 
 // Get channel emotes from the FFZ provider
 func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Emote, error) {
@@ -29,43 +24,37 @@ func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Em
 	}
 
 	// Set Request URI
-	uri := fmt.Sprintf("%v/rooms/id/%v", baseUrlFFZ, usr.ID)
+	uri := fmt.Sprintf("%v/cached/frankerfacez/users/twitch/%s", baseUrlBTTV, usr.ID)
 
-	// Send the request
-	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*10, time.Minute*15)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode == fiber.StatusTooManyRequests {
-		// Log 429s
-		log.WithFields(log.Fields{
-			"blame_provider":      "FFZ",
-			"rl-limit-header":     resp.Header["ratelimit-limit"],
-			"rl-remaining-header": resp.Header["ratelimit-remaining"],
-			"rl-reset-header":     resp.Header["ratelimit-reset"],
-			"rl-retry-after":      resp.Header["ratelimit-retry-after"],
-		})
-		go discord.SendWebhook("alerts", &discordgo.WebhookParams{
-			Content: fmt.Sprintf("[FFZ] 429 Too Many Requests @ `%s`", uri),
-		})
-	}
-
-	// Decode response
-	var emoteResponse getEmotesResponseFFZ
-	if err := json.Unmarshal(resp.Body, &emoteResponse); err != nil {
-		return nil, err
-	}
-
-	emotes, err := ffzTo7TV(emoteResponse.Emotes)
+	// Send request
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*30, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}
 
-	return emotes, nil
+	var emotes []emoteBTTVFFZ
+	err = json.Unmarshal(resp.Body, &emotes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert these emotes into a 7TV emote object
+	result := make([]*datastructure.Emote, len(emotes))
+	for i, e := range emotes {
+		emote, err := ffzTo7TV([]emoteBTTVFFZ{e})
+
+		if err != nil {
+			continue
+		}
+
+		result[i] = emote[0]
+	}
+
+	return result, nil
 }
 
 func GetGlobalEmotesFFZ(ctx context.Context) ([]*datastructure.Emote, error) {
-	uri := fmt.Sprintf("%v/set/global", baseUrlFFZ)
+	uri := fmt.Sprintf("%v/cached/frankerfacez/emotes/global", baseUrlBTTV)
 
 	// Send request
 	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*4, time.Minute*15)
@@ -73,29 +62,41 @@ func GetGlobalEmotesFFZ(ctx context.Context) ([]*datastructure.Emote, error) {
 		return nil, err
 	}
 
-	var emoteResponse getEmoteSetsResponseFFZ
-	if err := json.Unmarshal(resp.Body, &emoteResponse); err != nil {
-		return nil, err
-	}
-
-	var allEmotes []emoteFFZ
-	for _, s := range emoteResponse.Sets {
-		allEmotes = append(allEmotes, s.Emotes...)
-	}
-
-	emotes, err := ffzTo7TV(allEmotes)
+	var emotes []emoteBTTVFFZ
+	err = json.Unmarshal(resp.Body, &emotes)
 	if err != nil {
 		return nil, err
 	}
 
-	return emotes, nil
+	// Convert these emotes into a 7TV emote object
+	result := make([]*datastructure.Emote, len(emotes))
+	for i, e := range emotes {
+		emote, err := ffzTo7TV([]emoteBTTVFFZ{e})
+
+		if err != nil {
+			continue
+		}
+
+		result[i] = emote[0]
+	}
+
+	return result, nil
 }
 
 // Convert a FFZ emote object into 7TV
-func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
+func ffzTo7TV(emotes []emoteBTTVFFZ) ([]*datastructure.Emote, error) {
 	result := make([]*datastructure.Emote, len(emotes))
 
 	for i, emote := range emotes {
+		if emote.User == nil { // Add empty user if missing
+			emote.User = &userBTTVFFZ{}
+		}
+		visibility := int32(0)
+		// Set zero-width flag if emote is a hardcoded bttv zerowidth
+		if utils.Contains(zeroWidthBTTV, emote.Code) {
+			visibility |= datastructure.EmoteVisibilityZeroWidth
+		}
+
 		// Generate URLs list
 		urls := make([][]string, 3)
 		for i, s := range []int8{1, 2, 4} {
@@ -107,20 +108,20 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
 		}
 
 		result[i] = &datastructure.Emote{
-			Name:       emote.Name,
-			Width:      [4]int16{emote.Width, 0, 0, 0},
-			Height:     [4]int16{emote.Height, 0, 0, 0},
-			Visibility: 0,
-			Mime:       "image/png",
+			Name:       emote.Code,
+			Width:      [4]int16{28, 0, 0, 0},
+			Height:     [4]int16{28, 0, 0, 0},
+			Visibility: visibility,
+			Mime:       "image/" + emote.ImageType,
 			Status:     datastructure.EmoteStatusLive,
 			Owner: &datastructure.User{
-				Login:       emote.Owner.Name,
-				DisplayName: emote.Owner.DisplayName,
-				TwitchID:    "",
+				DisplayName: emote.User.DisplayName,
+				Login:       emote.User.Name,
+				TwitchID:    emote.User.ProviderID,
 			},
 
 			Provider:   "FFZ",
-			ProviderID: utils.StringPointer(fmt.Sprint(emote.ID)),
+			ProviderID: utils.StringPointer(strconv.Itoa(int(emote.ID))),
 			URLs:       urls,
 		}
 	}
@@ -129,7 +130,7 @@ func ffzTo7TV(emotes []emoteFFZ) ([]*datastructure.Emote, error) {
 }
 
 func getCdnURL_FFZ(emoteID int32, size int8) string {
-	return fmt.Sprintf("https://cdn.frankerfacez.com/emoticon/%d/%d", emoteID, size)
+	return fmt.Sprintf("https://cdn.betterttv.net/frankerfacez_emote/%d/%d", emoteID, size)
 }
 
 type emoteFFZ struct {
