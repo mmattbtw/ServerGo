@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const baseUrlFFZ = "https://api.frankerfacez.com/v1"
+const baseUrlFFZ = "http://10.0.0.4:9999/https://api.frankerfacez.com/v1"
 
 // Get channel emotes from the FFZ provider
 func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Emote, error) {
@@ -32,7 +32,7 @@ func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Em
 	uri := fmt.Sprintf("%v/rooms/id/%v", baseUrlFFZ, usr.ID)
 
 	// Send the request
-	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*10, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*60, time.Minute*15)
 	if err != nil {
 		return nil, err
 	}
