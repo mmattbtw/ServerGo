@@ -1,8 +1,10 @@
 package gql
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/graph-gophers/graphql-go"
+	jsoniter "github.com/json-iterator/go"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -31,6 +35,19 @@ type RootResolver struct {
 	*query_resolvers.QueryResolver
 	*mutation_resolvers.MutationResolver
 }
+
+type Query struct {
+	ID         primitive.ObjectID     `json:"id"`
+	IP         string                 `json:"ip"`
+	Query      string                 `json:"query"`
+	Origin     string                 `json:"origin"`
+	UserAgent  string                 `json:"user_agent"`
+	TimeTaken  time.Duration          `json:"time_taken"`
+	Variables  map[string]interface{} `json:"variables"`
+	RawHeaders string                 `json:"raw_headers"`
+}
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func GQL(app fiber.Router) fiber.Router {
 	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))
@@ -81,9 +98,36 @@ func GQL(app fiber.Router) fiber.Router {
 			})
 		}
 
+		start := time.Now()
+
 		rCtx := context.WithValue(Ctx, utils.RequestCtxKey, c)
 		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))
 		result := schema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
+
+		go func() {
+			sniffer := configure.Config.GetString("gql_sniffer")
+			if sniffer == "" {
+				return
+			}
+			data, err := json.Marshal(Query{
+				ID:         primitive.NewObjectIDFromTimestamp(start),
+				IP:         c.Get("Cf-Connecting-IP"),
+				Query:      req.Query,
+				Origin:     c.Get("Origin"),
+				UserAgent:  c.Get("User-Agent"),
+				Variables:  req.Variables,
+				TimeTaken:  time.Since(start),
+				RawHeaders: utils.B2S(c.Request().Header.RawHeaders()),
+			})
+			if err != nil {
+				return
+			}
+			resp, err := http.Post(sniffer, "application/json", bytes.NewBuffer(data))
+			if err != nil {
+				return
+			}
+			_ = resp.Body.Close()
+		}()
 
 		status := 200
 
