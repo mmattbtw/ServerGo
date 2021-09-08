@@ -6,10 +6,6 @@ on:
 
   workflow_dispatch:
 
-env:
-  REGISTRY_REPO: seventv/servergo
-  REGISTRTY_IMAGE_NAME: seventv/servergo:${{ github.sha }}
-
 jobs:
   build:
     name: Build (Production)
@@ -44,7 +40,7 @@ jobs:
       - name: Deploy Production Server
         uses: fifsky/ssh-action@master
         with:
-          command: docker pull ghcr.io/seventv/autodeploy:latest && docker run --net=host -v /opt/autodeploy/config.yaml:/app/config.yaml -v /opt/autodeploy/private.key:/app/private.key ghcr.io/seventv/autodeploy:latest --service server --tag ${{ github.sha }}
+          command: docker pull ghcr.io/seventv/autodeploy:latest && docker run --rm --net=host -v /opt/autodeploy/config.yaml:/app/config.yaml -v /opt/autodeploy/private.key:/app/private.key ghcr.io/seventv/autodeploy:latest --service server --tag ${{ github.sha }}
           host: ${{ secrets.DEPLOY_HOST }}
           user: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
