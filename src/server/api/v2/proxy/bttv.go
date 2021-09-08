@@ -154,9 +154,22 @@ type emoteBTTV struct {
 	User      *userBTTV `json:"user"`
 	UserID    *string   `json:"userId"`
 }
+type emoteBTTVFFZ struct {
+	ID        int32        `json:"id"`
+	Code      string       `json:"code"`
+	ImageType string       `json:"imageType"`
+	User      *userBTTVFFZ `json:"user"`
+	UserID    *string      `json:"userId"`
+}
 
 type userBTTV struct {
 	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	ProviderID  string `json:"providerId"`
+}
+type userBTTVFFZ struct {
+	ID          int32  `json:"id"`
 	Name        string `json:"name"`
 	DisplayName string `json:"displayName"`
 	ProviderID  string `json:"providerId"`
