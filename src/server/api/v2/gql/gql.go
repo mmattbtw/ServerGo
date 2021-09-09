@@ -2,8 +2,6 @@ package gql
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +12,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/graph-gophers/graphql-go"
 	jsoniter "github.com/json-iterator/go"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -65,15 +62,6 @@ func GQL(app fiber.Router) fiber.Router {
 	}, graphql.UseFieldResolvers())
 
 	rl := configure.Config.GetIntSlice("limits.route.gql")
-	origins := configure.Config.GetStringSlice("cors_origins")
-	gql.Use(cors.New(cors.Config{
-		AllowOrigins: utils.Ternary(configure.Config.GetBool("cors_wildcard"),
-			"*",
-			fmt.Sprintf("%v,%v,%v,%v", configure.Config.GetString("website_url"), strings.Join(origins, ","), "chrome-extension://*", "moz-extension://*"),
-		).(string),
-		ExposeHeaders: "X-Collection-Size,X-Created-ID",
-		AllowMethods:  "GET,POST,PUT,PATCH,DELETE",
-	}))
 	gql.Use(middleware.RateLimitMiddleware("gql", int32(rl[0]), time.Millisecond*time.Duration(rl[1])))
 	gql.Post("/", func(c *fiber.Ctx) error {
 		req := GQLRequest{}

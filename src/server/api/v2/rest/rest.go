@@ -10,7 +10,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/emotes"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/users"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func RestV2(app fiber.Router) fiber.Router {
@@ -20,10 +19,6 @@ func RestV2(app fiber.Router) fiber.Router {
 
 		return c.Next()
 	})
-	restGroup.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,PATCH,DELETE",
-	}))
 
 	emoteGroup := restGroup.Group("/emotes")
 	emotes.CreateEmoteRoute(emoteGroup)
