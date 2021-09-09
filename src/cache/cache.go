@@ -313,8 +313,7 @@ func CacheGetRequest(ctx context.Context, uri string, cacheDuration time.Duratio
 		return nil, err
 	}
 	log.WithFields(log.Fields{
-		"status_code":    resp.StatusCode,
-		"status":         resp.Status,
+		"status":         resp.StatusCode,
 		"response_in_ms": time.Since(startedAt).Milliseconds(),
 		"completed_at":   time.Now(),
 	}).Info("CacheGetRequest")

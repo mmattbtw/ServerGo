@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"sync"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -14,6 +15,7 @@ func Logger() func(c *fiber.Ctx) error {
 		var (
 			err interface{}
 		)
+		c.Locals("extra_data", sync.Map{})
 		func() {
 			defer func() {
 				err = recover()
@@ -23,15 +25,28 @@ func Logger() func(c *fiber.Ctx) error {
 		if err != nil {
 			_ = c.SendStatus(500)
 		}
-		l := log.WithFields(log.Fields{
-			"status":   c.Response().StatusCode(),
-			"path":     utils.B2S(c.Request().RequestURI()),
-			"duration": time.Since(start) / time.Millisecond,
+
+		extraDataSync := c.Locals("extra_data").(sync.Map)
+		extraData := map[interface{}]interface{}{}
+		extraDataSync.Range(func(key, value interface{}) bool {
+			extraData[key] = value
+			return true
 		})
+		l := log.WithFields(log.Fields{
+			"status":      c.Response().StatusCode(),
+			"path":        utils.B2S(c.Request().RequestURI()),
+			"duration":    time.Since(start) / time.Millisecond,
+			"ip":          c.Get("Cf-Connecting-IP"),
+			"origin":      c.Get("Origin"),
+			"user_agent":  c.Get("User-Agent"),
+			"extra_data":  extraData,
+			"raw_headers": utils.B2S(c.Request().Header.RawHeaders()),
+		})
+
 		if err != nil {
 			l = l.WithField("error", err)
 		}
-		l.Info()
+		l.Info("logger")
 		return nil
 	}
 }

@@ -1,11 +1,10 @@
 package gql
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/configure"
@@ -77,9 +76,8 @@ func GQL(app fiber.Router) fiber.Router {
 	}))
 	gql.Use(middleware.RateLimitMiddleware("gql", int32(rl[0]), time.Millisecond*time.Duration(rl[1])))
 	gql.Post("/", func(c *fiber.Ctx) error {
-		req := &GQLRequest{}
-		err := c.BodyParser(req)
-		if err != nil {
+		req := GQLRequest{}
+		if err := c.BodyParser(&req); err != nil {
 			return err
 		}
 		if err != nil {
@@ -98,36 +96,12 @@ func GQL(app fiber.Router) fiber.Router {
 			})
 		}
 
-		start := time.Now()
+		extraData := c.Locals("extra_data").(sync.Map)
+		extraData.Store("gql_request", req)
 
 		rCtx := context.WithValue(Ctx, utils.RequestCtxKey, c)
 		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))
 		result := schema.Exec(rCtx, req.Query, req.OperationName, req.Variables)
-
-		go func() {
-			sniffer := configure.Config.GetString("gql_sniffer")
-			if sniffer == "" {
-				return
-			}
-			data, err := json.Marshal(Query{
-				ID:         primitive.NewObjectIDFromTimestamp(start),
-				IP:         c.Get("Cf-Connecting-IP"),
-				Query:      req.Query,
-				Origin:     c.Get("Origin"),
-				UserAgent:  c.Get("User-Agent"),
-				Variables:  req.Variables,
-				TimeTaken:  time.Since(start),
-				RawHeaders: utils.B2S(c.Request().Header.RawHeaders()),
-			})
-			if err != nil {
-				return
-			}
-			resp, err := http.Post(sniffer, "application/json", bytes.NewBuffer(data))
-			if err != nil {
-				return
-			}
-			_ = resp.Body.Close()
-		}()
 
 		status := 200
 
