@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -27,9 +28,9 @@ func Logger() func(c *fiber.Ctx) error {
 		}
 
 		extraDataSync := c.Locals("extra_data").(sync.Map)
-		extraData := map[interface{}]interface{}{}
+		extraData := map[string]interface{}{}
 		extraDataSync.Range(func(key, value interface{}) bool {
-			extraData[key] = value
+			extraData[fmt.Sprint(key)] = value
 			return true
 		})
 		l := log.WithFields(log.Fields{

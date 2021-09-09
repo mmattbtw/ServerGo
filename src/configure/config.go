@@ -2,17 +2,19 @@ package configure
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/kr/pretty"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type ServerCfg struct {
 	Level      string `mapstructure:"level" json:"level"`
