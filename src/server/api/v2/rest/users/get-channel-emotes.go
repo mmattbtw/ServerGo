@@ -5,9 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SevenTV/ServerGo/src/cache"
+	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
@@ -39,7 +38,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			}
 			channel = &ub.User
 
-			// Find emotes
+			// Build query for emotes
 			var emotes []*datastructure.Emote
 			emoteFilter := bson.M{
 				"_id": bson.M{
@@ -53,7 +52,12 @@ func GetChannelEmotesRoute(router fiber.Router) {
 				}
 			}
 
-			if err := cache.Find(c.Context(), "emotes", "", emoteFilter, &emotes); err != nil {
+			// Find emotes
+			cur, err := mongo.Collection(mongo.CollectionNameEmotes).Find(ctx, emoteFilter)
+			if err != nil {
+				return restutil.ErrInternalServer().Send(c, err.Error())
+			}
+			if err := cur.All(ctx, &emotes); err != nil {
 				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 
@@ -76,11 +80,15 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			// Map IDs to struct
 			var owners []*datastructure.User
 			ownerMap := make(map[primitive.ObjectID]*datastructure.User, len(owners))
-			if err := cache.Find(c.Context(), "users", "", bson.M{
+			cur, err = mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 				"_id": bson.M{
 					"$in": ownerIDs,
 				},
-			}, &owners); err != nil {
+			})
+			if err != nil {
+				return restutil.ErrInternalServer().Send(c, err.Error())
+			}
+			if err := cur.All(ctx, &owners); err != nil {
 				return restutil.ErrInternalServer().Send(c, err.Error())
 			}
 			for _, o := range owners {
@@ -91,11 +99,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			response := make([]restutil.EmoteResponse, len(emotes))
 			for i, emote := range emotes {
 				var owner *datastructure.User
-				if !redis.Client.HExists(ctx, "user:bans", emote.OwnerID.Hex()).Val() {
-					owner = ownerMap[emote.OwnerID]
-				} else {
-					owner = datastructure.DeletedUser
-				}
+				owner = ownerMap[emote.OwnerID]
 
 				response[i] = restutil.CreateEmoteResponse(emote, owner)
 			}
