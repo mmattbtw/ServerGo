@@ -39,13 +39,8 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(channelID)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 
@@ -229,13 +224,8 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(channelID)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 
@@ -431,13 +421,8 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(channelID)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 

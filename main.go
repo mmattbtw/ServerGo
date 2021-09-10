@@ -20,10 +20,10 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/cache"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
 	_ "github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server"
 
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/tasks"
 )
 
@@ -97,11 +97,11 @@ func main() {
 	log.WithField("count", len(roles)).Infof("retrieved roles")
 
 	// Sync bans
-	bans, err := SyncBans(ctx)
+	err = actions.Bans.FetchBans(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not sync bans")
 	}
-	log.WithField("count", len(bans)).Info("retrieved bans")
+	log.WithField("count", len(actions.Bans.BannedUsers)).Info("retrieved bans")
 
 	go tasks.Start()
 
@@ -132,36 +132,6 @@ func GetAllRoles(ctx context.Context) ([]datastructure.Role, error) {
 	// Set "AllRoles" value to mongo context
 	cache.CachedRoles = roles
 	return roles, nil
-}
-
-// SyncBans: Ensure active bans exist on the redis instance
-func SyncBans(ctx context.Context) ([]*datastructure.Ban, error) {
-	bans := []*datastructure.Ban{}
-	cur, err := mongo.Collection(mongo.CollectionNameBans).Find(ctx, bson.M{
-		"$or": bson.A{
-			bson.M{"expire_at": nil},
-			bson.M{"expire_at": bson.M{"$gt": time.Now()}},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cur.All(ctx, &bans); err != nil {
-		return nil, err
-	}
-
-	// Sync with redis
-	for _, b := range bans {
-		if redis.Client.HExists(ctx, "user:bans", b.UserID.Hex()).Val() {
-			continue
-		}
-		if err := redis.Client.HSet(ctx, "user:bans", b.UserID.Hex(), b.Reason).Err(); err != nil {
-			log.WithError(err).Warn("SyncBans")
-		}
-	}
-
-	return bans, nil
 }
 
 func panicHandler(output string) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
@@ -43,23 +43,8 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrYourself
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
-		return nil, resolvers.ErrUserBanned
-	}
-
-	_, err = redis.Client.HGet(ctx, "user:bans", editorID.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(channelID)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 
@@ -151,13 +136,8 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		return nil, resolvers.ErrUnknownChannel
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", channelID.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(channelID)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 

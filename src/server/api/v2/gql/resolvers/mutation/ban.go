@@ -6,7 +6,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
@@ -44,12 +44,8 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 	}
 
 	// Check if ban already exists on victim
-	_, err = redis.Client.HGet(ctx, "user:bans", id.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.Errorf("redis, err=%v", err)
-		return nil, resolvers.ErrInternalServer
-	}
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(id)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 
@@ -101,12 +97,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = redis.Client.HSet(ctx, "user:bans", id.Hex(), reasonN).Result()
-	if err != nil {
-		log.Errorf("redis, err=%v", err)
-		return nil, resolvers.ErrInternalServer
-	}
-
+	actions.Bans.BannedUsers[id] = ban
 	_, err = mongo.Collection(mongo.CollectionNameAudit).InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserBan,
 		CreatedBy: usr.ID,
@@ -152,13 +143,9 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrYourself
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", id.Hex()).Result()
-	if err != nil {
-		if err != redis.ErrNil {
-			return nil, resolvers.ErrUserNotBanned
-		}
-		log.Errorf("redis, err=%v", err)
-		return nil, resolvers.ErrInternalServer
+	banned, _ := actions.Bans.IsUserBanned(id)
+	if !banned {
+		return nil, resolvers.ErrUserNotBanned
 	}
 
 	res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{
@@ -194,12 +181,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
-	_, err = redis.Client.HDel(ctx, "user:bans", id.Hex()).Result()
-	if err != nil {
-		log.Errorf("redis, err=%v", err)
-		return nil, resolvers.ErrInternalServer
-	}
-
+	delete(actions.Bans.BannedUsers, id)
 	_, err = mongo.Collection(mongo.CollectionNameAudit).InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserUnban,
 		CreatedBy: usr.ID,

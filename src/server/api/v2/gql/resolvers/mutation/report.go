@@ -5,7 +5,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
@@ -111,13 +111,8 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrYourself
 	}
 
-	_, err = redis.Client.HGet(ctx, "user:bans", id.Hex()).Result()
-	if err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
-		return nil, resolvers.ErrInternalServer
-	}
-
-	if err == nil {
+	banned, _ := actions.Bans.IsUserBanned(id)
+	if banned {
 		return nil, resolvers.ErrUserBanned
 	}
 

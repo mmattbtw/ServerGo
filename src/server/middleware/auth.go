@@ -7,7 +7,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/jwt"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
@@ -119,19 +118,8 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 			})
 		}
 
-		reason, err := redis.Client.HGet(c.Context(), "user:bans", user.ID.Hex()).Result()
-		if err != nil && err != redis.ErrNil {
-			log.WithError(err).Error("redis")
-			if !required {
-				return c.Next()
-			}
-			return c.Status(500).JSON(&fiber.Map{
-				"status": 500,
-				"error":  "Internal Server Error",
-			})
-		}
-
-		if err == nil {
+		banned, reason := actions.Bans.IsUserBanned(user.ID)
+		if banned {
 			if !required {
 				return c.Next()
 			}

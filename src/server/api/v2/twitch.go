@@ -12,7 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/jwt"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
+	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -280,7 +280,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		var respError error
 		// Check ban?
-		if reason, err := redis.Client.HGet(c.Context(), "user:bans", mongoUser.ID.Hex()).Result(); err != redis.ErrNil {
+		if banned, reason := actions.Bans.IsUserBanned(mongoUser.ID); banned {
 			var ban *datastructure.Ban
 			res := mongo.Collection(mongo.CollectionNameBans).FindOne(c.Context(), bson.M{"user_id": mongoUser.ID, "expire_at": bson.M{"$gt": time.Now()}})
 			err = res.Err()

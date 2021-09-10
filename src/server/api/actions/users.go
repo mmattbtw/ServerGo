@@ -7,7 +7,6 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -131,5 +130,7 @@ func (b UserBuilder) FetchEntitlements(kind *datastructure.EntitlementKind) ([]E
 }
 
 func (b UserBuilder) IsBanned() bool {
-	return redis.Client.HExists(b.ctx, "user:bans", b.User.ID.Hex()).Val()
+	banned, _ := Bans.IsUserBanned(b.User.ID)
+
+	return banned
 }

@@ -44,3 +44,11 @@ type UserBuilder struct {
 }
 
 var Users users = users{}
+
+type bans struct {
+	BannedUsers map[primitive.ObjectID]*datastructure.Ban
+}
+
+var Bans *bans = &bans{
+	BannedUsers: map[primitive.ObjectID]*datastructure.Ban{},
+}
