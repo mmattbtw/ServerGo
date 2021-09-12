@@ -1,4 +1,4 @@
-package badges
+package cosmetics
 
 import (
 	"encoding/json"
@@ -19,6 +19,8 @@ import (
 * user_identifier: "object_id", "twitch_id", "login"
  */
 func GetBadges(router fiber.Router) {
+	Avatar(router)
+
 	router.Get("/", func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		c.Set("Cache-Control", "max-age=300")

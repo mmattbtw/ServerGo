@@ -6,10 +6,11 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/redis"
-	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/badges"
+	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/cosmetics"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/emotes"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/users"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/rewrite/v2"
 )
 
 func RestV2(app fiber.Router) fiber.Router {
@@ -19,6 +20,11 @@ func RestV2(app fiber.Router) fiber.Router {
 
 		return c.Next()
 	})
+	restGroup.Use(rewrite.New(rewrite.Config{
+		Rules: map[string]string{
+			"/v2/badges": "/v2/cosmetics",
+		},
+	}))
 
 	emoteGroup := restGroup.Group("/emotes")
 	emotes.CreateEmoteRoute(emoteGroup)
@@ -29,8 +35,8 @@ func RestV2(app fiber.Router) fiber.Router {
 	users.GetUser(userGroup)
 	users.GetChannelEmotesRoute(userGroup)
 
-	badgeGroup := restGroup.Group("/badges")
-	badges.GetBadges(badgeGroup)
+	cosmeticsGroup := restGroup.Group("/cosmetics")
+	cosmetics.GetBadges(cosmeticsGroup)
 
 	restGroup.Get("/webext", func(c *fiber.Ctx) error {
 		// result := &WebExtResult{}

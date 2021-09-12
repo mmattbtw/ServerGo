@@ -102,6 +102,7 @@ func CreateUserResponse(user *datastructure.User, opt ...UserResponseOptions) *U
 		DisplayName:  user.DisplayName,
 		Role:         datastructure.GetRole(user.RoleID),
 		EmoteAliases: utils.Ternary(options.IncludeAliases, user.EmoteAlias, map[string]string{}).(map[string]string),
+		AvatarURL:    user.CustomAvatarURL,
 	}
 
 	return &response
@@ -118,6 +119,7 @@ type UserResponse struct {
 	DisplayName  string             `json:"display_name"`
 	Role         datastructure.Role `json:"role"`
 	EmoteAliases map[string]string  `json:"emote_aliases,omitempty"`
+	AvatarURL    string             `json:"avatar_url,omitempty"`
 }
 
 func CreateBadgeResponse(badge *datastructure.Badge, users []*datastructure.User, idType string) *BadgeResponse {

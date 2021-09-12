@@ -118,9 +118,10 @@ type User struct {
 	Description     string              `json:"description" bson:"description"`
 	CreatedAt       time.Time           `json:"twitch_created_at" bson:"twitch_created_at"`
 	ViewCount       int32               `json:"view_count" bson:"view_count"`
-	EmoteAlias      map[string]string   `json:"-" bson:"emote_alias"`           // Emote Alias - backend only
-	Badge           *primitive.ObjectID `json:"badge" bson:"badge"`             // User's badge, if any
-	EmoteSlots      int32               `json:"emote_slots" bson:"emote_slots"` // User's maximum channel emote slots
+	CustomAvatarURL string              `json:"avatar_url,omitempty" bson:"avatar_url,omitempty"` // URL to a custom avatar
+	EmoteAlias      map[string]string   `json:"-" bson:"emote_alias"`                             // Emote Alias - backend only
+	Badge           *primitive.ObjectID `json:"badge" bson:"badge"`                               // User's badge, if any
+	EmoteSlots      int32               `json:"emote_slots" bson:"emote_slots"`                   // User's maximum channel emote slots
 
 	// Relational Data
 	Emotes            *[]*Emote       `json:"emotes" bson:"-"`
@@ -212,6 +213,7 @@ const (
 	RolePermissionEditApplicationMeta                    // 2048 - (Elevated) Allows editing global app metadata, such as the active featured broadcast
 	RolePermissionManageEntitlements                     // 4096 - (Elevated) Allows granting and revoking entitlements to and from users
 	RolePermissionUseZeroWidthEmote                      // 8192 - Allows zero-width emotes to be enabled
+	RolePermissionUseCustomAvatars                       // 16384 - Allows setting a custom avatar
 
 	RolePermissionAll int64 = (1 << iota) - 1
 )
