@@ -18,7 +18,7 @@ func GetGlobalEmotesBTTV(ctx context.Context) ([]*datastructure.Emote, error) {
 	uri := fmt.Sprintf("%v/cached/emotes/global", baseUrlBTTV)
 
 	// Get global bttv emotes
-	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*4, time.Minute*15) // This request is cached for 4 hours as global emotes rarely change
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*24, time.Minute*3) // This request is cached for 4 hours as global emotes rarely change
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func GetChannelEmotesBTTV(ctx context.Context, login string) ([]*datastructure.E
 	uri := fmt.Sprintf("%v/cached/users/twitch/%v", baseUrlBTTV, usr.ID)
 
 	// Get bttv user response
-	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*5, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*40, time.Minute*3)
 	if err != nil {
 		return nil, err
 	}

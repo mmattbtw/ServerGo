@@ -27,7 +27,7 @@ func GetChannelEmotesFFZ(ctx context.Context, login string) ([]*datastructure.Em
 	uri := fmt.Sprintf("%v/cached/frankerfacez/users/twitch/%s", baseUrlBTTV, usr.ID)
 
 	// Send request
-	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*30, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Minute*60, time.Minute*3)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func GetGlobalEmotesFFZ(ctx context.Context) ([]*datastructure.Emote, error) {
 	uri := fmt.Sprintf("%v/cached/frankerfacez/emotes/global", baseUrlBTTV)
 
 	// Send request
-	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*4, time.Minute*15)
+	resp, err := cache.CacheGetRequest(ctx, uri, time.Hour*4, time.Minute*3)
 	if err != nil {
 		return nil, err
 	}
