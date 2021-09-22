@@ -11,13 +11,15 @@ import (
 )
 
 type ErrorResponse struct {
-	Status  int
-	Message string
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+	Reason  string `json:"reason"`
 }
 
 func (e *ErrorResponse) Send(c *fiber.Ctx, placeholders ...string) error {
 	if len(placeholders) > 0 {
 		e.Message = fmt.Sprintf(e.Message, strings.Join(placeholders, ", "))
+		e.Reason = strings.Join(placeholders, ", ")
 	}
 
 	b, _ := json.Marshal(e)
@@ -26,7 +28,7 @@ func (e *ErrorResponse) Send(c *fiber.Ctx, placeholders ...string) error {
 
 func createErrorResponse(status int, message string) *ErrorResponse {
 	return &ErrorResponse{
-		status, message,
+		status, message, "",
 	}
 }
 

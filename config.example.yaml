@@ -81,3 +81,6 @@ chatterino:
       download: https://github.com/SevenTV/chatterino7/releases/download/v7.3.4/Chatterino.dmg
       portable_download: 
       updateexe: https://github.com/SevenTV/chatterino7/releases/download/v7.3.4/Chatterino.dmg
+
+google:
+  api_key: ""

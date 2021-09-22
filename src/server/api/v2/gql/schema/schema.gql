@@ -261,6 +261,8 @@ type User {
   broadcaster_type: String!
   # twitch profile picture
   profile_image_url: String!
+  # YouTube ID
+  youtube_id: String!
   # date of pair
   created_at: String!
   # Get the emotes added to this users channel.

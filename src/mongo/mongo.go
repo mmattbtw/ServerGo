@@ -69,6 +69,7 @@ func init() {
 	_, err = Collection(CollectionNameUsers).Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"id": 1}, Options: options.Index().SetUnique(true)},
 		{Keys: bson.M{"login": 1}, Options: options.Index().SetUnique(true)},
+		{Keys: bson.M{"yt_id": 1}},
 		{Keys: bson.M{"role": 1}},
 		{Keys: bson.M{"editors": 1}},
 		{Keys: bson.M{"emotes": 1}},

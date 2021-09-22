@@ -110,6 +110,7 @@ type User struct {
 
 	// Twitch Data
 	TwitchID        string              `json:"twitch_id" bson:"id"`
+	YouTubeID       string              `json:"yt_id,omitempty" bson:"yt_id,omitempty"`
 	DisplayName     string              `json:"display_name" bson:"display_name"`
 	Login           string              `json:"login" bson:"login"`
 	BroadcasterType string              `json:"broadcaster_type" bson:"broadcaster_type"`

@@ -517,6 +517,10 @@ func (r *UserResolver) TwitchID() string {
 	return r.v.TwitchID
 }
 
+func (r *UserResolver) YouTubeID() string {
+	return r.v.YouTubeID
+}
+
 func (r *UserResolver) DisplayName() string {
 	return r.v.DisplayName
 }

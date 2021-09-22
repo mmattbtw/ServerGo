@@ -32,6 +32,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	go.mongodb.org/mongo-driver v1.7.2
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
+	google.golang.org/api v0.57.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/gographics/imagick.v3 v3.4.0
 )

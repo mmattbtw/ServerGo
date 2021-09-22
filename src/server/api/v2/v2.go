@@ -17,6 +17,7 @@ func API(app fiber.Router) fiber.Router {
 	}))
 
 	Twitch(api)
+	YouTube(api)
 	rest.RestV2(api)
 	gql.GQL(api)
 	chatterino.Chatterino(api)
