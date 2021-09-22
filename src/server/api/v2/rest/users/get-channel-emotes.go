@@ -28,7 +28,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 				"$or": bson.A{
 					bson.M{"id": channelIdentifier},
 					bson.M{"login": strings.ToLower(channelIdentifier)},
-					bson.M{"youtube_id": channelIdentifier},
+					bson.M{"yt_id": channelIdentifier},
 				},
 			})
 			if err != nil {
