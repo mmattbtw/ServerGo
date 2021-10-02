@@ -99,12 +99,12 @@ func CreateUserResponse(user *datastructure.User, opt ...UserResponseOptions) *U
 	}
 
 	response := UserResponse{
-		ID:           user.ID.Hex(),
-		Login:        user.Login,
-		DisplayName:  user.DisplayName,
-		Role:         datastructure.GetRole(user.RoleID),
-		EmoteAliases: utils.Ternary(options.IncludeAliases, user.EmoteAlias, map[string]string{}).(map[string]string),
-		AvatarURL:    user.CustomAvatarURL,
+		ID:               user.ID.Hex(),
+		Login:            user.Login,
+		DisplayName:      user.DisplayName,
+		Role:             datastructure.GetRole(user.RoleID),
+		EmoteAliases:     utils.Ternary(options.IncludeAliases, user.EmoteAlias, map[string]string{}).(map[string]string),
+		ProfilePictureID: user.ProfilePictureID,
 	}
 
 	return &response
@@ -115,13 +115,13 @@ type UserResponseOptions struct {
 }
 
 type UserResponse struct {
-	ID           string             `json:"id"`
-	TwitchID     string             `json:"twitch_id"`
-	Login        string             `json:"login"`
-	DisplayName  string             `json:"display_name"`
-	Role         datastructure.Role `json:"role"`
-	EmoteAliases map[string]string  `json:"emote_aliases,omitempty"`
-	AvatarURL    string             `json:"avatar_url,omitempty"`
+	ID               string             `json:"id"`
+	TwitchID         string             `json:"twitch_id"`
+	Login            string             `json:"login"`
+	DisplayName      string             `json:"display_name"`
+	Role             datastructure.Role `json:"role"`
+	EmoteAliases     map[string]string  `json:"emote_aliases,omitempty"`
+	ProfilePictureID string             `json:"profile_picture_id,omitempty"`
 }
 
 func CreateBadgeResponse(badge *datastructure.Badge, users []*datastructure.User, idType string) *BadgeResponse {

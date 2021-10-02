@@ -28,9 +28,11 @@ require (
 	github.com/pasztorpisti/qs v0.0.0-20171216220353-8d6c33ee906c
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
+	github.com/sizeofint/webpanimation v0.0.0-20210809145948-1d2b32119882
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	go.mongodb.org/mongo-driver v1.7.2
+	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
 	google.golang.org/api v0.57.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect

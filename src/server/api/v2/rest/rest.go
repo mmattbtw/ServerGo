@@ -34,6 +34,7 @@ func RestV2(app fiber.Router) fiber.Router {
 	userGroup := restGroup.Group("/users")
 	users.GetUser(userGroup)
 	users.GetChannelEmotesRoute(userGroup)
+	users.EditProfilePicture(userGroup)
 
 	cosmeticsGroup := restGroup.Group("/cosmetics")
 	cosmetics.GetBadges(cosmeticsGroup)
