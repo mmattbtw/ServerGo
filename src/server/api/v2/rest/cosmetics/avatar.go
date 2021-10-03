@@ -92,9 +92,16 @@ func Avatar(router fiber.Router) {
 			for _, ent := range u.EntitledRoles {
 				rb := actions.Entitlements.With(ctx, *ent)
 				roleID := rb.ReadRoleData().ObjectReference
-
 				role := datastructure.GetRole(&roleID)
 
+				// Check: user has "administrator", or "use custom avatars" permission
+				if utils.BitField.HasBits(role.Allowed, datastructure.RolePermissionAdministrator) || utils.BitField.HasBits(role.Allowed, datastructure.RolePermissionUseCustomAvatars) {
+					hasPermission = true
+				}
+			}
+			// If no permission from entitled role, also check the user's directly assigned role
+			if !hasPermission && u.RoleID != nil {
+				role := datastructure.GetRole(u.RoleID)
 				// Check: user has "administrator", or "use custom avatars" permission
 				if utils.BitField.HasBits(role.Allowed, datastructure.RolePermissionAdministrator) || utils.BitField.HasBits(role.Allowed, datastructure.RolePermissionUseCustomAvatars) {
 					hasPermission = true
