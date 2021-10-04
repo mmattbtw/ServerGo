@@ -115,9 +115,15 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 				return nil, err
 			}
 
+			var roleBindingID primitive.ObjectID
+			if args.Data.Badge.RoleBindingID != nil && primitive.IsValidObjectID(*args.Data.Badge.RoleBindingID) {
+				roleBindingID, _ = primitive.ObjectIDFromHex(*args.Data.Badge.RoleBindingID)
+			}
+
 			builder = builder.SetBadgeData(datastructure.EntitledBadge{
 				ObjectReference: badge.ID,
 				Selected:        args.Data.Badge.Selected,
+				RoleBinding:     &roleBindingID,
 			})
 
 			notify = notify.SetTitle("Chat Badge Acquired").
