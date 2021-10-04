@@ -31,7 +31,7 @@ const MAX_PIXEL_HEIGHT = 1000
 const MAX_PIXEL_WIDTH = 1000
 
 func EditProfilePicture(router fiber.Router) {
-	router.Patch("/profile-picture", middleware.UserAuthMiddleware(true), func(c *fiber.Ctx) error {
+	router.Post("/profile-picture", middleware.UserAuthMiddleware(true), func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "application/json")
 		req := c.Request()
 		ctx := c.Context()
@@ -64,8 +64,8 @@ func EditProfilePicture(router fiber.Router) {
 				log.WithError(err).Warn("EditProfilePicture, ReadAll")
 				return restutil.ErrBadRequest().Send(c, "File Unreadable")
 			}
-			if len(b) > 1000000 {
-				return restutil.ErrBadRequest().Send(c, "Input File Too Large. Must be <1MB")
+			if len(b) > 2500000 {
+				return restutil.ErrBadRequest().Send(c, "Input File Too Large. Must be <2.5MB")
 			}
 
 			file = bytes.NewReader(b)
