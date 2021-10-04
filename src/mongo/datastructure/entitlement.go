@@ -42,6 +42,8 @@ type EntitledBadge struct {
 	ID              string             `json:"id" bson:"-"`
 	ObjectReference primitive.ObjectID `json:"-" bson:"ref"`
 	Selected        bool               `json:"selected" bson:"selected"`
+	// The role required for the badge to show up
+	RoleBinding *primitive.ObjectID `json:"role_binding" bson:"role_binding"`
 }
 
 // (Data) Role binding in an Entitlement

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/SevenTV/ServerGo/src/cache"
+	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
@@ -44,12 +45,18 @@ func GetBadges(router fiber.Router) {
 		for _, baj := range badges {
 			var users []*datastructure.User
 			// Find directly assigned users
-			if err := cache.Find(c.Context(), "users", "", bson.M{
+			cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 				"_id": bson.M{"$in": baj.Users},
-			}, &users); err != nil {
-				log.WithError(err).WithField("badge", baj.Name).Errorf("mongo")
+			})
+			if err != nil {
+				log.WithError(err).WithField("badge", baj.Name).Error("mongo")
 				continue
 			}
+			if err = cur.All(ctx, &users); err != nil {
+				log.WithError(err).WithField("badge", baj.Name).Error("mongo")
+				continue
+			}
+
 			// Find entitled users
 			builders, err := actions.Entitlements.FetchEntitlements(ctx, struct {
 				Kind            *datastructure.EntitlementKind
@@ -62,9 +69,41 @@ func GetBadges(router fiber.Router) {
 				log.WithError(err).Error("GetBadges, FetchEntitlements")
 			}
 			for _, eb := range builders {
+				data := eb.ReadBadgeData()
+				ok := false
+				if data.RoleBinding != nil {
+					// Badge has role binding, we will now ensure user can actually use this badge
+					if eb.User.RoleID == data.RoleBinding {
+						ok = true
+					} else { // The user doesn't have the role bound directly, so we will check for an entitled role
+						ub, err := actions.Users.With(ctx, eb.User)
+						if err != nil {
+							log.WithError(err).WithField("badge", baj.Name).Error("actions")
+							continue
+						}
+
+						uents, err := ub.FetchEntitlements(&datastructure.EntitlementKindRole)
+						if err != nil {
+							log.WithError(err).WithField("badge", baj.Name).Error("actions")
+						}
+						// Iterate role entitlements for the user
+						for _, uent := range uents {
+							role := uent.ReadRoleData()
+							if role.ObjectReference != *data.RoleBinding {
+								continue
+							}
+							ok = true
+						}
+					}
+				} else {
+					ok = true
+				}
+				if !ok { // No permission to use this badge. Unlucky
+					continue
+				}
+
 				users = append(users, eb.User)
 			}
-
 			b := restutil.CreateBadgeResponse(baj, users, idType)
 
 			result.Badges = append(result.Badges, b)

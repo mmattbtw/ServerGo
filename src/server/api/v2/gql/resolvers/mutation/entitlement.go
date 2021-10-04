@@ -87,7 +87,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 	switch args.Kind {
 	case datastructure.EntitlementKindBadge:
 		if args.Data.Badge == nil {
-			return nil, fmt.Errorf("Missing Badge Data")
+			return nil, fmt.Errorf("missing badge data")
 		}
 
 		itemID, err = primitive.ObjectIDFromHex(args.Data.Badge.ID)
@@ -99,7 +99,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 		if err := mongo.Collection(mongo.CollectionNameBadges).FindOne(ctx, bson.M{"_id": itemID}).Decode(&badge); err != nil {
 			log.WithError(err).Error("mongo")
 			if err == mongo.ErrNoDocuments {
-				return nil, fmt.Errorf("Unknown Badge")
+				return nil, fmt.Errorf("unknown badge")
 			}
 
 			return nil, err
@@ -114,7 +114,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 			AddTextMessagePart(fmt.Sprintf("The badge \"%v\" has been added to your account", badge.Name))
 	case datastructure.EntitlementKindRole:
 		if args.Data.Role == nil {
-			return nil, fmt.Errorf("Missing Role Data")
+			return nil, fmt.Errorf("missing role data")
 		}
 		itemID, err = primitive.ObjectIDFromHex(args.Data.Role.ID)
 		if err != nil {
@@ -129,10 +129,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 		role := datastructure.GetRole(&itemID)
 		notify = notify.SetTitle("Global Role Granted").
 			AddTextMessagePart("You've been granted the role").
-			AddRoleMentionPart(role.ID).
-			AddTextMessagePart("by").
-			AddUserMentionPart(actor.ID).
-			AddTextMessagePart(".")
+			AddRoleMentionPart(role.ID)
 	}
 
 	// Write to DB
