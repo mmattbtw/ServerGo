@@ -100,8 +100,8 @@ func Avatar(router fiber.Router) {
 				}
 			}
 			// If no permission from entitled role, also check the user's directly assigned role
-			if !hasPermission && u.RoleID != nil {
-				role := datastructure.GetRole(u.RoleID)
+			if !hasPermission && u.User.RoleID != nil {
+				role := datastructure.GetRole(u.User.RoleID)
 				// Check: user has "administrator", or "use custom avatars" permission
 				if utils.BitField.HasBits(role.Allowed, datastructure.RolePermissionAdministrator) || utils.BitField.HasBits(role.Allowed, datastructure.RolePermissionUseCustomAvatars) {
 					hasPermission = true
