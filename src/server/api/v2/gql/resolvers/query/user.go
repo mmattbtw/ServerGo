@@ -534,7 +534,11 @@ func (r *UserResolver) BroadcasterType() string {
 }
 
 func (r *UserResolver) ProfileImageURL() string {
-	return r.v.ProfileImageURL
+	if r.v.ProfilePictureID != "" {
+		return datastructure.UserUtil.GetProfilePictureURL(r.v)
+	} else {
+		return r.v.ProfileImageURL
+	}
 }
 
 func (r *UserResolver) Reports() (*[]*reportResolver, error) {
