@@ -94,24 +94,35 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 		if err != nil {
 			return nil, err
 		}
-
+		// Check the item already being entitled to the user
 		var badge datastructure.Badge
-		if err := mongo.Collection(mongo.CollectionNameBadges).FindOne(ctx, bson.M{"_id": itemID}).Decode(&badge); err != nil {
-			log.WithError(err).Error("mongo")
-			if err == mongo.ErrNoDocuments {
-				return nil, fmt.Errorf("unknown badge")
-			}
-
-			return nil, err
+		exists := true
+		if err = mongo.Collection(mongo.CollectionNameEntitlements).FindOne(ctx, bson.M{
+			"kind":     "BADGE",
+			"user_id":  userID,
+			"data.ref": itemID,
+		}).Decode(&badge); err == mongo.ErrNoDocuments {
+			exists = false
 		}
 
-		builder = builder.SetBadgeData(datastructure.EntitledBadge{
-			ObjectReference: badge.ID,
-			Selected:        args.Data.Badge.Selected,
-		})
+		if !exists {
+			if err := mongo.Collection(mongo.CollectionNameBadges).FindOne(ctx, bson.M{"_id": itemID}).Decode(&badge); err != nil {
+				log.WithError(err).Error("mongo")
+				if err == mongo.ErrNoDocuments {
+					return nil, fmt.Errorf("unknown badge")
+				}
 
-		notify = notify.SetTitle("Chat Badge Acquired").
-			AddTextMessagePart(fmt.Sprintf("The badge \"%v\" has been added to your account", badge.Name))
+				return nil, err
+			}
+
+			builder = builder.SetBadgeData(datastructure.EntitledBadge{
+				ObjectReference: badge.ID,
+				Selected:        args.Data.Badge.Selected,
+			})
+
+			notify = notify.SetTitle("Chat Badge Acquired").
+				AddTextMessagePart(fmt.Sprintf("The badge \"%v\" has been added to your account", badge.Name))
+		}
 	case datastructure.EntitlementKindRole:
 		if args.Data.Role == nil {
 			return nil, fmt.Errorf("missing role data")
@@ -132,25 +143,27 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 			AddRoleMentionPart(role.ID)
 	}
 
-	// Write to DB
-	if builder, err = builder.Write(); err != nil {
-		log.WithError(err).Error(err)
-		return nil, resolvers.ErrInternalServer
-	}
+	if builder.Entitlement.Data != nil {
+		// Write to DB
+		if builder, err = builder.Write(); err != nil {
+			log.WithError(err).Error(err)
+			return nil, resolvers.ErrInternalServer
+		}
 
-	// Add the X-Created-ID header specifying the ID of the entitlement created
-	f, ok := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
-	if ok {
-		f.Set("X-Created-ID", builder.Entitlement.ID.Hex())
-	}
+		// Add the X-Created-ID header specifying the ID of the entitlement created
+		f, ok := ctx.Value(utils.RequestCtxKey).(*fiber.Ctx) // Fiber context
+		if ok {
+			f.Set("X-Created-ID", builder.Entitlement.ID.Hex())
+		}
 
-	// Send the notification
-	if len(notify.Notification.MessageParts) > 0 {
-		go func() {
-			if err := notify.Write(ctx); err != nil {
-				log.WithError(err).Error("notifications")
-			}
-		}()
+		// Send the notification
+		if len(notify.Notification.MessageParts) > 0 {
+			go func() {
+				if err := notify.Write(ctx); err != nil {
+					log.WithError(err).Error("notifications")
+				}
+			}()
+		}
 	}
 
 	return &response{
