@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"regexp"
+	"strings"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -85,6 +86,9 @@ func Avatar(router fiber.Router) {
 			if err = cur.Decode(&u); err != nil {
 				log.WithError(err).Error("mongo")
 				return restutil.ErrInternalServer().Send(c)
+			}
+			if strings.HasPrefix(u.User.ProfileImageURL, "https://static-cdn.jtvnw.net/user-default-pictures-uv") {
+				continue
 			}
 
 			// Ensure permissions

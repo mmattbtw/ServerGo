@@ -9,6 +9,7 @@ import (
 	"image/gif"
 	"io"
 	"mime/multipart"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/image/draw"
@@ -42,6 +43,9 @@ func EditProfilePicture(router fiber.Router) {
 		user := c.Locals("user").(*datastructure.User)
 		if !user.HasPermission(datastructure.RolePermissionUseCustomAvatars) {
 			return restutil.ErrAccessDenied().Send(c, "Insufficient Privilege")
+		}
+		if strings.HasPrefix(user.ProfileImageURL, "https://static-cdn.jtvnw.net/user-default-pictures-uv") {
+			return restutil.ErrBadRequest().Send(c, "For technical reasons, you must also have a profile picture set on Twitch before you can enable an animated avatar. Please sign out and back into 7TV after doing this.")
 		}
 
 		// Read file
