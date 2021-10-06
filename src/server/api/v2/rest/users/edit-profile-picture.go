@@ -102,16 +102,27 @@ func EditProfilePicture(router fiber.Router) {
 
 		// Append frames
 		timeline := 0
-		for i, img := range gif.Image {
-			r := image.NewRGBA(image.Rect(0, 0, int(rw), int(rh)))
-			draw.NearestNeighbor.Scale(r, r.Rect, img, img.Bounds(), draw.Src, nil)
+		size := image.Rect(0, 0, int(rw), int(rh))
+		canvas := image.NewRGBA(size)
+		var mask draw.Options
+		bg := image.NewAlpha(size)
 
-			if err = anim.AddFrame(r, timeline, cfg); err != nil {
+		for i, img := range gif.Image {
+
+			mask.SrcMask = img.Bounds()
+
+			draw.NearestNeighbor.Scale(canvas, canvas.Rect, img, gif.Image[0].Rect, draw.Over, &mask)
+
+			if err = anim.AddFrame(canvas, timeline, cfg); err != nil {
 				log.WithError(err).Error("EditProfilePicture, webp, AddFrame")
 				return restutil.ErrInternalServer().Send(c)
 			}
 
 			timeline += gif.Delay[i] * 10
+
+			if gif.Disposal[i] == 2 {
+				draw.NearestNeighbor.Scale(canvas, canvas.Rect, bg, bg.Rect, draw.Src, &mask)
+			}
 		}
 		if err = anim.AddFrame(nil, timeline, cfg); err != nil {
 			log.WithError(err).Error("EditProfilePicture, webp, AddFrame")
