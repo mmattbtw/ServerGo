@@ -3,7 +3,6 @@ package cosmetics
 import (
 	"encoding/json"
 
-	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
@@ -13,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 /*
@@ -34,8 +34,14 @@ func GetBadges(router fiber.Router) {
 
 		// Retrieve all badges from the DB
 		var badges []*datastructure.Badge
-		if err := cache.Find(c.Context(), "badges", "", bson.M{}, &badges); err != nil {
-			return err
+		cur, err := mongo.Collection(mongo.CollectionNameBadges).Find(ctx, bson.M{}, options.Find().SetSort(bson.M{"_id": -1}))
+		if err != nil {
+			log.WithError(err).Error("mongo")
+			return restutil.ErrInternalServer().Send(c, err.Error())
+		}
+		if err = cur.All(ctx, &badges); err != nil {
+			log.WithError(err).Error("mongo")
+			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 
 		// Retrieve all users of badges
