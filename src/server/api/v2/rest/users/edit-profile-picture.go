@@ -30,6 +30,13 @@ import (
 
 const MAX_PIXEL_HEIGHT = 1000
 const MAX_PIXEL_WIDTH = 1000
+const MIN_PIXEL_HEIGHT = 64
+const MIN_PIXEL_WIDTH = 64
+const MAX_UPLOAD_SIZE = 2621440    // 2.5MB
+const MAX_LOSSLESS_SIZE = 256000.0 // 250KB
+const QUALITY_AT_MAX_SIZE = 80.0   // A file at 2.5MB will encode at quality 80
+
+const QUALITY_FACTOR = -((QUALITY_AT_MAX_SIZE / 100) * (MAX_LOSSLESS_SIZE - MAX_UPLOAD_SIZE)) / (1 - (QUALITY_AT_MAX_SIZE / 100))
 
 func EditProfilePicture(router fiber.Router) {
 	router.Post("/profile-picture", middleware.UserAuthMiddleware(true), func(c *fiber.Ctx) error {
@@ -51,6 +58,7 @@ func EditProfilePicture(router fiber.Router) {
 		// Read file
 		var file *bytes.Reader
 		mr := multipart.NewReader(stream, utils.B2S(req.Header.MultipartFormBoundary()))
+		var filelength int
 		for {
 			part, err := mr.NextPart()
 			if err == io.EOF {
@@ -68,10 +76,11 @@ func EditProfilePicture(router fiber.Router) {
 				log.WithError(err).Warn("EditProfilePicture, ReadAll")
 				return restutil.ErrBadRequest().Send(c, "File Unreadable")
 			}
-			if len(b) > 2500000 {
+			if len(b) > MAX_UPLOAD_SIZE {
 				return restutil.ErrBadRequest().Send(c, "Input File Too Large. Must be <2.5MB")
 			}
 
+			filelength = len(b)
 			file = bytes.NewReader(b)
 		}
 
@@ -83,6 +92,8 @@ func EditProfilePicture(router fiber.Router) {
 		}
 		if gif.Config.Width > MAX_PIXEL_WIDTH || gif.Config.Height > MAX_PIXEL_HEIGHT {
 			return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Too Many Pixels (maximum %dx%d)", MAX_PIXEL_WIDTH, MAX_PIXEL_HEIGHT))
+		} else if gif.Config.Width < MIN_PIXEL_WIDTH || gif.Config.Height < MIN_PIXEL_HEIGHT {
+			return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Too Few Pixels (mimimum %dx%d)", MIN_PIXEL_WIDTH, MIN_PIXEL_HEIGHT))
 		}
 
 		rw, rh := utils.GetSizeRatio(
@@ -96,34 +107,52 @@ func EditProfilePicture(router fiber.Router) {
 		anim.WebPAnimEncoderOptions.SetKmax(5)
 		defer anim.ReleaseMemory()
 
+		// Scale quality between QUALITY_AT_MAX_SIZE and 100
+		var quality float32
+		q := (QUALITY_FACTOR / (QUALITY_FACTOR - MAX_LOSSLESS_SIZE + float32(filelength))) * 100
+
+		if quality = 100; q < quality {
+			quality = q
+		}
+
 		cfg := webpanimation.NewWebpConfig()
 		cfg.SetLossless(0)
-		cfg.SetQuality(85)
+		cfg.SetQuality(quality)
 
 		// Append frames
 		timeline := 0
-		size := image.Rect(0, 0, int(rw), int(rh))
-		canvas := image.NewRGBA(size)
+		canvas := image.NewRGBA(gif.Image[0].Rect)
+		frame := image.NewRGBA(image.Rect(0, 0, int(rw), int(rh)))
+		bg := image.NewUniform(image.Transparent)
+
 		var mask draw.Options
-		bg := image.NewAlpha(size)
 
 		for i, img := range gif.Image {
 
 			mask.SrcMask = img.Bounds()
+			mask.SrcMaskP = canvas.Rect.Min
 
-			draw.NearestNeighbor.Scale(canvas, canvas.Rect, img, gif.Image[0].Rect, draw.Over, &mask)
+			if gif.Disposal[i] == 3 {
+				draw.NearestNeighbor.Scale(frame, frame.Rect, canvas, canvas.Bounds(), draw.Src, nil)
+				draw.NearestNeighbor.Scale(frame, frame.Rect, img, img.Bounds(), draw.Over, &mask)
+			} else {
+				draw.Draw(canvas, canvas.Rect, img, gif.Image[0].Rect.Min, draw.Over)
+			}
 
-			if err = anim.AddFrame(canvas, timeline, cfg); err != nil {
+			draw.NearestNeighbor.Scale(frame, frame.Rect, canvas, canvas.Bounds(), draw.Src, nil)
+
+			if gif.Disposal[i] == 2 {
+				draw.NearestNeighbor.Scale(canvas, canvas.Rect, bg, canvas.Rect, draw.Src, &mask)
+			}
+
+			if err = anim.AddFrame(frame, timeline, cfg); err != nil {
 				log.WithError(err).Error("EditProfilePicture, webp, AddFrame")
 				return restutil.ErrInternalServer().Send(c)
 			}
 
 			timeline += gif.Delay[i] * 10
-
-			if gif.Disposal[i] == 2 {
-				draw.NearestNeighbor.Scale(canvas, canvas.Rect, bg, bg.Rect, draw.Src, &mask)
-			}
 		}
+
 		if err = anim.AddFrame(nil, timeline, cfg); err != nil {
 			log.WithError(err).Error("EditProfilePicture, webp, AddFrame")
 			return restutil.ErrInternalServer().Send(c)
