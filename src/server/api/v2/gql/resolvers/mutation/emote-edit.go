@@ -41,6 +41,10 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 		update["name"] = *req.Name
 	}
 	if req.OwnerID != nil {
+		if !usr.HasPermission(datastructure.RolePermissionEmoteEditAll) {
+			return nil, resolvers.ErrAccessDenied
+		}
+
 		id, err := primitive.ObjectIDFromHex(*req.OwnerID)
 		if err != nil {
 			return nil, resolvers.ErrInvalidOwner
