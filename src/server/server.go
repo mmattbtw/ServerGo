@@ -32,6 +32,11 @@ func New() *Server {
 			BodyLimit:                    2e16,
 			StreamRequestBody:            true,
 			DisablePreParseMultipartForm: true,
+			DisableKeepalive:             true,
+			ReadTimeout:                  time.Second * 10,
+			WriteTimeout:                 time.Second * 10,
+			IdleTimeout:                  time.Second * 10,
+			DisableStartupMessage:        true,
 		}),
 		listener: l,
 	}
