@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -37,9 +36,14 @@ func GetEmoteRoute(router fiber.Router) {
 
 			// Fetch emote data
 			var emote datastructure.Emote
-			if err := cache.FindOne(c.Context(), "emotes", "", bson.M{
+			res := mongo.Collection(mongo.CollectionNameEmotes).FindOne(c.Context(), bson.M{
 				"_id": id,
-			}, &emote); err != nil {
+			})
+			err = res.Err()
+			if err == nil {
+				err = res.Decode(&emote)
+			}
+			if err != nil {
 				if err == mongo.ErrNoDocuments {
 					return restutil.ErrUnknownEmote().Send(c)
 				}
@@ -48,9 +52,13 @@ func GetEmoteRoute(router fiber.Router) {
 
 			// Fetch emote owner
 			var owner *datastructure.User
-			if err := cache.FindOne(c.Context(), "users", "", bson.M{
+			res = mongo.Collection(mongo.CollectionNameUsers).FindOne(c.Context(), bson.M{
 				"_id": emote.OwnerID,
-			}, &owner); err != nil {
+			})
+			if err == nil {
+				err = res.Decode(&owner)
+			}
+			if err != nil {
 				if err != mongo.ErrNoDocuments {
 					return restutil.ErrInternalServer().Send(c, err.Error())
 				}
@@ -75,14 +83,24 @@ func GetEmoteRoute(router fiber.Router) {
 		var emote *datastructure.Emote
 		var owner *datastructure.User
 		if id, err := primitive.ObjectIDFromHex(emoteID); err == nil {
-			if err := cache.FindOne(c.Context(), "emotes", "", bson.M{
+			res := mongo.Collection(mongo.CollectionNameEmotes).FindOne(c.Context(), bson.M{
 				"_id": id,
-			}, &emote); err != nil {
+			})
+			err := res.Err()
+			if err == nil {
+				err = res.Decode(&emote)
+			}
+			if err != nil {
 				return c.Status(400).Send([]byte("Unknown Emote: " + err.Error()))
 			}
-			if err := cache.FindOne(c.Context(), "users", "", bson.M{
+			res = mongo.Collection(mongo.CollectionNameUsers).FindOne(c.Context(), bson.M{
 				"_id": emote.OwnerID,
-			}, &owner); err != nil {
+			})
+			err = res.Err()
+			if err == nil {
+				err = res.Decode(&owner)
+			}
+			if err != nil {
 				owner = &datastructure.User{}
 			}
 

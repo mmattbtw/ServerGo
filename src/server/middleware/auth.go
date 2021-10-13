@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -49,7 +49,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		pl := &PayloadJWT{}
 		if err := jwt.Verify(token, pl); err != nil {
-			log.WithError(err).Error("jwt")
+			logrus.WithError(err).Error("jwt")
 			if !required {
 				return c.Next()
 			}
@@ -94,7 +94,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 					"error":  "Invalid Token",
 				})
 			}
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			if !required {
 				return c.Next()
 			}
@@ -108,7 +108,7 @@ func UserAuthMiddleware(required bool) func(c *fiber.Ctx) error {
 
 		err = res.Decode(user)
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			if !required {
 				return c.Next()
 			}

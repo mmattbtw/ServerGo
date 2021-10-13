@@ -25,7 +25,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/validation"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"gopkg.in/gographics/imagick.v3/imagick"
@@ -74,7 +74,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			// The temp directory where the emote will be created
 			fileDir := fmt.Sprintf("%s/%s", configure.Config.GetString("temp_file_store"), id.String())
 			if err := os.MkdirAll(fileDir, 0777); err != nil {
-				log.WithError(err).Error("mkdir")
+				logrus.WithError(err).Error("mkdir")
 				return restutil.ErrInternalServer().Send(c)
 			}
 			ogFilePath := fmt.Sprintf("%v/og", fileDir) // The original file's path in temp
@@ -89,7 +89,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				if err == io.EOF {
 					break
 				} else if err != nil {
-					log.WithError(err).Error("multipart_reader")
+					logrus.WithError(err).Error("multipart_reader")
 					break
 				}
 
@@ -137,7 +137,6 @@ func CreateEmoteRoute(router fiber.Router) {
 					if utils.BitField.HasBits(int64(i), int64(datastructure.EmoteVisibilityZeroWidth)) {
 						emoteVisibility |= datastructure.EmoteVisibilityZeroWidth
 					}
-					fmt.Println(emoteVisibility)
 				case "channel":
 					buf := make([]byte, 64)
 					n, err := part.Read(buf)
@@ -172,7 +171,7 @@ func CreateEmoteRoute(router fiber.Router) {
 
 					osFile, err := os.Create(ogFilePath)
 					if err != nil {
-						log.WithError(err).Error("file")
+						logrus.WithError(err).Error("file")
 						return restutil.ErrInternalServer().Send(c)
 					}
 
@@ -185,13 +184,13 @@ func CreateEmoteRoute(router fiber.Router) {
 						}
 
 						if err != nil && err != io.EOF {
-							log.WithError(err).Error("read")
+							logrus.WithError(err).Error("read")
 							return restutil.ErrBadRequest().Send(c, "File Not Readable")
 						}
 						_, err2 := osFile.Write(data[:n])
 						if err2 != nil {
 							osFile.Close()
-							log.WithError(err).Error("write")
+							logrus.WithError(err).Error("write")
 							return restutil.ErrInternalServer().Send(c)
 						}
 						if err == io.EOF {
@@ -217,7 +216,7 @@ func CreateEmoteRoute(router fiber.Router) {
 						if err == mongo.ErrNoDocuments {
 							return restutil.ErrAccessDenied().Send(c)
 						}
-						log.WithError(err).Error("mongo")
+						logrus.WithError(err).Error("mongo")
 						return restutil.ErrInternalServer().Send(c)
 					}
 				}
@@ -226,7 +225,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			// Get uploaded image file into an image.Image
 			ogFile, err := os.Open(ogFilePath)
 			if err != nil {
-				log.WithError(err).Error("could not open original file")
+				logrus.WithError(err).Error("could not open original file")
 				return restutil.ErrInternalServer().Send(c)
 			}
 			ogHeight := 0
@@ -235,7 +234,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			case "jpg":
 				img, err := jpeg.Decode(ogFile)
 				if err != nil {
-					log.WithError(err).Error("could not decode jpeg")
+					logrus.WithError(err).Error("could not decode jpeg")
 					return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Couldn't decode JPEG: %v", err.Error()))
 				}
 				ogWidth = img.Bounds().Dx()
@@ -243,7 +242,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			case "png":
 				img, err := png.Decode(ogFile)
 				if err != nil {
-					log.WithError(err).Error("could not decode png")
+					logrus.WithError(err).Error("could not decode png")
 					return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Couldn't decode PNG: %v", err.Error()))
 				}
 				ogWidth = img.Bounds().Dx()
@@ -251,7 +250,7 @@ func CreateEmoteRoute(router fiber.Router) {
 			case "gif":
 				g, err := gif.DecodeAll(ogFile)
 				if err != nil {
-					log.WithError(err).Error("could not decode gif")
+					logrus.WithError(err).Error("could not decode gif")
 					return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Couldn't decode GIF: %v", err.Error()))
 				}
 
@@ -295,7 +294,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				// Create new boundaries for frames
 				mw := imagick.NewMagickWand() // Get magick wand & read the original image
 				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
-					log.WithError(err).Error("SetResourceLimit")
+					logrus.WithError(err).Error("SetResourceLimit")
 				}
 				if err := mw.ReadImage(ogFilePath); err != nil {
 					return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Input File Not Readable: %s", err))
@@ -304,7 +303,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				// Merge all frames with coalesce
 				aw := mw.CoalesceImages()
 				if err = aw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
-					log.WithError(err).Error("SetResourceLimit")
+					logrus.WithError(err).Error("SetResourceLimit")
 				}
 				mw.Destroy()
 				defer aw.Destroy()
@@ -312,7 +311,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				// Set delays
 				mw = imagick.NewMagickWand()
 				if err = mw.SetResourceLimit(imagick.RESOURCE_MEMORY, 500); err != nil {
-					log.WithError(err).Error("SetResourceLimit")
+					logrus.WithError(err).Error("SetResourceLimit")
 				}
 				defer mw.Destroy()
 
@@ -323,11 +322,11 @@ func CreateEmoteRoute(router fiber.Router) {
 					img := aw.GetImage()
 
 					if err = img.ResizeImage(uint(width), uint(height), imagick.FILTER_LANCZOS); err != nil {
-						log.WithError(err).Errorf("ResizeImage i=%v", ind)
+						logrus.WithError(err).Errorf("ResizeImage i=%v", ind)
 						continue
 					}
 					if err = mw.AddImage(img); err != nil {
-						log.WithError(err).Errorf("AddImage i=%v", ind)
+						logrus.WithError(err).Errorf("AddImage i=%v", ind)
 					}
 					img.Destroy()
 				}
@@ -335,16 +334,16 @@ func CreateEmoteRoute(router fiber.Router) {
 				// Done - convert to WEBP
 				q, _ := strconv.Atoi(quality)
 				if err = mw.SetImageCompressionQuality(uint(q)); err != nil {
-					log.WithError(err).Error("SetImageCompressionQuality")
+					logrus.WithError(err).Error("SetImageCompressionQuality")
 				}
 				if err = mw.SetImageFormat("webp"); err != nil {
-					log.WithError(err).Error("SetImageFormat")
+					logrus.WithError(err).Error("SetImageFormat")
 				}
 
 				// Write to file
 				err = mw.WriteImages(outFile, true)
 				if err != nil {
-					log.WithError(err).Error("cmd")
+					logrus.WithError(err).Error("cmd")
 					return restutil.ErrInternalServer().Send(c)
 				}
 			}
@@ -366,18 +365,18 @@ func CreateEmoteRoute(router fiber.Router) {
 			res, err := mongo.Collection(mongo.CollectionNameEmotes).InsertOne(c.Context(), emote)
 
 			if err != nil {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return restutil.ErrInternalServer().Send(c)
 			}
 
 			_id, ok := res.InsertedID.(primitive.ObjectID)
 			if !ok {
-				log.WithField("resp", res.InsertedID).Error("bad resp from mongo")
+				logrus.WithField("resp", res.InsertedID).Error("bad resp from mongo")
 				_, err := mongo.Collection(mongo.CollectionNameEmotes).DeleteOne(c.Context(), bson.M{
 					"_id": res.InsertedID,
 				})
 				if err != nil {
-					log.WithError(err).Error("mongo")
+					logrus.WithError(err).Error("mongo")
 				}
 				return restutil.ErrInternalServer().Send(c)
 			}
@@ -390,13 +389,13 @@ func CreateEmoteRoute(router fiber.Router) {
 					defer wg.Done()
 					data, err := os.ReadFile(path[0] + ".webp")
 					if err != nil {
-						log.WithError(err).Error("read")
+						logrus.WithError(err).Error("read")
 						errored = true
 						return
 					}
 
 					if err := aws.UploadFile(configure.Config.GetString("aws_cdn_bucket"), fmt.Sprintf("emote/%s/%s", _id.Hex(), path[1]), data, &mime); err != nil {
-						log.WithError(err).Error("aws")
+						logrus.WithError(err).Error("aws")
 						errored = true
 					}
 				}(path)
@@ -409,7 +408,7 @@ func CreateEmoteRoute(router fiber.Router) {
 					"_id": _id,
 				})
 				if err != nil {
-					log.WithError(err).WithField("id", id).Error("mongo")
+					logrus.WithError(err).WithField("id", id).Error("mongo")
 				}
 				return restutil.ErrInternalServer().Send(c)
 			}
@@ -422,7 +421,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				},
 			})
 			if err != nil {
-				log.WithError(err).WithField("id", id).Error("mongo")
+				logrus.WithError(err).WithField("id", id).Error("mongo")
 			}
 
 			_, err = mongo.Collection(mongo.CollectionNameAudit).InsertOne(c.Context(), &datastructure.AuditLog{
@@ -439,7 +438,7 @@ func CreateEmoteRoute(router fiber.Router) {
 				CreatedBy: usr.ID,
 			})
 			if err != nil {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 			}
 
 			go discord.SendEmoteCreate(*emote, *usr)

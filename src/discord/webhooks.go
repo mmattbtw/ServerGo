@@ -8,11 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 	dgo "github.com/bwmarrin/discordgo"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -52,9 +53,16 @@ func SendEmoteEdit(emote datastructure.Emote, actor datastructure.User, logs []*
 		})
 	}
 
-	_ = cache.FindOne(context.Background(), "users", "", bson.M{
+	res := mongo.Collection(mongo.CollectionNameUsers).FindOne(context.Background(), bson.M{
 		"_id": emote.OwnerID,
-	}, &emote.Owner)
+	})
+	err := res.Err()
+	if err == nil {
+		err = res.Decode(&emote.Owner)
+	}
+	if err != nil {
+		logrus.WithError(err).Error("failed to fetch user")
+	}
 
 	ownerName := datastructure.DeletedUser.DisplayName
 	if emote.Owner != nil {

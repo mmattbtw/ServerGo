@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type RateLimiter struct {
@@ -31,14 +31,16 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		if c.Locals("user") != nil {
 			user := c.Locals("user").(*datastructure.User)
 			identifier = user.ID.Hex()
-		} else if len(c.IPs()) > 0 {
-			identifier = c.IPs()[0]
 		} else {
-			identifier = c.IP()
+			identifier = c.Get("Cf-Connecting-IP") // cf-ip
+		}
+
+		if identifier == "" {
+			return c.Next()
 		}
 
 		// Create hash of identifier + route tag
-		h := sha1.New()
+		h := sha256.New()
 		h.Write(utils.S2B(identifier))
 		h.Write(utils.S2B(tag))
 
@@ -52,13 +54,13 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 			if err := redis.ReloadScripts(); err != nil {
 				return err
 			}
-			log.Info("ratelimit, redis: reloaded scripts")
+			logrus.Info("ratelimit, redis: reloaded scripts")
 		}
 
 		// Create RateLimiter instance
 		redisKey := hex.EncodeToString(h.Sum(nil))
 		if result, err := redis.Client.EvalSha(c.Context(), redis.RateLimitScriptSHA1, []string{}, redisKey, duration.Seconds(), limit, 1).Result(); err != nil {
-			log.WithError(err).Error("ratelimit")
+			logrus.WithError(err).Error("ratelimit")
 			c.Set("X-RateLimit-Error", err.Error())
 			return c.Next()
 		} else {

@@ -2,7 +2,6 @@ package query_resolvers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/cache"
@@ -12,12 +11,11 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	api_proxy "github.com/SevenTV/ServerGo/src/server/api/v2/proxy"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type UserResolver struct {
@@ -31,11 +29,16 @@ type UserResolver struct {
 func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID *primitive.ObjectID, fields map[string]*SelectedField) (*UserResolver, error) {
 	if user == nil || user.Login == "" {
 		user = &datastructure.User{}
-		if err := cache.FindOne(ctx, "users", "", bson.M{
+		res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{
 			"_id": userID,
-		}, user); err != nil {
+		})
+		err := res.Err()
+		if err == nil {
+			err = res.Decode(user)
+		}
+		if err != nil {
 			if err != mongo.ErrNoDocuments {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			return nil, nil
@@ -66,11 +69,15 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if v, ok := fields["owned_emotes"]; ok && user.OwnedEmotes == nil {
 		user.OwnedEmotes = &[]*datastructure.Emote{}
-		if err := cache.Find(ctx, "emotes", fmt.Sprintf("owner:%s", user.ID.Hex()), bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameEmotes).Find(ctx, bson.M{
 			"owner":  user.ID,
 			"status": datastructure.EmoteStatusLive,
-		}, user.OwnedEmotes); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(ctx, user.OwnedEmotes)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 		ems := *user.OwnedEmotes
@@ -83,13 +90,17 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		}
 		if _, ok := v.Children["audit_entries"]; ok {
 			logs := []*datastructure.AuditLog{}
-			if err := cache.Find(ctx, "audit", fmt.Sprintf("user:%s:owned_emotes", user.ID.Hex()), bson.M{
+			cur, err := mongo.Collection(mongo.CollectionNameAudit).Find(ctx, bson.M{
 				"target.id": bson.M{
 					"$in": ids,
 				},
 				"target.type": "emotes",
-			}, &logs); err != nil {
-				log.WithError(err).Error("mongo")
+			})
+			if err == nil {
+				err = cur.All(ctx, &logs)
+			}
+			if err != nil {
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 
@@ -110,12 +121,16 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			user.Emotes = &[]*datastructure.Emote{}
 		} else {
 			user.Emotes = &[]*datastructure.Emote{}
-			if err := cache.Find(ctx, "emotes", fmt.Sprintf("user:%s:emotes", user.ID.Hex()), bson.M{
+			cur, err := mongo.Collection(mongo.CollectionNameEmotes).Find(ctx, bson.M{
 				"_id": bson.M{
 					"$in": user.EmoteIDs,
 				},
-			}, user.Emotes); err != nil {
-				log.WithError(err).Error("mongo")
+			})
+			if err == nil {
+				err = cur.All(ctx, user.Emotes)
+			}
+			if err != nil {
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			ems := *user.Emotes
@@ -127,13 +142,17 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			}
 			if _, ok := v.Children["audit_entries"]; ok {
 				logs := []*datastructure.AuditLog{}
-				if err := cache.Find(ctx, "audit", "", bson.M{
+				cur, err := mongo.Collection(mongo.CollectionNameAudit).Find(ctx, bson.M{
 					"target.id": bson.M{
 						"$in": ids,
 					},
 					"target.type": "emotes",
-				}, &logs); err != nil {
-					log.WithError(err).Error("mongo")
+				})
+				if err == nil {
+					err = cur.All(ctx, &logs)
+				}
+				if err != nil {
+					logrus.WithError(err).Error("mongo")
 					return nil, resolvers.ErrInternalServer
 				}
 				for _, l := range logs {
@@ -151,12 +170,16 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if _, ok := fields["editors"]; ok && user.Editors == nil {
 		user.Editors = &[]*datastructure.User{}
-		if err := cache.Find(ctx, "users", fmt.Sprintf("user:%s:editors", user.ID.Hex()), bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 			"_id": bson.M{
 				"$in": utils.Ternary(len(user.EditorIDs) > 0, user.EditorIDs, []primitive.ObjectID{}).([]primitive.ObjectID),
 			},
-		}, user.Editors); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(ctx, user.Editors)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	}
@@ -167,11 +190,11 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		if cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 			"editors": user.ID,
 		}); err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		} else {
 			if err = cur.All(ctx, user.EditorIn); err != nil {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -179,11 +202,15 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 
 	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != datastructure.UserRankAdmin && usr.Rank != datastructure.UserRankModerator) && user.Reports == nil {
 		user.Reports = &[]*datastructure.Report{}
-		if err := cache.Find(ctx, "users", fmt.Sprintf("user:%s:reports", user.ID.Hex()), bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 			"target.id":   user.ID,
 			"target.type": "users",
-		}, user.EditorIn); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(ctx, user.EditorIn)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -204,12 +231,16 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			}
 			reporters := []*datastructure.User{}
 
-			if err := cache.Find(ctx, "users", "", bson.M{
+			cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 				"_id": bson.M{
 					"$in": ids,
 				},
-			}, &reporters); err != nil {
-				log.WithError(err).Error("mongo")
+			})
+			if err == nil {
+				err = cur.All(ctx, &reporters)
+			}
+			if err != nil {
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			for _, u := range reporters {
@@ -226,7 +257,7 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 			"user_id": user.ID,
 		})
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -350,7 +381,7 @@ func (r *UserResolver) Description() string {
 func (r *UserResolver) Role() (*RoleResolver, error) {
 	res, err := GenerateRoleResolver(r.ctx, r.v.Role, r.v.RoleID, nil)
 	if err != nil {
-		log.WithError(err).Error("generation")
+		logrus.WithError(err).Error("generation")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -410,7 +441,7 @@ func (r *UserResolver) Editors() ([]*UserResolver, error) {
 		}
 
 		if err != nil {
-			log.WithError(err).Error("generation")
+			logrus.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -432,7 +463,7 @@ func (r *UserResolver) EditorIn() ([]*UserResolver, error) {
 			continue
 		}
 		if err != nil {
-			log.WithError(err).Error("generation")
+			logrus.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -461,7 +492,7 @@ func (r *UserResolver) Emotes() ([]*EmoteResolver, error) {
 
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["emotes"].Children)
 		if err != nil {
-			log.WithError(err).Error("generation")
+			logrus.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -481,7 +512,7 @@ func (r *UserResolver) OwnedEmotes() ([]*EmoteResolver, error) {
 	for _, e := range emotes {
 		r, err := GenerateEmoteResolver(r.ctx, e, nil, r.fields["owned_emotes"].Children)
 		if err != nil {
-			log.WithError(err).Error("generation")
+			logrus.WithError(err).Error("generation")
 			return nil, resolvers.ErrInternalServer
 		}
 		if r != nil {
@@ -603,12 +634,12 @@ func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
 		},
 		Limit: utils.Int64Pointer(30),
 	}); err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	} else {
 		err := cur.All(r.ctx, &logs)
 		if err != nil && err != mongo.ErrNoDocuments {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return nil, err
 		}
 	}
@@ -621,7 +652,7 @@ func (r *UserResolver) AuditEntries() (*[]*auditResolver, error) {
 
 		resolver, err := GenerateAuditResolver(r.ctx, l, r.fields)
 		if err != nil {
-			log.WithError(err).Error("GenerateAuditResolver")
+			logrus.WithError(err).Error("GenerateAuditResolver")
 			continue
 		}
 
@@ -720,21 +751,29 @@ func (r *UserResolver) Notifications() ([]*NotificationResolver, error) {
 	}
 
 	if len(mentionedUserIDs) > 0 {
-		if err := cache.Find(r.ctx, "users", "", bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(r.ctx, bson.M{
 			"_id": bson.M{
 				"$in": mentionedUserIDs,
 			},
-		}, &mentionedUsers); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(r.ctx, &mentionedUsers)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 		}
 	}
 	if len(mentionedEmoteIDs) > 0 {
-		if err := cache.Find(r.ctx, "emotes", "", bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameEmotes).Find(r.ctx, bson.M{
 			"_id": bson.M{
 				"$in": mentionedEmoteIDs,
 			},
-		}, &mentionedEmotes); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(r.ctx, &mentionedEmotes)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 		}
 	}
 
@@ -755,7 +794,7 @@ func (r *UserResolver) Notifications() ([]*NotificationResolver, error) {
 		notify := n.Notification
 		resolver, err := GenerateNotificationResolver(r.ctx, &notify, r.fields)
 		if err != nil {
-			log.WithError(err).Error("GenerateNotificationResolver")
+			logrus.WithError(err).Error("GenerateNotificationResolver")
 			continue
 		}
 		resolvers = append(resolvers, resolver)

@@ -8,7 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -35,11 +35,11 @@ func (*MutationResolver) MergeEmote(ctx context.Context, args struct {
 		err   error
 	)
 	if oldID, err = primitive.ObjectIDFromHex(args.OldID); err != nil {
-		log.WithError(err).Error("failed to merge emotes")
+		logrus.WithError(err).Error("failed to merge emotes")
 		return nil, err
 	}
 	if newID, err = primitive.ObjectIDFromHex(args.NewID); err != nil {
-		log.WithError(err).Error("failed to merge emotes")
+		logrus.WithError(err).Error("failed to merge emotes")
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (*MutationResolver) MergeEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("failed to merge emotes")
+		logrus.WithError(err).Error("failed to merge emotes")
 		return nil, err
 	}
 

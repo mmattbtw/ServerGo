@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/bsm/redislock"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -28,10 +28,10 @@ func CheckEmotesPopularity(ctx context.Context) error {
 	// Create ticker
 	// This is the interval between how often emote popularities should refresh
 	ticker := time.NewTicker(6 * time.Hour)
-	log.Info("Task=CheckEmotesPopularity, starting now")
+	logrus.Info("Task=CheckEmotesPopularity, starting now")
 
 	f := func() error {
-		log.Info("Task=CheckEmotesPopularity, starting update...")
+		logrus.Info("Task=CheckEmotesPopularity, starting update...")
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		defer wg.Done()
@@ -68,7 +68,7 @@ func CheckEmotesPopularity(ctx context.Context) error {
 		}
 		cur, err := mongo.Collection(mongo.CollectionNameEmotes).Aggregate(ctx, popCheck)
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return err
 		}
 
@@ -86,7 +86,7 @@ func CheckEmotesPopularity(ctx context.Context) error {
 			if err == nil { // Get the unchecked emotes, add them to a slice
 				ops := make([]mongo.WriteModel, len(diffEmotes))
 				if len(ops) == 0 {
-					log.Info("Task=CheckEmotesPopularity, no change in emote popularities.")
+					logrus.Info("Task=CheckEmotesPopularity, no change in emote popularities.")
 					return nil
 				}
 				for i, e := range diffEmotes {
@@ -106,19 +106,19 @@ func CheckEmotesPopularity(ctx context.Context) error {
 				// Update unchecked with channel count data
 				_, err := mongo.Collection(mongo.CollectionNameEmotes).BulkWrite(ctx, ops)
 				if err != nil {
-					log.WithError(err).WithField("count", len(countedEmotes)).Error("mongo was unable to update channel count emotes")
+					logrus.WithError(err).WithField("count", len(countedEmotes)).Error("mongo was unable to update channel count emotes")
 				}
 			}
 		}
-		log.WithError(err).WithField("count", len(countedEmotes)).Error("mongo was unable to update channel count emotes")
+		logrus.WithError(err).WithField("count", len(countedEmotes)).Error("mongo was unable to update channel count emotes")
 
 		return err
 	}
 
 	defer func() {
-		log.Info("Task=CheckEmotesPopularity, giving up lock, another pod will take over.")
+		logrus.Info("Task=CheckEmotesPopularity, giving up lock, another pod will take over.")
 		if err := lock.Release(lockCtx); err != nil {
-			log.WithError(err).Error("CheckEmotesPopularity, failed to release lock")
+			logrus.WithError(err).Error("CheckEmotesPopularity, failed to release lock")
 		}
 
 		ticker.Stop()
@@ -132,18 +132,18 @@ func CheckEmotesPopularity(ctx context.Context) error {
 			case <-ticker.C:
 				// Refresh lock
 				if err := lock.Refresh(ctx, time.Hour*6, &redislock.Options{}); err != nil {
-					log.WithError(err).Error("CheckEmotesPopularity, could not refresh lock")
+					logrus.WithError(err).Error("CheckEmotesPopularity, could not refresh lock")
 				}
 
 				// Run the check
 				go func() {
 					err := f()
 					if err != nil {
-						log.WithError(err).Error("CheckEmotesPopularity")
+						logrus.WithError(err).Error("CheckEmotesPopularity")
 						ticker.Stop()
 					}
 
-					log.Info("Task=CheckEmotesPopularity, completed update cycle! Keeping lock.")
+					logrus.Info("Task=CheckEmotesPopularity, completed update cycle! Keeping lock.")
 				}()
 			}
 		}

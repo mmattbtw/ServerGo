@@ -2,14 +2,11 @@ package configure
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"strings"
 
-	"github.com/fsnotify/fsnotify"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/kr/pretty"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -67,15 +64,15 @@ var PodName string = os.Getenv("POD_NAME")
 var PodIP string = os.Getenv("POD_IP")
 
 func initLog() {
-	if l, err := log.ParseLevel(Config.GetString("level")); err == nil {
-		log.SetLevel(l)
-		log.SetReportCaller(true)
+	if l, err := logrus.ParseLevel(Config.GetString("level")); err == nil {
+		logrus.SetLevel(l)
+		logrus.SetReportCaller(true)
 	}
 }
 
 func checkErr(err error) {
 	if err != nil {
-		log.WithError(err).Fatal("config")
+		logrus.WithError(err).Fatal("config")
 	}
 }
 
@@ -87,7 +84,7 @@ func init() {
 		PodName = "STANDALONE"
 	}
 
-	log.SetFormatter(&log.JSONFormatter{})
+	logrus.SetFormatter(&logrus.JSONFormatter{})
 	// Default config
 	b, _ := json.Marshal(defaultConf)
 	defaultConfig := bytes.NewReader(b)
@@ -139,8 +136,8 @@ func init() {
 	Config.AddConfigPath(".")
 	err := Config.ReadInConfig()
 	if err != nil {
-		log.Warning(err)
-		log.Info("Using default config")
+		logrus.Warning(err)
+		logrus.Info("Using default config")
 	} else {
 		checkErr(Config.MergeInConfig())
 	}
@@ -157,10 +154,4 @@ func init() {
 	// Print final config
 	c := ServerCfg{}
 	checkErr(Config.Unmarshal(&c))
-	log.Debugf("Current configurations: \n%# v", pretty.Formatter(c))
-
-	Config.WatchConfig()
-	Config.OnConfigChange(func(_ fsnotify.Event) {
-		fmt.Println("Config has changed")
-	})
 }

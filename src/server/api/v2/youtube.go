@@ -17,7 +17,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
@@ -30,7 +30,7 @@ func YouTube(app fiber.Router) fiber.Router {
 	route := app.Group("/auth/youtube")
 	yts, err := youtube.NewService(yCtx, option.WithAPIKey(configure.Config.GetString("google.api_key")))
 	if err != nil {
-		log.WithError(err).Error("youtube")
+		logrus.WithError(err).Error("youtube")
 		return route
 	}
 
@@ -48,7 +48,7 @@ func YouTube(app fiber.Router) fiber.Router {
 			res, err = yts.Channels.List([]string{"snippet", "statistics"}).ForUsername(strings.ToLower(channelID)).Do()
 			// If the channel couldn't be found via its ID, we attempt to find it by username
 			if err != nil || len(res.Items) == 0 {
-				log.WithError(err).Errorf("could not find channel with id/username %s", channelID)
+				logrus.WithError(err).Errorf("could not find channel with id/username %s", channelID)
 				return restutil.ErrBadRequest().Send(c, "Could not find that channel")
 			}
 		}
@@ -62,7 +62,7 @@ func YouTube(app fiber.Router) fiber.Router {
 		// Generate a random string that will be used to verify the requester owns the channel
 		r, err := utils.GenerateRandomBytes(24)
 		if err != nil {
-			log.WithError(err).Error("youtube, couldn't generate verification token")
+			logrus.WithError(err).Error("youtube, couldn't generate verification token")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 		token := hex.EncodeToString(r)
@@ -70,7 +70,7 @@ func YouTube(app fiber.Router) fiber.Router {
 		// Save the token to state, bound to the channel
 		user := c.Locals("user").(*datastructure.User)
 		if _, err = redis.Client.SetEX(ctx, fmt.Sprintf("yt_verify:%s:%s", user.ID.Hex(), channel.Id), token, time.Hour*1).Result(); err != nil {
-			log.WithError(err).Error("youtube, redis")
+			logrus.WithError(err).Error("youtube, redis")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 
@@ -101,7 +101,7 @@ func YouTube(app fiber.Router) fiber.Router {
 				return restutil.ErrAccessDenied().Send(c, "No verification flow is ongoing for that channel")
 			}
 
-			log.WithError(err).Error("youtube, redis")
+			logrus.WithError(err).Error("youtube, redis")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 		if tok == "" {
@@ -111,7 +111,7 @@ func YouTube(app fiber.Router) fiber.Router {
 		// Fetch the channel again
 		res, err := yts.Channels.List([]string{"snippet", "statistics"}).Id(channelID).Do()
 		if err != nil || len(res.Items) == 0 {
-			log.WithError(err).Error("youtube")
+			logrus.WithError(err).Error("youtube")
 			return restutil.ErrInternalServer().Send(c, "An error occured trying fetch the youtube channel")
 		}
 
@@ -119,7 +119,7 @@ func YouTube(app fiber.Router) fiber.Router {
 		channel := res.Items[0]
 		regex, err := regexp.Compile(fmt.Sprintf(`\[7TV VERIFY\]:"(%s?)"`, tok))
 		if err != nil {
-			log.WithError(err).Error("youtube, regexp")
+			logrus.WithError(err).Error("youtube, regexp")
 			return restutil.ErrInternalServer().Send(c)
 		}
 
@@ -139,12 +139,12 @@ func YouTube(app fiber.Router) fiber.Router {
 				"yt_subscriber_count":  channel.Statistics.SubscriberCount,
 			},
 		}); err != nil {
-			log.WithError(err).Error("youtube, mongo")
+			logrus.WithError(err).Error("youtube, mongo")
 			return restutil.ErrInternalServer().Send(c)
 		}
 		// Remove the key in redis
 		if _, err = redis.Client.Del(ctx, rkey).Result(); err != nil {
-			log.WithError(err).Error("youtube, redis")
+			logrus.WithError(err).Error("youtube, redis")
 		}
 
 		j, _ := json.Marshal(&verifyResult{

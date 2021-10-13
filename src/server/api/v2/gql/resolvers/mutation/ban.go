@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -65,7 +65,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownUser
 		}
-		log.Errorf("mongo, err=%v", err)
+		logrus.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -93,7 +93,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 
 	_, err = mongo.Collection(mongo.CollectionNameBans).InsertOne(ctx, ban)
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		logrus.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -107,7 +107,7 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 	})
 
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		logrus.Errorf("mongo, err=%v", err)
 	}
 
 	return &response{
@@ -164,7 +164,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownUser
 		}
-		log.Errorf("mongo, err=%v", err)
+		logrus.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -177,7 +177,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		},
 	})
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		logrus.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -191,7 +191,7 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 	})
 
 	if err != nil {
-		log.Errorf("mongo, err=%v", err)
+		logrus.Errorf("mongo, err=%v", err)
 	}
 
 	return &response{

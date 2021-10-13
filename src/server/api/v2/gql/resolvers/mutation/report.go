@@ -8,7 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -47,7 +47,7 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -80,7 +80,7 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 		Reason:    args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	return &response{
@@ -132,7 +132,7 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownUser
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -165,7 +165,7 @@ func (*MutationResolver) ReportUser(ctx context.Context, args struct {
 		Reason:    args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	return &response{

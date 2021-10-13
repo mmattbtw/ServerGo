@@ -7,7 +7,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type NotificationResolver struct {
@@ -61,7 +61,7 @@ func (r *NotificationResolver) MessageParts() []*messagePart {
 		} else if v.Text != nil {
 			pData = *v.Text
 		} else {
-			log.WithError(fmt.Errorf("Bad Notification Message Part")).
+			logrus.WithError(fmt.Errorf("Bad Notification Message Part")).
 				WithField("notification_id", r.v.ID).
 				WithField("part_index", i).
 				Error("notification")

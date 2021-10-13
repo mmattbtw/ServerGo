@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/hashicorp/go-multierror"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -80,7 +80,7 @@ func (r *auditResolver) Changes() []*auditChange {
 		old, err1 := json.MarshalToString(c.OldValue)
 		new, err2 := json.MarshalToString(c.NewValue)
 		if err1 != nil || err2 != nil {
-			log.WithError(multierror.Append(err1, err2)).Error("AuditLogResolver")
+			logrus.WithError(multierror.Append(err1, err2)).Error("AuditLogResolver")
 			continue
 		}
 
@@ -133,7 +133,7 @@ func resolveTarget(ctx context.Context, t *datastructure.Target) (string, error)
 		if err == mongo.ErrNoDocuments {
 			return "", nil
 		} else {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return "", resolvers.ErrInternalServer
 		}
 	}

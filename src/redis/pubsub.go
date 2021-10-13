@@ -4,7 +4,7 @@ import (
 	"context"
 
 	jsoniter "github.com/json-iterator/go"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -50,7 +50,7 @@ func Subscribe(ctx context.Context, ch chan []byte, subscribeTo ...string) {
 					if len(subs[e]) == 0 {
 						delete(subs, e)
 						if err := sub.Unsubscribe(context.Background(), e); err != nil {
-							log.WithError(err).Error("failed to unsubscribe")
+							logrus.WithError(err).Error("failed to unsubscribe")
 						}
 					}
 					break
