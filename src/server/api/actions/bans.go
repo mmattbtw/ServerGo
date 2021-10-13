@@ -12,6 +12,9 @@ import (
 
 // FetchBans gets the current active bans stored in database and store them in memory
 func (b *bans) FetchBans(ctx context.Context) error {
+	b.Mtx.Lock()
+	defer b.Mtx.Unlock()
+
 	banList := []*datastructure.Ban{}
 	cur, err := mongo.Collection(mongo.CollectionNameBans).Find(ctx, bson.M{
 		"$or": bson.A{
@@ -37,6 +40,9 @@ func (b *bans) FetchBans(ctx context.Context) error {
 }
 
 func (b *bans) IsUserBanned(id primitive.ObjectID) (bool, string) {
+	b.Mtx.Lock()
+	defer b.Mtx.Unlock()
+
 	ban, ok := b.BannedUsers[id]
 	if !ok {
 		return false, ""

@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"sync"
 
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -47,8 +48,10 @@ var Users users = users{}
 
 type bans struct {
 	BannedUsers map[primitive.ObjectID]*datastructure.Ban
+	Mtx         *sync.Mutex
 }
 
 var Bans *bans = &bans{
 	BannedUsers: map[primitive.ObjectID]*datastructure.Ban{},
+	Mtx:         &sync.Mutex{},
 }
