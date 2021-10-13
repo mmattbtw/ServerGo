@@ -7,7 +7,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -20,7 +20,7 @@ func (*emotes) MergeEmote(ctx context.Context, opts MergeEmoteOptions) (*datastr
 		return nil, fmt.Errorf("Cannot merge emote into itself")
 	}
 
-	logInfo := log.WithFields(log.Fields{
+	logInfo := logrus.WithFields(logrus.Fields{
 		"OldEmoteID": opts.OldID,
 		"NewEmoteID": opts.NewID,
 		"ActorID":    opts.Actor.ID,
@@ -114,7 +114,7 @@ func (*emotes) MergeEmote(ctx context.Context, opts MergeEmoteOptions) (*datastr
 	if len(userOps) > 0 {
 		result, err := mongo.Collection(mongo.CollectionNameUsers).BulkWrite(ctx, userOps)
 		if err != nil {
-			log.WithError(err).WithField("count", len(userOps)).Error("mongo, failed to update users during emote merger")
+			logrus.WithError(err).WithField("count", len(userOps)).Error("mongo, failed to update users during emote merger")
 			return nil, err
 		}
 		logInfo.Infof("Targeted %d users and updated %d users during merger of Emote(id=%v) into Emote(id=%v)",
@@ -141,7 +141,7 @@ func (*emotes) MergeEmote(ctx context.Context, opts MergeEmoteOptions) (*datastr
 				AddUserMentionPart(opts.Actor.ID).
 				AddTextMessagePart(fmt.Sprintf(". Reason: \"%v\"", opts.Reason)).
 				Write(context.Background()); err != nil {
-				log.WithError(err).Error("failed to create notification")
+				logrus.WithError(err).Error("failed to create notification")
 			}
 		}()
 
@@ -160,7 +160,7 @@ func (*emotes) MergeEmote(ctx context.Context, opts MergeEmoteOptions) (*datastr
 				AddUserMentionPart(opts.Actor.ID).
 				AddTextMessagePart(fmt.Sprintf("for the reason \"%v\". No further action is required.", opts.Reason)).
 				Write(context.Background()); err != nil {
-				log.WithError(err).Error("failed to create notification")
+				logrus.WithError(err).Error("failed to create notification")
 			}
 		}()
 
@@ -178,7 +178,7 @@ func (*emotes) MergeEmote(ctx context.Context, opts MergeEmoteOptions) (*datastr
 				AddUserMentionPart(opts.Actor.ID).
 				AddTextMessagePart(fmt.Sprintf("for the reason \"%v\". %d new channels have been added to your emote and no further action is required.", opts.Reason, len(switchedChannels))).
 				Write(context.Background()); err != nil {
-				log.WithError(err).Error("failed to create notification")
+				logrus.WithError(err).Error("failed to create notification")
 			}
 		}()
 
@@ -202,7 +202,7 @@ func (*emotes) MergeEmote(ctx context.Context, opts MergeEmoteOptions) (*datastr
 		Reason: &opts.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	return &newEmote, nil

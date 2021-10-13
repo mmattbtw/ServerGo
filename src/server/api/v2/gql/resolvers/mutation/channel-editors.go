@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -63,7 +63,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -94,7 +94,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 	}
 
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -108,7 +108,7 @@ func (*MutationResolver) AddChannelEditor(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 	return query_resolvers.GenerateUserResolver(ctx, newChannel, &newChannel.ID, field.Children)
 }
@@ -156,7 +156,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -187,7 +187,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 	}
 
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -201,7 +201,7 @@ func (*MutationResolver) RemoveChannelEditor(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	return query_resolvers.GenerateUserResolver(ctx, newChannel, &newChannel.ID, field.Children)

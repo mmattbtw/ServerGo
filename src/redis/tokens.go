@@ -3,7 +3,7 @@ package redis
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -22,7 +22,7 @@ func AuthTokenValues(ctx context.Context, token string) (string, error) {
 	}
 	resp, ok := res.(string)
 	if !ok {
-		log.WithField("resp", res).Error("invalid redis resp expected string")
+		logrus.WithField("resp", res).Error("invalid redis resp expected string")
 		return "", errInvalidResp
 	}
 	return resp, nil

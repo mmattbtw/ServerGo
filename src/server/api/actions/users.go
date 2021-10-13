@@ -8,7 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -106,7 +106,7 @@ func (b UserBuilder) FetchEntitlements(kind *datastructure.EntitlementKind) ([]E
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	} else if err != nil {
-		log.WithError(err).Error("actions, UserBuilder, FetchEntitlements")
+		logrus.WithError(err).Error("actions, UserBuilder, FetchEntitlements")
 		return nil, err
 	}
 

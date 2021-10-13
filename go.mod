@@ -7,9 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.40.37
 	github.com/bsm/redislock v0.7.1
 	github.com/bwmarrin/discordgo v0.23.2
-	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/gofiber/fiber/v2 v2.18.0
@@ -21,7 +19,6 @@ require (
 	github.com/json-iterator/go v1.1.11
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/karrick/godirwalk v1.16.1 // indirect
-	github.com/kr/pretty v0.3.0
 	github.com/mitchellh/panicwrap v1.0.0
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -43,6 +40,7 @@ require (
 	cloud.google.com/go v0.94.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobuffalo/logger v1.0.3 // indirect
 	github.com/gobuffalo/packd v1.0.0 // indirect

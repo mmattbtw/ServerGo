@@ -12,7 +12,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -47,7 +47,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -60,7 +60,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 				if err == mongo.ErrNoDocuments {
 					return nil, resolvers.ErrAccessDenied
 				}
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -76,7 +76,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 	})
 
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -89,7 +89,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 			obj := fmt.Sprintf("emote/%s", emote.ID.Hex())
 			err := aws.Unexpire(configure.Config.GetString("aws_cdn_bucket"), obj, i)
 			if err != nil {
-				log.WithError(err).WithField("obj", obj).Error("aws")
+				logrus.WithError(err).WithField("obj", obj).Error("aws")
 			}
 		}(i)
 	}
@@ -105,7 +105,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		},
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -119,7 +119,7 @@ func (*MutationResolver) RestoreEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	return &response{

@@ -2,7 +2,6 @@ package gql
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/configure"
@@ -14,9 +13,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/graph-gophers/graphql-go"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type GQLRequest struct {
@@ -53,7 +51,7 @@ func GQL(app fiber.Router) fiber.Router {
 	s, err := box.FindString("schema.gql")
 
 	if err != nil {
-		log.WithError(err).Fatal("gql failed")
+		logrus.WithError(err).Fatal("gql failed")
 	}
 
 	schema := graphql.MustParseSchema(s, &RootResolver{
@@ -69,7 +67,7 @@ func GQL(app fiber.Router) fiber.Router {
 			return err
 		}
 		if err != nil {
-			log.WithError(err).Error("gql")
+			logrus.WithError(err).Error("gql")
 			return c.Status(400).JSON(fiber.Map{
 				"status":  400,
 				"message": "Invalid GraphQL Request. (" + err.Error() + ")",
@@ -77,15 +75,12 @@ func GQL(app fiber.Router) fiber.Router {
 		}
 
 		if err != nil {
-			log.WithError(err).Error("session")
+			logrus.WithError(err).Error("session")
 			return c.Status(500).JSON(fiber.Map{
 				"status":  500,
 				"message": "Failed to get session from store.",
 			})
 		}
-
-		extraData := c.Locals("extra_data").(sync.Map)
-		extraData.Store("gql_request", req)
 
 		rCtx := context.WithValue(Ctx, utils.RequestCtxKey, c)
 		rCtx = context.WithValue(rCtx, utils.UserKey, c.Locals("user"))

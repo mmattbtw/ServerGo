@@ -10,7 +10,7 @@ import (
 	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobuffalo/packr/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -21,7 +21,7 @@ func init() {
 	options, err := redis.ParseURL(configure.Config.GetString("redis_uri"))
 	options.DB = configure.Config.GetInt("redis_db")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 
 	Client = redis.NewClient(options)
@@ -30,7 +30,7 @@ func init() {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.WithField("err", err).Fatal("panic in subs")
+				logrus.WithField("err", err).Fatal("panic in subs")
 			}
 		}()
 		ch := sub.Channel()
@@ -46,7 +46,7 @@ func init() {
 				go func(s *redisSub) {
 					defer func() {
 						if err := recover(); err != nil {
-							log.WithField("err", err).Error("panic in subs")
+							logrus.WithField("err", err).Error("panic in subs")
 						}
 					}()
 					s.ch <- payload
@@ -57,7 +57,7 @@ func init() {
 	}()
 
 	if err = ReloadScripts(); err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 }
 
@@ -66,63 +66,63 @@ func ReloadScripts() error {
 
 	tokenConsumerLuaScript, err := box.FindString("token-consumer.lua")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*25)
 	defer cancel()
 	v, err := Client.ScriptLoad(ctx, tokenConsumerLuaScript).Result()
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	tokenConsumerLuaScriptSHA1 = v
 
 	getCacheLuaScript, err := box.FindString("get-cache.lua")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	v, err = Client.ScriptLoad(ctx, getCacheLuaScript).Result()
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	getCacheLuaScriptSHA1 = v
 
 	setCacheLuaScript, err := box.FindString("set-cache.lua")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	v, err = Client.ScriptLoad(ctx, setCacheLuaScript).Result()
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	setCacheLuaScriptSHA1 = v
 
 	invalidateCacheLuaScript, err := box.FindString("invalidate-cache.lua")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	v, err = Client.ScriptLoad(ctx, invalidateCacheLuaScript).Result()
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	invalidateCacheLuaScriptSHA1 = v
 
 	invalidateCommonIndexCacheLuaScript, err := box.FindString("invalidate-common-index-cache.lua")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	v, err = Client.ScriptLoad(ctx, invalidateCommonIndexCacheLuaScript).Result()
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	invalidateCommonIndexCacheLuaScriptSHA1 = v
 
 	rateLimitLuaScript, err := box.FindString("rate-limit.lua")
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	v, err = Client.ScriptLoad(ctx, rateLimitLuaScript).Result()
 	if err != nil {
-		log.WithError(err).Fatal("redis failed")
+		logrus.WithError(err).Fatal("redis failed")
 	}
 	RateLimitScriptSHA1 = v
 

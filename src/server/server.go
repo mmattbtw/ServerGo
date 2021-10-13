@@ -9,7 +9,7 @@ import (
 	apiv2 "github.com/SevenTV/ServerGo/src/server/api/v2"
 	"github.com/SevenTV/ServerGo/src/server/health"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/gofiber/fiber/v2"
@@ -23,7 +23,7 @@ type Server struct {
 func New() *Server {
 	l, err := net.Listen(configure.Config.GetString("conn_type"), configure.Config.GetString("conn_uri"))
 	if err != nil {
-		log.Fatalf("failed to start listner for http server, err=%v", err)
+		logrus.Fatalf("failed to start listner for http server, err=%v", err)
 		return nil
 	}
 
@@ -96,7 +96,7 @@ func New() *Server {
 	go func() {
 		err = server.app.Listener(server.listener)
 		if err != nil {
-			log.WithError(err).Fatal("failed to start http server")
+			logrus.WithError(err).Fatal("failed to start http server")
 		}
 	}()
 

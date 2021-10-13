@@ -12,7 +12,7 @@ import (
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/SevenTV/ServerGo/src/validation"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -94,7 +94,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -130,7 +130,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 	}
 
 	if doc.Err() != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -144,7 +144,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	// Push event to redis
@@ -170,7 +170,7 @@ func (*MutationResolver) AddChannelEmote(ctx context.Context, args struct {
 			err = ownerRes.Decode(&owner)
 		}
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 		}
 
 		_ = redis.Publish(context.Background(), fmt.Sprintf("events-v1:channel-emotes:%s", channel.Login), redis.EventApiV1ChannelEmotes{
@@ -242,7 +242,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -259,7 +259,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -332,7 +332,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 	}
 
 	if doc.Err() != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -344,7 +344,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 		Reason:    args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	// Push event to redis
@@ -370,7 +370,7 @@ func (*MutationResolver) EditChannelEmote(ctx context.Context, args struct {
 			err = ownerRes.Decode(&owner)
 		}
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 		}
 
 		_ = redis.Publish(context.Background(), fmt.Sprintf("events-v1:channel-emotes:%s", channel.Login), redis.EventApiV1ChannelEmotes{
@@ -441,7 +441,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownChannel
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -458,7 +458,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -513,7 +513,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 	}
 
 	if doc.Err() != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -527,7 +527,7 @@ func (*MutationResolver) RemoveChannelEmote(ctx context.Context, args struct {
 		Reason: args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	// Push event to redis

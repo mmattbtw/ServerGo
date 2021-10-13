@@ -11,11 +11,10 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type EmoteResolver struct {
@@ -28,11 +27,16 @@ type EmoteResolver struct {
 func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emoteID *primitive.ObjectID, fields map[string]*SelectedField) (*EmoteResolver, error) {
 	if emote == nil {
 		emote = &datastructure.Emote{}
-		if err := cache.FindOne(ctx, "emotes", "", bson.M{
+		res := mongo.Collection(mongo.CollectionNameEmotes).FindOne(ctx, bson.M{
 			"_id": emoteID,
-		}, emote); err != nil {
+		})
+		err := res.Err()
+		if err == nil {
+			err = res.Decode(emote)
+		}
+		if err != nil {
 			if err != mongo.ErrNoDocuments {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			return nil, nil
@@ -46,11 +50,15 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 	if emote.AuditEntries == nil {
 		if _, ok := fields["audit_entries"]; ok {
 			emote.AuditEntries = &[]*datastructure.AuditLog{}
-			if err := cache.Find(ctx, "audit", fmt.Sprintf("logs:%s", emote.ID.Hex()), bson.M{
+			cur, err := mongo.Collection(mongo.CollectionNameAudit).Find(ctx, bson.M{
 				"target.id":   emote.ID,
 				"target.type": "emotes",
-			}, emote.AuditEntries); err != nil {
-				log.WithError(err).Error("mongo")
+			})
+			if err == nil {
+				err = cur.All(ctx, emote.AuditEntries)
+			}
+			if err != nil {
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -79,11 +87,15 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 	usr, usrValid := ctx.Value(utils.UserKey).(*datastructure.User)
 	if v, ok := fields["reports"]; ok && usrValid && (usr.Rank != datastructure.UserRankAdmin && usr.Rank != datastructure.UserRankModerator) && emote.Reports == nil {
 		emote.Reports = &[]*datastructure.Report{}
-		if err := cache.Find(ctx, "reports", fmt.Sprintf("reports:%s", emote.ID.Hex()), bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameReports).Find(ctx, bson.M{
 			"target.id":   emote.ID,
 			"target.type": "emotes",
-		}, emote.Reports); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(ctx, emote.Reports)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -104,12 +116,16 @@ func GenerateEmoteResolver(ctx context.Context, emote *datastructure.Emote, emot
 			}
 
 			reporters := []*datastructure.User{}
-			if err := cache.Find(ctx, "users", "", bson.M{
+			cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
 				"_id": bson.M{
 					"$in": ids,
 				},
-			}, &reporters); err != nil {
-				log.WithError(err).Error("mongo")
+			})
+			if err == nil {
+				err = cur.All(ctx, &reporters)
+			}
+			if err != nil {
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 			for _, u := range reporters {
@@ -191,12 +207,12 @@ func (r *EmoteResolver) AuditEntries() (*[]*auditResolver, error) {
 		},
 		Limit: utils.Int64Pointer(20),
 	}); err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	} else {
 		err := cur.All(r.ctx, &logs)
 		if err != nil && err != mongo.ErrNoDocuments {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return nil, err
 		}
 	}
@@ -209,7 +225,7 @@ func (r *EmoteResolver) AuditEntries() (*[]*auditResolver, error) {
 
 		resolver, err := GenerateAuditResolver(r.ctx, l, r.fields)
 		if err != nil {
-			log.WithError(err).Error("GenerateAuditResolver")
+			logrus.WithError(err).Error("GenerateAuditResolver")
 			continue
 		}
 
@@ -279,7 +295,7 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 	}
 
 	if cur, err := mongo.Collection(mongo.CollectionNameUsers).Aggregate(ctx, pipeline); err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	} else {
 		out := []struct { // The output data
@@ -288,7 +304,7 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 
 		err = cur.All(ctx, &out)
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return nil, err
 		}
 

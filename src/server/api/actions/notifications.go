@@ -5,7 +5,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -68,7 +68,7 @@ func (b NotificationBuilder) Write(ctx context.Context) error {
 	}, &options.UpdateOptions{
 		Upsert: &upsert,
 	}); err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return err
 	} else if len(b.TargetUsers) > 0 {
 		id := d.UpsertedID.(primitive.ObjectID) // Get the ID of the created notification
@@ -86,7 +86,7 @@ func (b NotificationBuilder) Write(ctx context.Context) error {
 
 		// Write the read states to database
 		if _, err := mongo.Collection(mongo.CollectionNameNotificationsRead).InsertMany(ctx, readStates); err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 		}
 	}
 

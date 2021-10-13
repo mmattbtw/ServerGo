@@ -10,7 +10,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -24,7 +24,7 @@ func (*emotes) Delete(ctx context.Context, emote *datastructure.Emote) error {
 		},
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return err
 	}
 
@@ -37,7 +37,7 @@ func (*emotes) Delete(ctx context.Context, emote *datastructure.Emote) error {
 			obj := fmt.Sprintf("emote/%s", emote.ID.Hex())
 			err := aws.Expire(configure.Config.GetString("aws_cdn_bucket"), obj, i)
 			if err != nil {
-				log.WithError(err).WithField("obj", obj).Error("aws")
+				logrus.WithError(err).WithField("obj", obj).Error("aws")
 			}
 		}(i)
 	}
@@ -50,7 +50,7 @@ func (*emotes) Delete(ctx context.Context, emote *datastructure.Emote) error {
 		},
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	wg.Wait()

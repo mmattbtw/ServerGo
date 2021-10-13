@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -42,12 +41,12 @@ func init() {
 	}
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	Database = client.Database(configure.Config.GetString("mongo_db"))
@@ -63,7 +62,7 @@ func init() {
 		{Keys: bson.M{"channel_count_checked_at": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Collection(CollectionNameUsers).Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -75,7 +74,7 @@ func init() {
 		{Keys: bson.M{"emotes": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Collection(CollectionNameBans).Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -84,7 +83,7 @@ func init() {
 		{Keys: bson.M{"active": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Collection(CollectionNameAudit).Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -93,7 +92,7 @@ func init() {
 		{Keys: bson.M{"target.id": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Collection(CollectionNameReports).Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -102,14 +101,14 @@ func init() {
 		{Keys: bson.M{"target.id": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Collection(CollectionNameBadges).Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_ = Database.CreateCollection(ctx, "notifications")
@@ -118,7 +117,7 @@ func init() {
 		{Keys: bson.M{"notification": 1}},
 	})
 	if err != nil {
-		log.WithError(err).Fatal("mongo")
+		logrus.WithError(err).Fatal("mongo")
 	}
 
 	_, err = Collection(CollectionNameEntitlements).Indexes().CreateMany(ctx, []mongo.IndexModel{

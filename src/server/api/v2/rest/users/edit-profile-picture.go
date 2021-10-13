@@ -15,6 +15,7 @@ import (
 	"golang.org/x/image/draw"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"github.com/sizeofint/webpanimation"
 
 	"github.com/SevenTV/ServerGo/src/aws"
@@ -25,7 +26,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
 )
 
 const MAX_PIXEL_HEIGHT = 1000
@@ -64,7 +64,7 @@ func EditProfilePicture(router fiber.Router) {
 			if err == io.EOF {
 				break
 			} else if err != nil {
-				log.WithError(err).Error("multipart")
+				logrus.WithError(err).Error("multipart")
 				break
 			}
 			if part.FormName() != "file" {
@@ -73,7 +73,7 @@ func EditProfilePicture(router fiber.Router) {
 
 			b, err := io.ReadAll(part)
 			if err != nil {
-				log.WithError(err).Warn("EditProfilePicture, ReadAll")
+				logrus.WithError(err).Warn("EditProfilePicture, ReadAll")
 				return restutil.ErrBadRequest().Send(c, "File Unreadable")
 			}
 			if len(b) > MAX_UPLOAD_SIZE {
@@ -87,7 +87,7 @@ func EditProfilePicture(router fiber.Router) {
 		// Decode GIF
 		gif, err := gif.DecodeAll(file)
 		if err != nil {
-			log.WithError(err).Warn("EditProfilePicture, gif, DecodeAll")
+			logrus.WithError(err).Warn("EditProfilePicture, gif, DecodeAll")
 			return restutil.ErrBadRequest().Send(c, "Invalid GIF File")
 		}
 		if gif.Config.Width > MAX_PIXEL_WIDTH || gif.Config.Height > MAX_PIXEL_HEIGHT {
@@ -146,7 +146,7 @@ func EditProfilePicture(router fiber.Router) {
 			}
 
 			if err = anim.AddFrame(frame, timeline, cfg); err != nil {
-				log.WithError(err).Error("EditProfilePicture, webp, AddFrame")
+				logrus.WithError(err).Error("EditProfilePicture, webp, AddFrame")
 				return restutil.ErrInternalServer().Send(c)
 			}
 
@@ -154,7 +154,7 @@ func EditProfilePicture(router fiber.Router) {
 		}
 
 		if err = anim.AddFrame(nil, timeline, cfg); err != nil {
-			log.WithError(err).Error("EditProfilePicture, webp, AddFrame")
+			logrus.WithError(err).Error("EditProfilePicture, webp, AddFrame")
 			return restutil.ErrInternalServer().Send(c)
 		}
 
@@ -174,7 +174,7 @@ func EditProfilePicture(router fiber.Router) {
 			b.Bytes(),
 			utils.StringPointer("image/webp"),
 		); err != nil {
-			log.WithError(err).Error("aws")
+			logrus.WithError(err).Error("aws")
 			return restutil.ErrInternalServer().Send(c)
 		}
 
@@ -182,7 +182,7 @@ func EditProfilePicture(router fiber.Router) {
 		if _, err = mongo.Collection(mongo.CollectionNameUsers).UpdateByID(ctx, user.ID, bson.M{"$set": bson.M{
 			"profile_picture_id": strId,
 		}}); err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c)
 		}
 

@@ -5,14 +5,13 @@ import (
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var sess = session.Must(session.NewSession(&aws.Config{
@@ -41,7 +40,7 @@ func UploadFile(bucket, key string, body []byte, contentType *string) error {
 	if err != nil {
 		return fmt.Errorf("failed to upload file, %v", err)
 	}
-	log.Debugf("file uploaded to, %s", result.Location)
+	logrus.Debugf("file uploaded to, %s", result.Location)
 	return nil
 }
 

@@ -13,7 +13,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gobuffalo/packr/v2/file/resolver/encoding/hex"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -72,7 +72,7 @@ func Avatar(router fiber.Router) {
 		}
 		cur, err := mongo.Collection(mongo.CollectionNameUsers).Aggregate(ctx, pipeline)
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 
@@ -84,7 +84,7 @@ func Avatar(router fiber.Router) {
 
 			var u *avatarsPipelineResult
 			if err = cur.Decode(&u); err != nil {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return restutil.ErrInternalServer().Send(c)
 			}
 			if strings.HasPrefix(u.User.ProfileImageURL, "https://static-cdn.jtvnw.net/user-default-pictures-uv") {

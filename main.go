@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/mitchellh/panicwrap"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/SevenTV/ServerGo/src/configure"
@@ -28,7 +27,7 @@ import (
 )
 
 func init() {
-	log.Infoln("starting")
+	logrus.Infoln("starting")
 }
 
 func main() {
@@ -44,7 +43,7 @@ func main() {
 
 	configCode := configure.Config.GetInt("exit_code")
 	if configCode > 125 || configCode < 0 {
-		log.WithField("requested_exit_code", configCode).Warn("invalid exit code specified in config using 0 as new exit code")
+		logrus.WithField("requested_exit_code", configCode).Warn("invalid exit code specified in config using 0 as new exit code")
 		configCode = 0
 	}
 
@@ -55,7 +54,7 @@ func main() {
 
 	go func() {
 		sig := <-c
-		log.WithField("sig", sig).Info("stop issued")
+		logrus.WithField("sig", sig).Info("stop issued")
 
 		start := time.Now().UnixNano()
 
@@ -68,12 +67,12 @@ func main() {
 		go func() {
 			defer wg.Done()
 			if err := s.Shutdown(); err != nil {
-				log.WithError(err).Error("failed to shutdown server")
+				logrus.WithError(err).Error("failed to shutdown server")
 			}
 		}()
 		wg.Wait()
 
-		log.WithField("duration", float64(time.Now().UnixNano()-start)/10e5).Infof("shutdown")
+		logrus.WithField("duration", float64(time.Now().UnixNano()-start)/10e5).Infof("shutdown")
 		os.Exit(configCode)
 	}()
 
@@ -81,27 +80,27 @@ func main() {
 		for {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			log.WithField("alloc", m.Alloc).WithField("total_alloc", m.TotalAlloc).WithField("sys", m.Sys).WithField("numgc", m.NumGC).Debug("stats")
+			logrus.WithField("alloc", m.Alloc).WithField("total_alloc", m.TotalAlloc).WithField("sys", m.Sys).WithField("numgc", m.NumGC).Debug("stats")
 			time.Sleep(5 * time.Second)
 		}
 	}()
 
-	log.Infoln("started")
+	logrus.Infoln("started")
 
 	// Get and cache roles*
 	ctx := context.Background()
 	roles, err := GetAllRoles(ctx)
 	if err != nil {
-		log.WithError(err).Error("could not get roles")
+		logrus.WithError(err).Error("could not get roles")
 	}
-	log.WithField("count", len(roles)).Infof("retrieved roles")
+	logrus.WithField("count", len(roles)).Infof("retrieved roles")
 
 	// Sync bans
 	err = actions.Bans.FetchBans(ctx)
 	if err != nil {
-		log.WithError(err).Error("could not sync bans")
+		logrus.WithError(err).Error("could not sync bans")
 	}
-	log.WithField("count", len(actions.Bans.BannedUsers)).Info("retrieved bans")
+	logrus.WithField("count", len(actions.Bans.BannedUsers)).Info("retrieved bans")
 
 	go tasks.Start()
 
@@ -135,7 +134,7 @@ func GetAllRoles(ctx context.Context) ([]datastructure.Role, error) {
 }
 
 func panicHandler(output string) {
-	fmt.Printf("PANIC OCCURED:\n\n%s\n", output)
+	logrus.Error("PANIC OCCURED:\n\n%s\n", output)
 	// Try to send a message to discord
 	discord.SendPanic(output)
 

@@ -7,7 +7,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo/cache"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -161,7 +161,7 @@ func (u *User) HasPermission(flag int64) bool {
 	}
 
 	if !utils.IsPowerOfTwo(flag) { // Don't evaluate if flag is invalid
-		log.WithField("flag", flag).Error("flag is not power of two")
+		logrus.WithField("flag", flag).Error("flag is not power of two")
 		return false
 	}
 

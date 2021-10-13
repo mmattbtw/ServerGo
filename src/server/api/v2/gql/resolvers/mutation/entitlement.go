@@ -10,7 +10,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -39,7 +39,7 @@ func (*MutationResolver) DeleteEntitlement(ctx context.Context, args struct {
 	if _, err = mongo.Collection(mongo.CollectionNameEntitlements).DeleteOne(ctx, bson.M{
 		"_id": eID,
 	}); err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -107,7 +107,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 
 		if !exists {
 			if err := mongo.Collection(mongo.CollectionNameBadges).FindOne(ctx, bson.M{"_id": itemID}).Decode(&badge); err != nil {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				if err == mongo.ErrNoDocuments {
 					return nil, fmt.Errorf("unknown badge")
 				}
@@ -152,7 +152,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 	if builder.Entitlement.Data != nil {
 		// Write to DB
 		if builder, err = builder.Write(); err != nil {
-			log.WithError(err).Error(err)
+			logrus.WithError(err).Error(err)
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -166,7 +166,7 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 		if len(notify.Notification.MessageParts) > 0 {
 			go func() {
 				if err := notify.Write(ctx); err != nil {
-					log.WithError(err).Error("notifications")
+					logrus.WithError(err).Error("notifications")
 				}
 			}()
 		}

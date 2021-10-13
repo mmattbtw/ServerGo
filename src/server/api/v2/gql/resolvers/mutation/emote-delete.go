@@ -10,7 +10,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -53,7 +53,7 @@ func (*MutationResolver) DeleteEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -66,7 +66,7 @@ func (*MutationResolver) DeleteEmote(ctx context.Context, args struct {
 				if err == mongo.ErrNoDocuments {
 					return nil, resolvers.ErrAccessDenied
 				}
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -74,7 +74,7 @@ func (*MutationResolver) DeleteEmote(ctx context.Context, args struct {
 
 	err = actions.Emotes.Delete(ctx, emote)
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -88,7 +88,7 @@ func (*MutationResolver) DeleteEmote(ctx context.Context, args struct {
 		Reason: &args.Reason,
 	})
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 	}
 
 	// Send a notification to the emote owner if it was deleted by a user other than themselve
@@ -105,7 +105,7 @@ func (*MutationResolver) DeleteEmote(ctx context.Context, args struct {
 		go func() {
 			// Send the notification
 			if err := notification.Write(context.Background()); err != nil {
-				log.WithError(err).Error("failed to create notification")
+				logrus.WithError(err).Error("failed to create notification")
 			}
 		}()
 	}

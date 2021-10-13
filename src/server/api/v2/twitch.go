@@ -15,6 +15,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,8 +24,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/pasztorpisti/qs"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type TwitchTokenResp struct {
@@ -67,7 +66,7 @@ func Twitch(app fiber.Router) fiber.Router {
 	twitch.Get("/", func(c *fiber.Ctx) error {
 		csrfToken, err := utils.GenerateRandomString(64)
 		if err != nil {
-			log.WithError(err).Error("secure bytes")
+			logrus.WithError(err).Error("secure bytes")
 			return c.Status(500).JSON(&fiber.Map{
 				"message": "Internal server error.",
 				"status":  500,
@@ -83,7 +82,7 @@ func Twitch(app fiber.Router) fiber.Router {
 			CreatedAt: time.Now(),
 		})
 		if err != nil {
-			log.WithError(err).Error("jwt")
+			logrus.WithError(err).Error("jwt")
 			return c.Status(500).JSON(&fiber.Map{
 				"message": "Internal server error.",
 				"status":  500,
@@ -172,7 +171,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		req, err := http.NewRequestWithContext(c.Context(), "POST", fmt.Sprintf("https://id.twitch.tv/oauth2/token?%s", params), nil)
 		if err != nil {
-			log.WithError(err).Error("twitch")
+			logrus.WithError(err).Error("twitch")
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
 				"message": "Invalid response from twitch, failed to convert code to access token.",
@@ -181,7 +180,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.WithError(err).Error("twitch")
+			logrus.WithError(err).Error("twitch")
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
 				"message": "Invalid response from twitch, failed to convert code to access token.",
@@ -191,7 +190,7 @@ func Twitch(app fiber.Router) fiber.Router {
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.WithError(err).Error("ioutils")
+			logrus.WithError(err).Error("ioutils")
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
 				"message": "Invalid response from twitch, failed to convert code to access token.",
@@ -200,7 +199,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		tokenResp := TwitchTokenResp{}
 		if err := json.Unmarshal(data, &tokenResp); err != nil {
-			log.WithError(err).WithField("data", utils.B2S(data)).Error("twitch")
+			logrus.WithError(err).WithField("data", utils.B2S(data)).Error("twitch")
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
 				"message": "Invalid response from twitch, failed to convert code to access token.",
@@ -209,7 +208,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		users, err := api.GetUsers(c.Context(), tokenResp.AccessToken, nil, nil)
 		if err != nil || len(users) != 1 {
-			log.WithError(err).WithField("resp", users).WithField("token", tokenResp).Error("twitch")
+			logrus.WithError(err).WithField("resp", users).WithField("token", tokenResp).Error("twitch")
 			return c.Status(400).JSON(&fiber.Map{
 				"status":  400,
 				"message": "Invalid response from twitch, failed to convert access token to user account. (" + err.Error() + ")",
@@ -247,7 +246,7 @@ func Twitch(app fiber.Router) fiber.Router {
 				}
 				res, err := mongo.Collection(mongo.CollectionNameUsers).InsertOne(c.Context(), mongoUser)
 				if err != nil {
-					log.WithError(err).Error("mongo")
+					logrus.WithError(err).Error("mongo")
 					return c.Status(500).JSON(&fiber.Map{
 						"status":  500,
 						"message": "Failed to create new account.",
@@ -257,7 +256,7 @@ func Twitch(app fiber.Router) fiber.Router {
 				var ok bool
 				mongoUser.ID, ok = res.InsertedID.(primitive.ObjectID)
 				if !ok {
-					log.WithField("resp", res.InsertedID).Error("bad mongo resp")
+					logrus.WithField("resp", res.InsertedID).Error("bad mongo resp")
 					return c.Status(500).JSON(&fiber.Map{
 						"status":  500,
 						"message": "Failed to read account.",
@@ -292,7 +291,7 @@ func Twitch(app fiber.Router) fiber.Router {
 					fmt.Sprintf(" until %v", utils.Ternary(ban != nil && !ban.ExpireAt.IsZero(), ban.ExpireAt.Format("Mon, 02 Jan 2006 15:04:05 MST"), "the universe fades out")),
 				)
 			} else {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 			}
 		}
 
@@ -305,7 +304,7 @@ func Twitch(app fiber.Router) fiber.Router {
 
 		authToken, err := jwt.Sign(authPl)
 		if err != nil {
-			log.WithError(err).Error("jwt")
+			logrus.WithError(err).Error("jwt")
 			return c.Status(500).JSON(&fiber.Map{
 				"status":  500,
 				"message": "Failed to create user auth.",

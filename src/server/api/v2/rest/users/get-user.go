@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/SevenTV/ServerGo/src/cache"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
@@ -21,13 +20,18 @@ func GetUser(router fiber.Router) {
 		}
 
 		var user datastructure.User
-		if err := cache.FindOne(c.Context(), "users", "", bson.M{
+		res := mongo.Collection(mongo.CollectionNameUsers).FindOne(c.Context(), bson.M{
 			"$or": bson.A{
 				bson.M{"_id": id},
 				bson.M{"login": strings.ToLower(c.Params("user"))},
 				bson.M{"id": strings.ToLower(c.Params("user"))},
 			},
-		}, &user); err != nil {
+		})
+		err = res.Err()
+		if err == nil {
+			err = res.Decode(&user)
+		}
+		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return restutil.ErrUnknownUser().Send(c)
 			}

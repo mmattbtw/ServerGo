@@ -11,10 +11,10 @@ import (
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/sirupsen/logrus"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pasztorpisti/qs"
-	log "github.com/sirupsen/logrus"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -67,7 +67,7 @@ func GetAuth(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode > 200 {
-		log.WithField("resp", utils.B2S(data)).Error("twitch")
+		logrus.WithField("resp", utils.B2S(data)).Error("twitch")
 		return "", ErrInvalidRespTwitch
 	}
 
@@ -81,7 +81,7 @@ func GetAuth(ctx context.Context) (string, error) {
 	expiry := time.Second * time.Duration(int64(float64(resData.ExpiresIn)*0.75))
 
 	if err := redis.Client.SetNX(ctx, "twitch:auth", auth, expiry).Err(); err != nil {
-		log.WithError(err).Error("redis")
+		logrus.WithError(err).Error("redis")
 	}
 
 	go func() {

@@ -19,7 +19,7 @@ import (
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/selection"
 	jsoniter "github.com/json-iterator/go"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -86,18 +86,19 @@ func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 			"$in": *args.Types,
 		}
 	}
-	fmt.Println("query:", query)
-
-	if err := cache.Find(ctx, "audit", "", query, &logs, &options.FindOptions{
+	cur, err := mongo.Collection(mongo.CollectionNameAudit).Find(ctx, query, &options.FindOptions{
 		Limit: utils.Int64Pointer(int64(math.Min(250, float64(limit)))),
 		Sort: bson.M{
 			"_id": -1,
 		},
-	}); err != nil {
-		log.WithError(err).Error("mongo")
+	})
+	if err == nil {
+		err = cur.All(ctx, &logs)
+	}
+	if err != nil {
+		logrus.WithError(err).Error("mongo")
 		return nil, err
 	}
-	fmt.Println("logs", logs)
 
 	field, failed := GenerateSelectedFieldMap(ctx, resolvers.MaxDepth)
 	if failed {
@@ -108,7 +109,7 @@ func (*QueryResolver) AuditLogs(ctx context.Context, args struct {
 	for i, l := range logs {
 		resolver, err := GenerateAuditResolver(ctx, l, field.Children)
 		if err != nil {
-			log.WithError(err).Error("GenerateAuditResolver")
+			logrus.WithError(err).Error("GenerateAuditResolver")
 			return nil, err
 		}
 		if resolver == nil {
@@ -135,17 +136,22 @@ func (*QueryResolver) User(ctx context.Context, args struct{ ID string }) (*User
 			return nil, fmt.Errorf("Cannot request @me while unauthenticated")
 		}
 	} else if !primitive.IsValidObjectID(args.ID) {
-		if err := cache.FindOne(ctx, "users", "", bson.M{
+		res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{
 			"$or": bson.A{
 				bson.M{"id": args.ID},
 				bson.M{"login": strings.ToLower(args.ID)},
 				bson.M{"youtube_id": strings.ToLower(args.ID)},
 			},
-		}, user); err != nil {
+		})
+		err := res.Err()
+		if err == nil {
+			err = res.Decode(user)
+		}
+		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return nil, nil
 			}
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	} else {
@@ -215,12 +221,16 @@ func (*QueryResolver) Emotes(ctx context.Context, args struct{ List []string }) 
 	ids := mongo.HexIDSliceToObjectID(args.List)
 	emotes := []*datastructure.Emote{}
 	if len(args.List) > 0 {
-		if err := cache.Find(ctx, "emotes", "", bson.M{
+		cur, err := mongo.Collection(mongo.CollectionNameEmotes).Find(ctx, bson.M{
 			"_id": bson.M{
 				"$in": ids,
 			},
-		}, &emotes); err != nil {
-			log.WithError(err).Error("mongo")
+		})
+		if err == nil {
+			err = cur.All(ctx, &emotes)
+		}
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 	}
@@ -279,7 +289,12 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 	if args.Channel != nil {
 		var targetChannel *datastructure.User
 		// Find user and get their emotes
-		if err := cache.FindOne(ctx, "users", "", bson.M{"login": args.Channel}, &targetChannel); err == nil {
+		res := mongo.Collection(mongo.CollectionNameUsers).FindOne(ctx, bson.M{"login": args.Channel})
+		err := res.Err()
+		if err == nil {
+			err = res.Decode(&targetChannel)
+		}
+		if err == nil {
 			match["_id"] = bson.M{"$in": targetChannel.EmoteIDs}
 		}
 	}
@@ -461,7 +476,7 @@ func (*QueryResolver) SearchEmotes(ctx context.Context, args struct {
 		err = cur.All(ctx, &emotes)
 	}
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -588,7 +603,7 @@ func (*QueryResolver) SearchUsers(ctx context.Context, args struct {
 		err = cur.All(ctx, &users)
 	}
 	if err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -623,7 +638,7 @@ func (*QueryResolver) FeaturedBroadcast(ctx context.Context) (string, error) {
 
 	stream, err := api_proxy.GetTwitchStreams(ctx, channel)
 	if err != nil {
-		log.WithError(err).WithField("channel", channel).Error("query could not get live status of featured broadcast")
+		logrus.WithError(err).WithField("channel", channel).Error("query could not get live status of featured broadcast")
 		return "", err
 	}
 
@@ -640,10 +655,10 @@ func (*QueryResolver) Meta(ctx context.Context) (*datastructure.Meta, error) {
 	feat := pipe.Get(ctx, "meta:featured_broadcast")
 	_, _ = pipe.Exec(ctx)
 	if err := announce.Err(); err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
+		logrus.WithError(err).Error("redis")
 	}
 	if err := feat.Err(); err != nil && err != redis.ErrNil {
-		log.WithError(err).Error("redis")
+		logrus.WithError(err).Error("redis")
 	}
 
 	cachedRoles := mongocache.CachedRoles.([]datastructure.Role)

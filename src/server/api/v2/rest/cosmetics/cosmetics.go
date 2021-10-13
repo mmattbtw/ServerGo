@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -36,11 +36,11 @@ func GetBadges(router fiber.Router) {
 		var badges []*datastructure.Badge
 		cur, err := mongo.Collection(mongo.CollectionNameBadges).Find(ctx, bson.M{}, options.Find().SetSort(bson.M{"_id": -1}))
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 		if err = cur.All(ctx, &badges); err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 
@@ -55,11 +55,11 @@ func GetBadges(router fiber.Router) {
 				"_id": bson.M{"$in": baj.Users},
 			})
 			if err != nil {
-				log.WithError(err).WithField("badge", baj.Name).Error("mongo")
+				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
 				continue
 			}
 			if err = cur.All(ctx, &users); err != nil {
-				log.WithError(err).WithField("badge", baj.Name).Error("mongo")
+				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
 				continue
 			}
 
@@ -72,7 +72,7 @@ func GetBadges(router fiber.Router) {
 				ObjectReference: baj.ID,
 			})
 			if err != nil {
-				log.WithError(err).Error("GetBadges, FetchEntitlements")
+				logrus.WithError(err).Error("GetBadges, FetchEntitlements")
 			}
 			for _, eb := range builders {
 				data := eb.ReadBadgeData()
@@ -84,13 +84,13 @@ func GetBadges(router fiber.Router) {
 					} else { // The user doesn't have the role bound directly, so we will check for an entitled role
 						ub, err := actions.Users.With(ctx, eb.User)
 						if err != nil {
-							log.WithError(err).WithField("badge", baj.Name).Error("actions")
+							logrus.WithError(err).WithField("badge", baj.Name).Error("actions")
 							continue
 						}
 
 						uents, err := ub.FetchEntitlements(&datastructure.EntitlementKindRole)
 						if err != nil {
-							log.WithError(err).WithField("badge", baj.Name).Error("actions")
+							logrus.WithError(err).WithField("badge", baj.Name).Error("actions")
 						}
 						// Iterate role entitlements for the user
 						for _, uent := range uents {

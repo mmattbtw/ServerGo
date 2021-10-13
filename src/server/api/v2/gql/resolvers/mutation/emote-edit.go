@@ -12,7 +12,7 @@ import (
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/SevenTV/ServerGo/src/validation"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -91,7 +91,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 		if err == mongo.ErrNoDocuments {
 			return nil, resolvers.ErrUnknownEmote
 		}
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	}
 
@@ -104,7 +104,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 				if err == mongo.ErrNoDocuments {
 					return nil, resolvers.ErrAccessDenied
 				}
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return nil, resolvers.ErrInternalServer
 			}
 		}
@@ -185,7 +185,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 
 		err = doc.Err()
 		if err != nil {
-			log.WithError(err).WithField("id", id).Error("mongo")
+			logrus.WithError(err).WithField("id", id).Error("mongo")
 			return nil, resolvers.ErrInternalServer
 		}
 
@@ -198,7 +198,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 		})
 
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 		}
 
 		// Send a notification to the emote owner if another user removed the UNLISTED flag
@@ -219,7 +219,7 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 				go func() {
 					// Send the notification
 					if err := notification.Write(context.Background()); err != nil {
-						log.WithError(err).Error("failed to create notification")
+						logrus.WithError(err).Error("failed to create notification")
 					}
 				}()
 			}

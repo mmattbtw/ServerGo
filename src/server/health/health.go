@@ -9,8 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/gofiber/fiber/v2"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func Health(app fiber.Router) {
@@ -30,7 +29,7 @@ func Health(app fiber.Router) {
 		defer cancel()
 		// CHECK REDIS
 		if ping := redis.Client.Ping(redisCtx).Val(); ping == "" {
-			log.Error("health, REDIS IS DOWN")
+			logrus.Error("health, REDIS IS DOWN")
 			isDown = true
 			if down := downedServices["redis"]; !down {
 				go discord.SendServiceDown("redis")
@@ -47,7 +46,7 @@ func Health(app fiber.Router) {
 		mongoCtx, cancel := context.WithTimeout(c.Context(), time.Second*10)
 		defer cancel()
 		if err := mongo.Database.Client().Ping(mongoCtx, nil); err != nil {
-			log.Error("health, MONGO IS DOWN")
+			logrus.Error("health, MONGO IS DOWN")
 			isDown = true
 			if down := downedServices["mongo"]; !down {
 				go discord.SendServiceDown("mongo")

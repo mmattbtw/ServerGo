@@ -11,7 +11,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	query_resolvers "github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers/query"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -156,14 +156,14 @@ func (*MutationResolver) EditUser(ctx context.Context, args struct {
 			Reason:    args.Reason,
 		})
 		if err != nil {
-			log.WithError(err).Error("mongo")
+			logrus.WithError(err).Error("mongo")
 		}
 
 		// Send notifications
 		go func() {
 			for _, n := range notifications {
 				if err := n.Write(ctx); err != nil {
-					log.WithError(err).Error("failed to create notification")
+					logrus.WithError(err).Error("failed to create notification")
 				}
 			}
 		}()

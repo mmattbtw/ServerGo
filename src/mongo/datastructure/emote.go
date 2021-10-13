@@ -8,7 +8,7 @@ import (
 	"gopkg.in/gographics/imagick.v3/imagick"
 
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type emoteUtil struct{}
@@ -27,7 +27,7 @@ func (*emoteUtil) AddSizeMetadata(emote *Emote) ([4]int16, [4]int16, error) {
 		// Fetch emote data from the CDN
 		res, err := http.Get(url)
 		if err != nil {
-			log.WithError(err).Error("http")
+			logrus.WithError(err).Error("http")
 			return width, height, err
 		}
 

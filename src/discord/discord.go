@@ -6,7 +6,7 @@ import (
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	dgo "github.com/bwmarrin/discordgo"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // An empty Discord session for executing webhooks
@@ -55,7 +55,7 @@ func SendWebhook(name string, params *dgo.WebhookParams) *dgo.Message {
 	if msg, err := d.WebhookExecute(wh.ID, wh.Token, true, params); err == nil {
 		return msg
 	} else {
-		log.WithError(err).Error("discord, SendWebhook")
+		logrus.WithError(err).Error("discord, SendWebhook")
 	}
 
 	return nil

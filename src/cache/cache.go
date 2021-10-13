@@ -2,8 +2,7 @@ package cache
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/base64"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -11,17 +10,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/SevenTV/ServerGo/src/cache/decoder"
-	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/bsm/redislock"
-	"github.com/davecgh/go-spew/spew"
 	jsoniter "github.com/json-iterator/go"
-	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -33,7 +27,7 @@ var json = jsoniter.Config{
 }.Froze()
 
 func genSha(prefix, collection string, q interface{}, opts interface{}) (string, error) {
-	h := sha1.New()
+	h := sha256.New()
 	bytes, err := json.Marshal(q)
 	if err != nil {
 		return "", err
@@ -50,197 +44,6 @@ func genSha(prefix, collection string, q interface{}, opts interface{}) (string,
 	}
 	sha1 := hex.EncodeToString(h.Sum(nil))
 	return sha1, nil
-}
-
-func query(ctx context.Context, collection, sha1 string, output interface{}) ([]primitive.ObjectID, error) {
-	d, err := redis.GetCache(ctx, collection, sha1)
-	if err != nil {
-		return nil, err
-	}
-
-	items, ok := d[0].(string)
-	if !ok {
-		log.WithField("resp", spew.Sdump(d)).Error("redis bad response, expected string")
-		return nil, redis.ErrNil
-	}
-	missingItems, ok := d[1].([]interface{})
-	if !ok {
-		log.WithField("resp", spew.Sdump(d)).Error("redis bad response, expected array")
-		return nil, redis.ErrNil
-	}
-
-	if err = json.UnmarshalFromString(items, output); err != nil {
-		return nil, err
-	}
-
-	mItems := make([]primitive.ObjectID, len(missingItems))
-	for i, v := range missingItems {
-		s, ok := v.(string)
-		if !ok {
-			log.WithField("resp", spew.Sdump(d)).Error("redis bad response, expected string")
-			return nil, redis.ErrNil
-		}
-		if mItems[i], err = primitive.ObjectIDFromHex(s); err != nil {
-			return nil, err
-		}
-	}
-
-	return mItems, nil
-}
-
-func Find(ctx context.Context, collection, commonIndex string, q interface{}, output interface{}, opts ...*options.FindOptions) error {
-	if !utils.IsSliceArrayPointer(output) {
-		return fmt.Errorf("the output must be a pointer to some array")
-	}
-
-	if configure.Config.GetBool("disable_redis_cache") {
-		cur, err := mongo.Database.Collection(collection).Find(ctx, q, opts...)
-		if err != nil {
-			return err
-		}
-
-		return cur.All(ctx, output)
-	}
-
-	sha1, err := genSha("find", collection, q, opts)
-	if err != nil {
-		return err
-	}
-
-	val := []bson.M{}
-
-	missingIDs, err := query(ctx, collection, sha1, &val)
-	if err != nil {
-		if err != redis.ErrNil {
-			log.WithError(err).Error("redis")
-		}
-		// MongoQuery
-		cur, err := mongo.Database.Collection(collection).Find(ctx, q, opts...)
-		if err != nil {
-			return err
-		}
-
-		out := []bson.M{}
-
-		if err = cur.All(ctx, &out); err != nil {
-			return err
-		}
-
-		args := make([]string, len(out)*2)
-		for i, v := range out {
-			oid, ok := v["_id"].(primitive.ObjectID)
-			if !ok {
-				log.WithField("data", spew.Sdump(out)).Error("invalid resp mongo")
-				return fmt.Errorf("invalid resp mongo")
-			}
-			args[2*i] = oid.Hex()
-			args[2*i+1], err = json.MarshalToString(v)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = redis.SetCache(ctx, collection, sha1, commonIndex, args...)
-		if err != nil {
-			return err
-		}
-
-		return decoder.Decode(out, output)
-	} else if len(missingIDs) > 0 {
-		cur, err := mongo.Database.Collection(collection).Find(ctx, bson.M{
-			"_id": bson.M{
-				"$in": missingIDs,
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		results := []bson.M{}
-		if err = cur.All(ctx, &results); err != nil {
-			return err
-		}
-
-		args := make([]string, len(results)*2)
-		for i, v := range results {
-			oid, ok := v["_id"].(primitive.ObjectID)
-			if !ok {
-				log.WithField("data", spew.Sdump(results)).Error("invalid resp mongo")
-				return fmt.Errorf("invalid resp mongo")
-			}
-			args[2*i] = oid.Hex()
-			args[2*i+1], err = json.MarshalToString(v)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = redis.SetCache(ctx, collection, sha1, commonIndex, args...)
-		if err != nil {
-			return err
-		}
-
-		if err = decoder.Decode(results, output); err != nil {
-			return err
-		}
-	}
-
-	return decoder.Decode(val, output)
-}
-
-func FindOne(ctx context.Context, collection, commonIndex string, q interface{}, output interface{}, opts ...*options.FindOneOptions) error {
-	if !utils.IsPointer(output) {
-		return fmt.Errorf("the output must be a pointer")
-	}
-
-	if configure.Config.GetBool("disable_redis_cache") {
-		res := mongo.Database.Collection(collection).FindOne(ctx, q, opts...)
-		if err := res.Err(); err != nil {
-			return err
-		}
-
-		return res.Decode(output)
-	}
-
-	sha1, err := genSha("find-one", collection, q, opts)
-	if err != nil {
-		return err
-	}
-
-	val := []bson.M{}
-	_, err = query(ctx, collection, sha1, &val)
-	if err != nil {
-		if err != redis.ErrNil {
-			log.WithError(err).Error("redis")
-		}
-		// MongoQuery
-		res := mongo.Database.Collection(collection).FindOne(ctx, q, opts...)
-		err = res.Err()
-		if err != nil {
-			return err
-		}
-
-		out := bson.M{}
-		if err = res.Decode(&out); err != nil {
-			return err
-		}
-
-		oid, ok := out["_id"].(primitive.ObjectID)
-		if !ok {
-			log.WithField("data", spew.Sdump(out)).Error("invalid resp mongo")
-			return fmt.Errorf("invalid resp mongo")
-		}
-
-		data, err := json.MarshalToString(out)
-		if err != nil {
-			return err
-		}
-		_, err = redis.SetCache(ctx, collection, sha1, commonIndex, oid.Hex(), data)
-		if err != nil {
-			return err
-		}
-
-		return decoder.Decode(out, output)
-	}
-	return decoder.Decode(val[0], output)
 }
 
 // Gets the collection size then caches it in redis for some time
@@ -271,19 +74,18 @@ func CacheGetRequest(ctx context.Context, uri string, cacheDuration time.Duratio
 	Value string
 }) (*cachedGetRequest, error) {
 	//
-	encodedURI := base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(uri)))
-	h := sha1.New()
-	h.Write(utils.S2B(encodedURI))
-	sha1 := hex.EncodeToString(h.Sum(nil))
-	key := "cached:http-get:" + sha1
+	h := sha256.New()
+	h.Write(utils.S2B(url.QueryEscape(uri)))
+	checkSum := hex.EncodeToString(h.Sum(nil))
+	key := "cached:http-get:" + checkSum
 
 	// Establish distributed lock
 	// This prevents the same request from being executed multiple times simultaneously
-	lock, err := redis.GetLocker().Obtain(ctx, "lock:http-get"+sha1, 10*time.Second, &redislock.Options{
+	lock, err := redis.GetLocker().Obtain(ctx, "lock:http-get:"+checkSum, 10*time.Second, &redislock.Options{
 		RetryStrategy: redislock.ExponentialBackoff(4, 750),
 	})
 	if err != nil {
-		log.WithError(err).Error("CacheGetRequest")
+		logrus.WithError(err).Error("CacheGetRequest")
 		return nil, err
 	}
 	defer func() {
@@ -312,7 +114,9 @@ func CacheGetRequest(ctx context.Context, uri string, cacheDuration time.Duratio
 	if err != nil {
 		return nil, err
 	}
-	log.WithFields(log.Fields{
+	defer resp.Body.Close()
+
+	logrus.WithFields(logrus.Fields{
 		"status":         resp.StatusCode,
 		"response_in_ms": time.Since(startedAt).Milliseconds(),
 		"completed_at":   time.Now(),

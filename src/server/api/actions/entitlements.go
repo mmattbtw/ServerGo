@@ -7,7 +7,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -25,7 +25,7 @@ func (b EntitlementBuilder) Write() (EntitlementBuilder, error) {
 	}, &options.UpdateOptions{
 		Upsert: utils.BoolPointer(true),
 	}); err != nil {
-		log.WithError(err).Error("mongo")
+		logrus.WithError(err).Error("mongo")
 		return b, err
 	}
 
@@ -85,7 +85,7 @@ func (b EntitlementBuilder) SetEmoteSetData(data datastructure.EntitledEmoteSet)
 func (b EntitlementBuilder) marshalData(data interface{}) EntitlementBuilder {
 	d, err := bson.Marshal(data)
 	if err != nil {
-		log.WithError(err).Error("bson")
+		logrus.WithError(err).Error("bson")
 		return b
 	}
 
@@ -97,7 +97,7 @@ func (b EntitlementBuilder) marshalData(data interface{}) EntitlementBuilder {
 func (b EntitlementBuilder) ReadSubscriptionData() datastructure.EntitledSubscription {
 	var e datastructure.EntitledSubscription
 	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
-		log.WithError(err).Error("bson")
+		logrus.WithError(err).Error("bson")
 		return e
 	}
 	return e
@@ -107,7 +107,7 @@ func (b EntitlementBuilder) ReadSubscriptionData() datastructure.EntitledSubscri
 func (b EntitlementBuilder) ReadBadgeData() datastructure.EntitledBadge {
 	var e datastructure.EntitledBadge
 	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
-		log.WithError(err).Error("bson")
+		logrus.WithError(err).Error("bson")
 		return e
 	}
 	return e
@@ -117,7 +117,7 @@ func (b EntitlementBuilder) ReadBadgeData() datastructure.EntitledBadge {
 func (b EntitlementBuilder) ReadRoleData() datastructure.EntitledRole {
 	var e datastructure.EntitledRole
 	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
-		log.WithError(err).Error("bson")
+		logrus.WithError(err).Error("bson")
 		return e
 	}
 	return e
@@ -127,7 +127,7 @@ func (b EntitlementBuilder) ReadRoleData() datastructure.EntitledRole {
 func (b EntitlementBuilder) ReadEmoteSetData() datastructure.EntitledEmoteSet {
 	var e datastructure.EntitledEmoteSet
 	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
-		log.WithError(err).Error("bson")
+		logrus.WithError(err).Error("bson")
 		return e
 	}
 	return e
@@ -190,7 +190,7 @@ func (entitlements) FetchEntitlements(ctx context.Context, opts struct {
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	} else if err != nil {
-		log.WithError(err).Error("actions, UserBuilder, FetchEntitlements")
+		logrus.WithError(err).Error("actions, UserBuilder, FetchEntitlements")
 		return nil, err
 	}
 
@@ -218,7 +218,7 @@ type entitlementWithUser struct {
 }
 
 func (b EntitlementBuilder) Log(str string) {
-	log.WithFields(log.Fields{
+	logrus.WithFields(logrus.Fields{
 		"id":      b.Entitlement.ID,
 		"kind":    b.Entitlement.Kind,
 		"user_id": b.Entitlement.UserID,
@@ -226,7 +226,7 @@ func (b EntitlementBuilder) Log(str string) {
 }
 
 func (b EntitlementBuilder) LogError(str string) {
-	log.WithFields(log.Fields{
+	logrus.WithFields(logrus.Fields{
 		"id":      b.Entitlement.ID,
 		"kind":    b.Entitlement.Kind,
 		"user_id": b.Entitlement.UserID,

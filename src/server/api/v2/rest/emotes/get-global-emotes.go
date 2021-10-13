@@ -9,7 +9,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/server/middleware"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -27,7 +27,7 @@ func GetGlobalEmotes(router fiber.Router) {
 				},
 			})
 			if err != nil {
-				log.WithError(err).Error("mongo")
+				logrus.WithError(err).Error("mongo")
 				return restutil.ErrInternalServer().Send(c)
 			}
 			if err := cur.All(ctx, &emotes); err != nil {
