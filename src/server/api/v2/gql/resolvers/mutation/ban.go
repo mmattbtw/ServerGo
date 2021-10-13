@@ -97,7 +97,9 @@ func (*MutationResolver) BanUser(ctx context.Context, args struct {
 		return nil, resolvers.ErrInternalServer
 	}
 
+	actions.Bans.Mtx.Lock()
 	actions.Bans.BannedUsers[id] = ban
+	actions.Bans.Mtx.Unlock()
 	_, err = mongo.Collection(mongo.CollectionNameAudit).InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserBan,
 		CreatedBy: usr.ID,
@@ -180,8 +182,9 @@ func (*MutationResolver) UnbanUser(ctx context.Context, args struct {
 		logrus.Errorf("mongo, err=%v", err)
 		return nil, resolvers.ErrInternalServer
 	}
-
+	actions.Bans.Mtx.Lock()
 	delete(actions.Bans.BannedUsers, id)
+	actions.Bans.Mtx.Unlock()
 	_, err = mongo.Collection(mongo.CollectionNameAudit).InsertOne(ctx, &datastructure.AuditLog{
 		Type:      datastructure.AuditLogTypeUserUnban,
 		CreatedBy: usr.ID,
