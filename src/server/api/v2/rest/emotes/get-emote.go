@@ -18,11 +18,11 @@ import (
 
 const chunkSize = 1024 * 1024
 
-var (
-	errInternalServer = []byte(`{"status":500,"message":"internal server error"}`)
-	errInvalidRequest = `{"status":400,"message":"%s"}`
-	errAccessDenied   = `{"status":403,"message":"%s"}`
-)
+// var (
+// 	errInternalServer = []byte(`{"status":500,"message":"internal server error"}`)
+// 	errInvalidRequest = `{"status":400,"message":"%s"}`
+// 	errAccessDenied   = `{"status":403,"message":"%s"}`
+// )
 
 func GetEmoteRoute(router fiber.Router) {
 	// Get Emote

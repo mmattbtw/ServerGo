@@ -261,7 +261,7 @@ func CreateEmoteRoute(router fiber.Router) {
 
 				ogWidth, ogHeight = getGifDimensions(g)
 			case "webp":
-				return restutil.ErrBadRequest().Send(c, fmt.Sprintf("Sorry, direct support for WebP uploads is not available yet."))
+				return restutil.ErrBadRequest().Send(c, "Sorry, direct support for WebP uploads is not available yet.")
 			default:
 				return restutil.ErrBadRequest().Send(c, "Unsupported File Format")
 			}
@@ -278,8 +278,8 @@ func CreateEmoteRoute(router fiber.Router) {
 			for i, file := range files {
 				scope := file[1]
 				sizes := strings.Split(file[2], "x")
-				maxWidth, _ := strconv.ParseFloat(sizes[0], 4)
-				maxHeight, _ := strconv.ParseFloat(sizes[1], 4)
+				maxWidth, _ := strconv.ParseFloat(sizes[0], 32)
+				maxHeight, _ := strconv.ParseFloat(sizes[1], 32)
 				quality := file[3]
 				outFile := fmt.Sprintf("%v/%v.webp", fileDir, scope)
 

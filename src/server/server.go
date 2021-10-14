@@ -37,7 +37,6 @@ func New() *Server {
 			WriteTimeout:                 time.Second * 10,
 			IdleTimeout:                  time.Second * 10,
 			DisableStartupMessage:        true,
-			ReduceMemoryUsage:            true,
 		}),
 		listener: l,
 	}

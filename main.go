@@ -134,7 +134,7 @@ func GetAllRoles(ctx context.Context) ([]datastructure.Role, error) {
 }
 
 func panicHandler(output string) {
-	logrus.Error("PANIC OCCURED:\n\n%s\n", output)
+	logrus.Errorf("PANIC OCCURED: %s", output)
 	// Try to send a message to discord
 	discord.SendPanic(output)
 

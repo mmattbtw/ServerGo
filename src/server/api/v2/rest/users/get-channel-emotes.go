@@ -99,10 +99,7 @@ func GetChannelEmotesRoute(router fiber.Router) {
 			// Create final response
 			response := make([]restutil.EmoteResponse, len(emotes))
 			for i, emote := range emotes {
-				var owner *datastructure.User
-				owner = ownerMap[emote.OwnerID]
-
-				response[i] = restutil.CreateEmoteResponse(emote, owner)
+				response[i] = restutil.CreateEmoteResponse(emote, ownerMap[emote.OwnerID])
 			}
 
 			j, err := json.Marshal(response)

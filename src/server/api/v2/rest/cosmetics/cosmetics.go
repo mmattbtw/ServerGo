@@ -24,7 +24,7 @@ func GetBadges(router fiber.Router) {
 
 	router.Get("/", func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		c.Set("Cache-Control", "max-age=300")
+		c.Set("Cache-Control", "max-age=150 s-maxage=300")
 
 		idType := c.Query("user_identifier")
 
@@ -49,10 +49,80 @@ func GetBadges(router fiber.Router) {
 			Badges: []*restutil.BadgeResponse{},
 		}
 		for _, baj := range badges {
-			var users []*datastructure.User
+			//
+			pipeline := mongo.Pipeline{
+				// Step 1: Match all users that have this badge
+				bson.D{{
+					Key: "$match",
+					Value: bson.M{
+						"kind":     "BADGE",
+						"data.ref": baj.ID,
+					},
+				}},
+				bson.D{{
+					Key:   "$addFields",
+					Value: bson.M{"badge": "$$ROOT"},
+				}},
+
+				// Step 2: Add role bindings
+				bson.D{{
+					Key: "$lookup",
+					Value: bson.M{
+						"from": "entitlements",
+						"let":  bson.M{"user_id": "$user_id"},
+						"pipeline": mongo.Pipeline{
+							bson.D{{
+								Key: "$match",
+								Value: bson.M{
+									"disabled": bson.M{"$not": bson.M{"$eq": true}},
+									"kind":     "ROLE",
+									"$expr": bson.M{
+										"$eq": bson.A{"$user_id", "$$user_id"},
+									},
+								},
+							}},
+						},
+						"as": "role_bindings",
+					},
+				}},
+			}
+			// Create aggregation
+			var ents []*badgesAggregationResult
+			cur, err := mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, pipeline)
+			if err != nil {
+				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo, create aggregation")
+				continue
+			}
+			if err = cur.All(ctx, &ents); err != nil {
+				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo, execute aggregation")
+				continue
+			}
+			var userIDs []primitive.ObjectID
+			for _, ent := range ents {
+				bb := actions.Entitlements.With(ctx, *ent.Badge)
+				badge := bb.ReadBadgeData()
+
+				hasRole := false
+				for _, r := range ent.RoleBindings {
+					rb := actions.Entitlements.With(ctx, *r)
+
+					if rb.ReadRoleData().ObjectReference == *badge.RoleBinding {
+						hasRole = true
+						break
+					}
+				}
+
+				if hasRole {
+					userIDs = append(userIDs, ent.Badge.UserID)
+				}
+			}
+
 			// Find directly assigned users
-			cur, err := mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
-				"_id": bson.M{"$in": baj.Users},
+			userIDs = append(userIDs, baj.Users...)
+
+			var users []*datastructure.User
+			cur, err = mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
+				"_id": bson.M{"$in": userIDs},
 			})
 			if err != nil {
 				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
@@ -63,55 +133,7 @@ func GetBadges(router fiber.Router) {
 				continue
 			}
 
-			// Find entitled users
-			builders, err := actions.Entitlements.FetchEntitlements(ctx, struct {
-				Kind            *datastructure.EntitlementKind
-				ObjectReference primitive.ObjectID
-			}{
-				Kind:            &datastructure.EntitlementKindBadge,
-				ObjectReference: baj.ID,
-			})
-			if err != nil {
-				logrus.WithError(err).Error("GetBadges, FetchEntitlements")
-			}
-			for _, eb := range builders {
-				data := eb.ReadBadgeData()
-				ok := false
-				if data.RoleBinding != nil {
-					// Badge has role binding, we will now ensure user can actually use this badge
-					if eb.User.RoleID == data.RoleBinding {
-						ok = true
-					} else { // The user doesn't have the role bound directly, so we will check for an entitled role
-						ub, err := actions.Users.With(ctx, eb.User)
-						if err != nil {
-							logrus.WithError(err).WithField("badge", baj.Name).Error("actions")
-							continue
-						}
-
-						uents, err := ub.FetchEntitlements(&datastructure.EntitlementKindRole)
-						if err != nil {
-							logrus.WithError(err).WithField("badge", baj.Name).Error("actions")
-						}
-						// Iterate role entitlements for the user
-						for _, uent := range uents {
-							role := uent.ReadRoleData()
-							if role.ObjectReference != *data.RoleBinding {
-								continue
-							}
-							ok = true
-						}
-					}
-				} else {
-					ok = true
-				}
-				if !ok { // No permission to use this badge. Unlucky
-					continue
-				}
-
-				users = append(users, eb.User)
-			}
 			b := restutil.CreateBadgeResponse(baj, users, idType)
-
 			result.Badges = append(result.Badges, b)
 		}
 
@@ -125,4 +147,9 @@ func GetBadges(router fiber.Router) {
 
 type GetBadgesResult struct {
 	Badges []*restutil.BadgeResponse `json:"badges"`
+}
+
+type badgesAggregationResult struct {
+	Badge        *datastructure.Entitlement   `bson:"badge"`
+	RoleBindings []*datastructure.Entitlement `bson:"role_bindings"`
 }

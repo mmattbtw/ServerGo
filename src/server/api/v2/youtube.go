@@ -125,7 +125,7 @@ func YouTube(app fiber.Router) fiber.Router {
 
 		// Check that the string matched
 		if ok := regex.MatchString(channel.Snippet.Description); !ok {
-			return restutil.ErrAccessDenied().Send(c, fmt.Sprint("The token was not found in the channel's description"))
+			return restutil.ErrAccessDenied().Send(c, "The token was not found in the channel's description")
 		}
 
 		// Confirmed user owns the channel!

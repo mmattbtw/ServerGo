@@ -124,6 +124,9 @@ func init() {
 		{Keys: bson.M{"user_id": 1}},
 		{Keys: bson.M{"data.ref": 1}},
 	})
+	if err != nil {
+		logrus.WithError(err).Fatal("mongo")
+	}
 }
 
 func Collection(name CollectionName) *mongo.Collection {

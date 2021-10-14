@@ -67,9 +67,6 @@ func (users) Get(ctx context.Context, q bson.M) (*UserBuilder, error) {
 // GetRole: Returns the user's current role
 func (b UserBuilder) GetRole() datastructure.Role {
 	ents, _ := b.FetchEntitlements(&datastructure.EntitlementKindRole)
-	for i, ent := range ents {
-		ents[i] = ent
-	}
 
 	// Sort the entitlements by role position
 	sort.Slice(ents, func(i, j int) bool {

@@ -12,7 +12,6 @@ import (
 	"github.com/gobuffalo/packr/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/graph-gophers/graphql-go"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -40,8 +39,6 @@ type Query struct {
 	Variables  map[string]interface{} `json:"variables"`
 	RawHeaders string                 `json:"raw_headers"`
 }
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func GQL(app fiber.Router) fiber.Router {
 	gql := app.Group("/gql", middleware.UserAuthMiddleware(false))

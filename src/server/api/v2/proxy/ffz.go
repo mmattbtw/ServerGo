@@ -133,37 +133,37 @@ func getCdnURL_FFZ(emoteID int32, size int8) string {
 	return fmt.Sprintf("https://cdn.betterttv.net/frankerfacez_emote/%d/%d", emoteID, size)
 }
 
-type emoteFFZ struct {
-	ID          int32     `json:"id"`
-	Name        string    `json:"name"`
-	Width       int16     `json:"width"`
-	Height      int16     `json:"height"`
-	Public      bool      `json:"public"`
-	Hidden      bool      `json:"hidden"`
-	Owner       userFFZ   `json:"owner"`
-	Status      int32     `json:"status"`
-	UsageCount  int32     `json:"usage_count"`
-	CreatedAt   time.Time `json:"created_at"`
-	Sizes       []int8    `json:"sizes"`
-	LastUpdated time.Time `json:"last_updated"`
-}
+// type emoteFFZ struct {
+// 	ID          int32     `json:"id"`
+// 	Name        string    `json:"name"`
+// 	Width       int16     `json:"width"`
+// 	Height      int16     `json:"height"`
+// 	Public      bool      `json:"public"`
+// 	Hidden      bool      `json:"hidden"`
+// 	Owner       userFFZ   `json:"owner"`
+// 	Status      int32     `json:"status"`
+// 	UsageCount  int32     `json:"usage_count"`
+// 	CreatedAt   time.Time `json:"created_at"`
+// 	Sizes       []int8    `json:"sizes"`
+// 	LastUpdated time.Time `json:"last_updated"`
+// }
 
-type userFFZ struct {
-	ID          int32  `json:"_id"`
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-}
+// type userFFZ struct {
+// 	ID          int32  `json:"_id"`
+// 	Name        string `json:"name"`
+// 	DisplayName string `json:"display_name"`
+// }
 
-type getEmotesResponseFFZ struct {
-	Emotes []emoteFFZ `json:"emotes"`
-}
+// type getEmotesResponseFFZ struct {
+// 	Emotes []emoteFFZ `json:"emotes"`
+// }
 
-type getEmoteSetsResponseFFZ struct {
-	Sets map[string]emoteSetFFZ `json:"sets"`
-}
+// type getEmoteSetsResponseFFZ struct {
+// 	Sets map[string]emoteSetFFZ `json:"sets"`
+// }
 
-type emoteSetFFZ struct {
-	ID     int32      `json:"id"`
-	Title  string     `json:"title"`
-	Emotes []emoteFFZ `json:"emoticons"`
-}
+// type emoteSetFFZ struct {
+// 	ID     int32      `json:"id"`
+// 	Title  string     `json:"title"`
+// 	Emotes []emoteFFZ `json:"emoticons"`
+// }
