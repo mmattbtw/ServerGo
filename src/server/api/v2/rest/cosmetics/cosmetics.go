@@ -34,7 +34,7 @@ func GetBadges(router fiber.Router) {
 
 		// Retrieve all badges from the DB
 		var badges []*datastructure.Badge
-		cur, err := mongo.Collection(mongo.CollectionNameBadges).Find(ctx, bson.M{}, options.Find().SetSort(bson.M{"_id": -1}))
+		cur, err := mongo.Collection(mongo.CollectionNameBadges).Find(ctx, bson.M{}, options.Find().SetSort(bson.M{"priority": -1}))
 		if err != nil {
 			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c, err.Error())
@@ -48,6 +48,7 @@ func GetBadges(router fiber.Router) {
 		result := GetBadgesResult{
 			Badges: []*restutil.BadgeResponse{},
 		}
+		badgedUsers := make(map[primitive.ObjectID]bool)
 		for _, baj := range badges {
 			//
 			pipeline := mongo.Pipeline{
@@ -55,6 +56,7 @@ func GetBadges(router fiber.Router) {
 				bson.D{{
 					Key: "$match",
 					Value: bson.M{
+						"disabled": bson.M{"$not": bson.M{"$eq": true}},
 						"kind":     "BADGE",
 						"data.ref": baj.ID,
 					},
@@ -99,6 +101,10 @@ func GetBadges(router fiber.Router) {
 			}
 			var userIDs []primitive.ObjectID
 			for _, ent := range ents {
+				if _, ok := badgedUsers[ent.Badge.UserID]; ok {
+					continue
+				}
+
 				bb := actions.Entitlements.With(ctx, *ent.Badge)
 				badge := bb.ReadBadgeData()
 
@@ -114,27 +120,30 @@ func GetBadges(router fiber.Router) {
 
 				if hasRole {
 					userIDs = append(userIDs, ent.Badge.UserID)
+					badgedUsers[ent.Badge.UserID] = true
 				}
 			}
 
 			// Find directly assigned users
 			userIDs = append(userIDs, baj.Users...)
 
-			var users []*datastructure.User
-			cur, err = mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
-				"_id": bson.M{"$in": userIDs},
-			})
-			if err != nil {
-				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
-				continue
-			}
-			if err = cur.All(ctx, &users); err != nil {
-				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
-				continue
-			}
+			if len(userIDs) > 0 {
+				var users []*datastructure.User
+				cur, err = mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
+					"_id": bson.M{"$in": userIDs},
+				})
+				if err != nil {
+					logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
+					continue
+				}
+				if err = cur.All(ctx, &users); err != nil {
+					logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
+					continue
+				}
 
-			b := restutil.CreateBadgeResponse(baj, users, idType)
-			result.Badges = append(result.Badges, b)
+				b := restutil.CreateBadgeResponse(baj, users, idType)
+				result.Badges = append(result.Badges, b)
+			}
 		}
 
 		b, err := json.Marshal(&result)

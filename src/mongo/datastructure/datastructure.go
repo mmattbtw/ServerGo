@@ -307,11 +307,12 @@ const (
 )
 
 type Badge struct {
-	ID      primitive.ObjectID   `json:"id" bson:"_id"`
-	Tooltip string               `json:"tooltip"`
-	Name    string               `json:"name"`
-	Users   []primitive.ObjectID `json:"users"`
-	Misc    bool                 `json:"misc,omitempty"`
+	ID       primitive.ObjectID   `json:"id" bson:"_id"`
+	Priority int                  `json:"priority"`
+	Tooltip  string               `json:"tooltip"`
+	Name     string               `json:"name"`
+	Users    []primitive.ObjectID `json:"users"`
+	Misc     bool                 `json:"misc,omitempty"`
 }
 
 type Meta struct {
