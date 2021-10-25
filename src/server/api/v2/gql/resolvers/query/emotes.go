@@ -239,8 +239,6 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 	Page  *int32
 	Limit *int32
 }) (*[]*UserResolver, error) {
-	emote := r.v
-
 	// Get queried page
 	page := int32(1)
 	if args.Page != nil {
@@ -260,14 +258,15 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 	}
 
 	// Get the users with this emote
+	users := []*datastructure.User{}
 	pipeline := mongo.Pipeline{
-		bson.D{{ // Step 1: Query for users with the emote enabled
+		{{ // Step 1: Query for users with the emote enabled
 			Key: "$match",
 			Value: bson.M{
-				"emotes": bson.M{"$in": []primitive.ObjectID{emote.ID}},
+				"emotes": r.v.ID,
 			},
 		}},
-		bson.D{{ // Step 2: Add users' role data
+		{{ // Step 2: Add users' role data
 			Key: "$lookup",
 			Value: bson.M{
 				"from":         "roles",
@@ -276,49 +275,26 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 				"as":           "_role",
 			},
 		}},
-		bson.D{{ // Step 3: Perform a sort by role position
-			Key: "$facet",
-			Value: bson.D{
-				{
-					Key: "user",
-					Value: bson.A{
-						bson.D{{Key: "$sort", Value: bson.M{"_role.position": -1}}},
-					},
-				},
-			},
-		}},
-		bson.D{{Key: "$unwind", Value: "$user"}}, // Step 4: unwind the array
+		// Step 3: Perform a sort by role position
+		{{Key: "$sort", Value: bson.M{"_role.position": -1}}},
 
 		// Paginate
-		bson.D{{Key: "$skip", Value: utils.Int64Pointer(int64((page - 1) * limit))}},
-		bson.D{{Key: "$limit", Value: utils.Int64Pointer(int64(limit))}},
+		{{Key: "$skip", Value: utils.Int64Pointer(int64((page - 1) * limit))}},
+		{{Key: "$limit", Value: utils.Int64Pointer(int64(limit))}},
 	}
 
 	if cur, err := mongo.Collection(mongo.CollectionNameUsers).Aggregate(ctx, pipeline); err != nil {
 		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
 	} else {
-		out := []struct { // The output data
-			User *datastructure.User `bson:"user"`
-		}{}
-
-		err = cur.All(ctx, &out)
-		if err != nil {
+		if err = cur.All(ctx, &users); err != nil {
 			logrus.WithError(err).Error("mongo")
 			return nil, err
 		}
-
-		// Add output data to the emote's channels
-		list := make([]*datastructure.User, len(out))
-		for i, v := range out {
-			list[i] = v.User
-		}
-		emote.Channels = &list
 	}
 
-	u := *r.v.Channels
-	users := []*UserResolver{}
-	for _, usr := range u {
+	resolvers := []*UserResolver{}
+	for _, usr := range users {
 		resolver, err := GenerateUserResolver(r.ctx, usr, &usr.ID, nil)
 		if err != nil {
 			return nil, err
@@ -327,10 +303,10 @@ func (r *EmoteResolver) Channels(ctx context.Context, args struct {
 			continue
 		}
 
-		users = append(users, resolver)
+		resolvers = append(resolvers, resolver)
 	}
 
-	return &users, nil
+	return &resolvers, nil
 }
 
 func (r *EmoteResolver) ChannelCount() int32 {
