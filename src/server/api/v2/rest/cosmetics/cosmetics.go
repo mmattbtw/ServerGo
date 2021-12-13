@@ -2,7 +2,6 @@ package cosmetics
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -136,7 +135,6 @@ func GetBadges(router fiber.Router) {
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 		for _, ent := range userCosmetics {
-			fmt.Println("hi", ent.Roles)
 			// Map badges
 			for _, baj := range ent.Badges {
 				if _, ok := badgedUsers[baj.UserID]; ok {
