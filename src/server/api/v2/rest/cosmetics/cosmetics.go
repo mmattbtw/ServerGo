@@ -36,6 +36,10 @@ func GetBadges(router fiber.Router) {
 		badges := []*datastructure.Badge{}
 		cur, err := mongo.Collection(mongo.CollectionNameBadges).Aggregate(ctx, mongo.Pipeline{
 			{{
+				Key:   "$sort",
+				Value: bson.M{"priority": -1},
+			}},
+			{{
 				Key: "$lookup",
 				Value: bson.M{
 					"from":         mongo.CollectionNameUsers,
