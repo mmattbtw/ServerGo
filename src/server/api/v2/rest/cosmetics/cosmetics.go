@@ -12,7 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 /*
@@ -33,8 +32,22 @@ func GetBadges(router fiber.Router) {
 		}
 
 		// Retrieve all badges from the DB
-		var badges []*datastructure.Badge
-		cur, err := mongo.Collection(mongo.CollectionNameBadges).Find(ctx, bson.M{}, options.Find().SetSort(bson.M{"priority": -1}))
+		badges := []*datastructure.Badge{}
+		cur, err := mongo.Collection(mongo.CollectionNameBadges).Aggregate(ctx, mongo.Pipeline{
+			{{
+				Key:   "$sort",
+				Value: bson.M{"priority": -1},
+			}},
+			{{
+				Key: "$lookup",
+				Value: bson.M{
+					"from":         mongo.CollectionNameUsers,
+					"localField":   "users",
+					"foreignField": "_id",
+					"as":           "user_objects",
+				},
+			}},
+		})
 		if err != nil {
 			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c, err.Error())
@@ -43,74 +56,104 @@ func GetBadges(router fiber.Router) {
 			logrus.WithError(err).Error("mongo")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
+		badgeMap := make(map[primitive.ObjectID][]*datastructure.User)
+		for _, badge := range badges {
+			badgeMap[badge.ID] = []*datastructure.User{}
+		}
 
 		// Retrieve all users of badges
-		result := GetBadgesResult{
-			Badges: []*restutil.BadgeResponse{},
-		}
 		badgedUsers := make(map[primitive.ObjectID]bool)
-		for _, baj := range badges {
-			//
-			pipeline := mongo.Pipeline{
-				// Step 1: Match all users that have this badge
-				bson.D{{
-					Key: "$match",
-					Value: bson.M{
-						"disabled": bson.M{"$not": bson.M{"$eq": true}},
-						"kind":     "BADGE",
-						"data.ref": baj.ID,
+		pipeline := mongo.Pipeline{
+			// Step 1: Match all users that have this badge
+			{{
+				Key: "$match",
+				Value: bson.M{
+					"disabled": bson.M{"$not": bson.M{"$eq": true}},
+					"kind": bson.M{
+						"$in": bson.A{"ROLE", "BADGE"},
 					},
-				}},
-				bson.D{{
-					Key:   "$addFields",
-					Value: bson.M{"badge": "$$ROOT"},
-				}},
-
-				// Step 2: Add role bindings
-				bson.D{{
-					Key: "$lookup",
-					Value: bson.M{
-						"from": "entitlements",
-						"let":  bson.M{"user_id": "$user_id"},
-						"pipeline": mongo.Pipeline{
-							bson.D{{
-								Key: "$match",
-								Value: bson.M{
-									"disabled": bson.M{"$not": bson.M{"$eq": true}},
-									"kind":     "ROLE",
-									"$expr": bson.M{
-										"$eq": bson.A{"$user_id", "$$user_id"},
-									},
-								},
-							}},
+				},
+			}},
+			// Step 2: Group entitlements by their respective user
+			{{
+				Key: "$group",
+				Value: bson.M{
+					"_id": "$user_id",
+					"items": bson.M{
+						"$push": "$$ROOT",
+					},
+				},
+			}},
+			// Step 3: Return the results
+			{{
+				Key: "$project",
+				Value: bson.M{
+					// List of roles
+					"roles": bson.M{
+						"$filter": bson.M{
+							"input": "$items",
+							"as":    "item",
+							"cond":  bson.M{"$eq": bson.A{"$$item.kind", "ROLE"}},
 						},
-						"as": "role_bindings",
 					},
-				}},
-			}
-			// Create aggregation
-			var ents []*badgesAggregationResult
-			cur, err := mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, pipeline)
-			if err != nil {
-				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo, create aggregation")
-				continue
-			}
-			if err = cur.All(ctx, &ents); err != nil {
-				logrus.WithError(err).WithField("badge", baj.Name).Error("mongo, execute aggregation")
-				continue
-			}
-			var userIDs []primitive.ObjectID
-			for _, ent := range ents {
-				if _, ok := badgedUsers[ent.Badge.UserID]; ok {
+					// List of badges
+					"badges": bson.M{
+						"$filter": bson.M{
+							"input": "$items",
+							"as":    "item",
+							"cond":  bson.M{"$eq": bson.A{"$$item.kind", "BADGE"}},
+						},
+					},
+				},
+			}},
+			// Step 4: Add user relation
+			{{
+				Key: "$lookup",
+				Value: bson.M{
+					"from":         mongo.CollectionNameUsers,
+					"localField":   "_id",
+					"foreignField": "_id",
+					"as":           "user",
+				},
+			}},
+			{{
+				Key: "$set",
+				Value: bson.M{
+					"user": bson.M{"$first": "$user"},
+				},
+			}},
+		}
+		// Create aggregation
+		userCosmetics := []*cosmeticsResult{}
+		cur, err = mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, pipeline)
+		if err != nil {
+			logrus.WithError(err).Error("mongo, create aggregation")
+			return restutil.ErrInternalServer().Send(c, err.Error())
+		}
+		if err = cur.All(ctx, &userCosmetics); err != nil {
+			logrus.WithError(err).Error("mongo, execute aggregation")
+			return restutil.ErrInternalServer().Send(c, err.Error())
+		}
+		for _, ent := range userCosmetics {
+			// Map badges
+			for _, baj := range ent.Badges {
+				if _, ok := badgedUsers[baj.UserID]; ok {
 					continue
 				}
 
-				bb := actions.Entitlements.With(ctx, *ent.Badge)
+				bb := actions.Entitlements.With(ctx, *baj)
 				badge := bb.ReadBadgeData()
 
 				hasRole := false
-				for _, r := range ent.RoleBindings {
-					rb := actions.Entitlements.With(ctx, *r)
+				for _, rol := range ent.Roles {
+					if rol == nil {
+						continue
+					}
+					if badge.RoleBinding == nil {
+						hasRole = true
+						continue
+					}
+					rb := actions.Entitlements.With(ctx, *rol)
 
 					if rb.ReadRoleData().ObjectReference == *badge.RoleBinding {
 						hasRole = true
@@ -119,31 +162,24 @@ func GetBadges(router fiber.Router) {
 				}
 
 				if hasRole {
-					userIDs = append(userIDs, ent.Badge.UserID)
-					badgedUsers[ent.Badge.UserID] = true
+					badgedUsers[ent.UserID] = true
+
+					badgeMap[badge.ObjectReference] = append(badgeMap[badge.ObjectReference], ent.User)
 				}
 			}
+		}
 
-			// Find directly assigned users
-			userIDs = append(userIDs, baj.Users...)
+		// Find directly assigned users
+		result := GetBadgesResult{
+			Badges: []*restutil.BadgeResponse{},
+		}
+		for _, baj := range badges {
+			users := append(badgeMap[baj.ID], baj.Users...)
 
-			if len(userIDs) > 0 {
-				var users []*datastructure.User
-				cur, err = mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
-					"_id": bson.M{"$in": userIDs},
-				})
-				if err != nil {
-					logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
-					continue
-				}
-				if err = cur.All(ctx, &users); err != nil {
-					logrus.WithError(err).WithField("badge", baj.Name).Error("mongo")
-					continue
-				}
+			// Find direct users
 
-				b := restutil.CreateBadgeResponse(baj, users, idType)
-				result.Badges = append(result.Badges, b)
-			}
+			b := restutil.CreateBadgeResponse(baj, users, idType)
+			result.Badges = append(result.Badges, b)
 		}
 
 		b, err := json.Marshal(&result)
@@ -158,7 +194,9 @@ type GetBadgesResult struct {
 	Badges []*restutil.BadgeResponse `json:"badges"`
 }
 
-type badgesAggregationResult struct {
-	Badge        *datastructure.Entitlement   `bson:"badge"`
-	RoleBindings []*datastructure.Entitlement `bson:"role_bindings"`
+type cosmeticsResult struct {
+	UserID primitive.ObjectID           `bson:"_id"`
+	User   *datastructure.User          `bson:"user"`
+	Badges []*datastructure.Entitlement `bson:"badges"`
+	Roles  []*datastructure.Entitlement `bson:"roles"`
 }
