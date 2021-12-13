@@ -308,11 +308,12 @@ const (
 
 type Badge struct {
 	ID       primitive.ObjectID   `json:"id" bson:"_id"`
-	Priority int                  `json:"priority"`
-	Tooltip  string               `json:"tooltip"`
-	Name     string               `json:"name"`
-	Users    []primitive.ObjectID `json:"users"`
-	Misc     bool                 `json:"misc,omitempty"`
+	Priority int                  `json:"priority" bson:"priority"`
+	Tooltip  string               `json:"tooltip" bson:"tooltip"`
+	Name     string               `json:"name" bson:"name"`
+	UserIDs  []primitive.ObjectID `json:"users" bson:"users"`
+	Users    []*User              `json:"user_objects" bson:"user_objects,skip,omitempty"`
+	Misc     bool                 `json:"misc,omitempty" bson:"misc"`
 }
 
 type Meta struct {
