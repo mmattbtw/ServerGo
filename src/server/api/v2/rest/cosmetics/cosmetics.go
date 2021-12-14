@@ -30,27 +30,13 @@ func GetBadges(router fiber.Router) {
 			return restutil.ErrMissingQueryParams().Send(c, `user_identifier: must be 'object_id', 'twitch_id' or 'login'`)
 		}
 
-		// Retrieve all badges from the DB
-		badges := []*datastructure.Badge{}
-		cur, err := mongo.Collection(mongo.CollectionNameBadges).Aggregate(ctx, mongo.Pipeline{
+		// Retrieve all users of badges
+		badgedUsers := make(map[primitive.ObjectID]bool)
+		pipeline := mongo.Pipeline{
 			{{
 				Key:   "$sort",
 				Value: bson.M{"priority": -1},
 			}},
-		})
-		if err != nil {
-			logrus.WithError(err).Error("mongo")
-			return restutil.ErrInternalServer().Send(c, err.Error())
-		}
-		if err = cur.All(ctx, &badges); err != nil {
-			logrus.WithError(err).Error("mongo")
-			return restutil.ErrInternalServer().Send(c, err.Error())
-		}
-		badgeUserMap := make(map[primitive.ObjectID][]*datastructure.User)
-
-		// Retrieve all users of badges
-		badgedUsers := make(map[primitive.ObjectID]bool)
-		pipeline := mongo.Pipeline{
 			{{
 				Key: "$lookup",
 				Value: bson.M{
@@ -85,9 +71,12 @@ func GetBadges(router fiber.Router) {
 							Key: "$set",
 							Value: bson.M{
 								"ent": bson.M{
-									"$arrayElemAt": bson.A{
-										"$items",
-										bson.M{"$indexOfArray": bson.A{"$items._id", "$$item._id"}},
+									"$first": bson.M{
+										"$filter": bson.M{
+											"input": "$items",
+											"as":    "it",
+											"cond":  bson.M{"$eq": bson.A{"$$it.kind", "BADGE"}},
+										},
 									},
 								},
 								"roles": bson.M{
@@ -128,7 +117,6 @@ func GetBadges(router fiber.Router) {
 				Key:   "$unset",
 				Value: bson.A{"entitled"},
 			}},
-
 			// Step 4: Add user relation
 			{{
 				Key: "$lookup",
@@ -142,7 +130,7 @@ func GetBadges(router fiber.Router) {
 		}
 		// Create aggregation
 		userCosmetics := []*datastructure.Badge{}
-		cur, err = mongo.Collection(mongo.CollectionNameBadges).Aggregate(ctx, pipeline)
+		cur, err := mongo.Collection(mongo.CollectionNameBadges).Aggregate(ctx, pipeline)
 		if err != nil {
 			logrus.WithError(err).Error("mongo, create aggregation")
 			return restutil.ErrInternalServer().Send(c, err.Error())
@@ -151,26 +139,20 @@ func GetBadges(router fiber.Router) {
 			logrus.WithError(err).Error("mongo, execute aggregation")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
-		for _, baj := range userCosmetics {
-			// Map badges
-			for _, u := range baj.Users {
-				if _, ok := badgedUsers[u.ID]; ok {
-					continue
-				}
-
-				badgedUsers[u.ID] = true
-				badgeUserMap[baj.ID] = append(badgeUserMap[baj.ID], u)
-			}
-		}
 
 		// Find directly assigned users
 		result := GetBadgesResult{
 			Badges: []*restutil.BadgeResponse{},
 		}
-		for _, baj := range badges {
-			users := badgeUserMap[baj.ID]
-
-			// Find direct users
+		for _, baj := range userCosmetics {
+			users := []*datastructure.User{}
+			for _, u := range baj.Users {
+				if ok := badgedUsers[u.ID]; ok {
+					continue
+				}
+				users = append(users, u)
+				badgedUsers[u.ID] = true
+			}
 
 			b := restutil.CreateBadgeResponse(baj, users, idType)
 			result.Badges = append(result.Badges, b)
