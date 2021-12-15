@@ -3,6 +3,7 @@ package configure
 import (
 	"bytes"
 	"os"
+	"reflect"
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
@@ -142,16 +143,36 @@ func init() {
 		checkErr(Config.MergeInConfig())
 	}
 
-	// Environment
-	replacer := strings.NewReplacer(".", "_")
-	Config.SetEnvKeyReplacer(replacer)
-	Config.AllowEmptyEnv(true)
-	Config.AutomaticEnv()
+	BindEnvs(Config, ServerCfg{})
 
+	// Environment
+	Config.AutomaticEnv()
+	Config.SetEnvPrefix("SERVERGO")
+	Config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	Config.AllowEmptyEnv(true)
 	// Log
 	initLog()
 
 	// Print final config
 	c := ServerCfg{}
 	checkErr(Config.Unmarshal(&c))
+}
+
+func BindEnvs(config *viper.Viper, iface interface{}, parts ...string) {
+	ifv := reflect.ValueOf(iface)
+	ift := reflect.TypeOf(iface)
+	for i := 0; i < ift.NumField(); i++ {
+		v := ifv.Field(i)
+		t := ift.Field(i)
+		tv, ok := t.Tag.Lookup("mapstructure")
+		if !ok {
+			continue
+		}
+		switch v.Kind() {
+		case reflect.Struct:
+			BindEnvs(config, v.Interface(), append(parts, tv)...)
+		default:
+			_ = config.BindEnv(strings.Join(append(parts, tv), "."))
+		}
+	}
 }
