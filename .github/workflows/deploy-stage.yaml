@@ -73,4 +73,4 @@ jobs:
             kubectl apply -f k8s/cluster/7tv-stage/server.yaml
             kubectl patch $KUBE_RESOURCE seventv-apiv2 --type="json" -p="$KUBE_IMAGE_PATCH"
 
-            kubectl rollout restart -n app $KUBE_RESOURCE/seventv-apiv2
+            kubectl rollout restart -n app-stage $KUBE_RESOURCE/seventv-apiv2
