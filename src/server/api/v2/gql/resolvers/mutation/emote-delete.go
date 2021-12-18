@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -19,6 +20,9 @@ func (*MutationResolver) DeleteEmote(ctx context.Context, args struct {
 	ID     string
 	Reason string
 }) (*bool, error) {
+	if configure.Config.GetBool("maintenance_mode") {
+		return nil, fmt.Errorf("Maintenance Mode")
+	}
 	if args.Reason == "" {
 		return nil, resolvers.ErrNoReason
 	}

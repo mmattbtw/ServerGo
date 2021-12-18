@@ -21,6 +21,9 @@ func (*MutationResolver) EditUser(ctx context.Context, args struct {
 	User   userInput
 	Reason *string
 }) (*query_resolvers.UserResolver, error) {
+	if configure.Config.GetBool("maintenance_mode") {
+		return nil, fmt.Errorf("Maintenance Mode")
+	}
 	// Get the actor user
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {

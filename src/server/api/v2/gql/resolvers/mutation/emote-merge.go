@@ -2,7 +2,9 @@ package mutation_resolvers
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
@@ -17,6 +19,9 @@ func (*MutationResolver) MergeEmote(ctx context.Context, args struct {
 	NewID  string
 	Reason string
 }) (*query_resolvers.EmoteResolver, error) {
+	if configure.Config.GetBool("maintenance_mode") {
+		return nil, fmt.Errorf("Maintenance Mode")
+	}
 	// Get the actor user
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {

@@ -28,6 +28,9 @@ twitch_client_id:
 twitch_client_secret: 
 # The temporary file storage folder, used whilst uploading emotes
 temp_file_store: ./tmp
+
+maintenance: false
+
 # JSON Web Token Secret
 # For signing and validating user access tokens
 jwt_secret: 

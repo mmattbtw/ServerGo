@@ -2,8 +2,10 @@ package mutation_resolvers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
@@ -25,6 +27,9 @@ func (*MutationResolver) EditEmote(ctx context.Context, args struct {
 	Emote  emoteInput
 	Reason *string
 }) (*query_resolvers.EmoteResolver, error) {
+	if configure.Config.GetBool("maintenance_mode") {
+		return nil, fmt.Errorf("Maintenance Mode")
+	}
 	usr, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
 		return nil, resolvers.ErrLoginRequired

@@ -64,6 +64,11 @@ func Twitch(app fiber.Router) fiber.Router {
 	twitch := app.Group("/auth")
 
 	twitch.Get("/", func(c *fiber.Ctx) error {
+		if configure.Config.GetBool("maintenance_mode") {
+			return c.Status(fiber.StatusLocked).JSON(&fiber.Map{
+				"error": "Maintenance Mode",
+			})
+		}
 		csrfToken, err := utils.GenerateRandomString(64)
 		if err != nil {
 			logrus.WithError(err).Error("secure bytes")

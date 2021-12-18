@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
@@ -18,6 +19,9 @@ import (
 func (*MutationResolver) DeleteEntitlement(ctx context.Context, args struct {
 	ID string
 }) (*response, error) {
+	if configure.Config.GetBool("maintenance_mode") {
+		return nil, fmt.Errorf("Maintenance Mode")
+	}
 	// Get actor reference
 	actor, ok := ctx.Value(utils.UserKey).(*datastructure.User)
 	if !ok {
