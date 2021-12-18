@@ -19,6 +19,9 @@ var (
 
 func init() {
 	options, err := redis.ParseURL(configure.Config.GetString("redis_uri"))
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to parse redis uri")
+	}
 	options.DB = configure.Config.GetInt("redis_db")
 	if err != nil {
 		logrus.WithError(err).Fatal("redis failed")
