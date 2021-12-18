@@ -2,7 +2,7 @@ name: Build & Deploy (Production)
 
 on:
   push:
-    branches: ["master", "autodeploy-test"]
+    branches: [master]
 
   workflow_dispatch:
 
