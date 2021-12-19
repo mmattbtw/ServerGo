@@ -99,18 +99,18 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 			return nil, err
 		}
 		// Check the item already being entitled to the user
-		var badge datastructure.Badge
-		exists := true
-		if err = mongo.Collection(mongo.CollectionNameEntitlements).FindOne(ctx, bson.M{
+		badge := &datastructure.Cosmetic{}
+		count, err := mongo.Collection(mongo.CollectionNameEntitlements).CountDocuments(ctx, bson.M{
 			"kind":     "BADGE",
 			"user_id":  userID,
 			"data.ref": itemID,
-		}).Decode(&badge); err == mongo.ErrNoDocuments {
-			exists = false
+		})
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
 		}
 
-		if !exists {
-			if err := mongo.Collection(mongo.CollectionNameBadges).FindOne(ctx, bson.M{"_id": itemID}).Decode(&badge); err != nil {
+		if count == 0 {
+			if err := mongo.Collection(mongo.CollectionNameCosmetics).FindOne(ctx, bson.M{"_id": itemID, "kind": "BADGE"}).Decode(badge); err != nil {
 				logrus.WithError(err).Error("mongo")
 				if err == mongo.ErrNoDocuments {
 					return nil, fmt.Errorf("unknown badge")
@@ -132,6 +132,50 @@ func (*MutationResolver) CreateEntitlement(ctx context.Context, args struct {
 
 			notify = notify.SetTitle("Chat Badge Acquired").
 				AddTextMessagePart(fmt.Sprintf("The badge \"%v\" has been added to your account", badge.Name))
+		}
+	case datastructure.EntitlementKindPaint:
+		if args.Data.Paint == nil {
+			return nil, fmt.Errorf("missing paint data")
+		}
+
+		itemID, err := primitive.ObjectIDFromHex(args.Data.Paint.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		paint := &datastructure.Cosmetic{}
+		count, err := mongo.Collection(mongo.CollectionNameEntitlements).CountDocuments(ctx, bson.M{
+			"kind":     "PAINT",
+			"user_id":  userID,
+			"data.ref": itemID,
+		})
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
+		}
+
+		if count == 0 {
+			if err := mongo.Collection(mongo.CollectionNameCosmetics).FindOne(ctx, bson.M{"_id": itemID, "kind": "PAINT"}).Decode(paint); err != nil {
+				logrus.WithError(err).Error("mongo")
+				if err == mongo.ErrNoDocuments {
+					return nil, fmt.Errorf("unknown paint")
+				}
+
+				return nil, err
+			}
+
+			var roleBindingID primitive.ObjectID
+			if args.Data.Paint.RoleBindingID != nil && primitive.IsValidObjectID(*args.Data.Paint.RoleBindingID) {
+				roleBindingID, _ = primitive.ObjectIDFromHex(*args.Data.Paint.RoleBindingID)
+			}
+
+			builder = builder.SetPaintData(datastructure.EntitledPaint{
+				ObjectReference: paint.ID,
+				Selected:        args.Data.Paint.Selected,
+				RoleBinding:     &roleBindingID,
+			})
+
+			notify = notify.SetTitle("Nametag Paint Acquired").
+				AddTextMessagePart(fmt.Sprintf("The paint \"%v\" has been added to your account", paint.Name))
 		}
 	case datastructure.EntitlementKindRole:
 		if args.Data.Role == nil {

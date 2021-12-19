@@ -72,6 +72,11 @@ func (b EntitlementBuilder) SetBadgeData(data datastructure.EntitledBadge) Entit
 	return b.marshalData(data)
 }
 
+// SetPainteData: Add a paint reference to the entitlement
+func (b EntitlementBuilder) SetPaintData(data datastructure.EntitledPaint) EntitlementBuilder {
+	return b.marshalData(data)
+}
+
 // SetRoleData: Add a role reference to the entitlement
 func (b EntitlementBuilder) SetRoleData(data datastructure.EntitledRole) EntitlementBuilder {
 	return b.marshalData(data)
@@ -106,6 +111,16 @@ func (b EntitlementBuilder) ReadSubscriptionData() datastructure.EntitledSubscri
 // ReadBadgeData: Read the data as an Entitled Badge
 func (b EntitlementBuilder) ReadBadgeData() datastructure.EntitledBadge {
 	var e datastructure.EntitledBadge
+	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
+		logrus.WithError(err).Error("bson")
+		return e
+	}
+	return e
+}
+
+// ReadPaintData: Read the data as an Entitled Paint
+func (b EntitlementBuilder) ReadPaintData() datastructure.EntitledPaint {
+	var e datastructure.EntitledPaint
 	if err := bson.Unmarshal(b.Entitlement.Data, &e); err != nil {
 		logrus.WithError(err).Error("bson")
 		return e

@@ -8,6 +8,7 @@ import (
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ErrorResponse struct {
@@ -124,19 +125,9 @@ type UserResponse struct {
 	ProfilePictureID string             `json:"profile_picture_id,omitempty"`
 }
 
-func CreateBadgeResponse(badge *datastructure.Badge, users []*datastructure.User, idType string) *BadgeResponse {
-	// Select user ID type
-	userIDs := make([]string, len(users))
-	for i, u := range users {
-		switch idType {
-		case "object_id":
-			userIDs[i] = u.ID.Hex()
-		case "twitch_id":
-			userIDs[i] = u.TwitchID
-		case "login":
-			userIDs[i] = u.Login
-		}
-	}
+func CreateBadgeResponse(badge *datastructure.Cosmetic, users []*datastructure.User, idType string) *BadgeCosmeticResponse {
+	// Get user list
+	userIDs := selectUserIDType(users, idType)
 
 	// Generate URLs
 	urls := make([][]string, 3)
@@ -148,23 +139,89 @@ func CreateBadgeResponse(badge *datastructure.Badge, users []*datastructure.User
 		urls[i-1] = a
 	}
 
-	response := &BadgeResponse{
+	data := badge.ReadBadge()
+	if data == nil {
+		return &BadgeCosmeticResponse{
+			ID:      primitive.NilObjectID.Hex(),
+			Name:    "Error",
+			Tooltip: "Error",
+		}
+	}
+
+	response := &BadgeCosmeticResponse{
 		ID:      badge.ID.Hex(),
 		Name:    badge.Name,
-		Tooltip: badge.Tooltip,
+		Tooltip: data.Tooltip,
 		Users:   userIDs,
 		URLs:    urls,
-		Misc:    badge.Misc,
+		Misc:    data.Misc,
 	}
 
 	return response
 }
 
-type BadgeResponse struct {
+func CreatePaintResponse(paint *datastructure.Cosmetic, users []*datastructure.User, idType string) *PaintCosmeticResponse {
+	// Get user list
+	userIDs := selectUserIDType(users, idType)
+
+	data := paint.ReadPaint()
+	if data == nil {
+		return &PaintCosmeticResponse{
+			ID:   paint.ID.Hex(),
+			Name: "Error",
+		}
+	}
+
+	return &PaintCosmeticResponse{
+		ID:         paint.ID.Hex(),
+		Name:       paint.Name,
+		Users:      userIDs,
+		Function:   string(data.Function),
+		Stops:      data.Stops,
+		Repeat:     data.Repeat,
+		Angle:      data.Angle,
+		Shape:      data.Shape,
+		ImageURL:   data.ImageURL,
+		DropShadow: data.DropShadow,
+		Animation:  data.Animation,
+	}
+}
+
+func selectUserIDType(users []*datastructure.User, t string) []string {
+	userIDs := make([]string, len(users))
+	for i, u := range users {
+		switch t {
+		case "object_id":
+			userIDs[i] = u.ID.Hex()
+		case "twitch_id":
+			userIDs[i] = u.TwitchID
+		case "login":
+			userIDs[i] = u.Login
+		}
+	}
+
+	return userIDs
+}
+
+type BadgeCosmeticResponse struct {
 	ID      string     `json:"id"`
 	Name    string     `json:"name"`
 	Tooltip string     `json:"tooltip"`
 	URLs    [][]string `json:"urls"`
 	Users   []string   `json:"users"`
 	Misc    bool       `json:"misc,omitempty"`
+}
+
+type PaintCosmeticResponse struct {
+	ID         string                                    `json:"id"`
+	Name       string                                    `json:"name"`
+	Users      []string                                  `json:"users"`
+	Function   string                                    `json:"function"`
+	Stops      []datastructure.CosmeticPaintGradientStop `json:"stops"`
+	Repeat     bool                                      `json:"repeat"`
+	Angle      int32                                     `json:"angle"`
+	Shape      string                                    `json:"shape,omitempty"`
+	ImageURL   string                                    `json:"image_url,omitempty"`
+	DropShadow datastructure.CosmeticPaintDropShadow     `json:"drop_shadow,omitempty"`
+	Animation  []datastructure.CosmeticPaintAnimation    `json:"animation,omitempty"`
 }

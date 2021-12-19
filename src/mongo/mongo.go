@@ -104,7 +104,7 @@ func init() {
 		logrus.WithError(err).Fatal("mongo")
 	}
 
-	_, err = Collection(CollectionNameBadges).Indexes().CreateMany(ctx, []mongo.IndexModel{
+	_, err = Collection(CollectionNameCosmetics).Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{Keys: bson.M{"name": 1}},
 	})
 	if err != nil {
@@ -140,7 +140,7 @@ var (
 	CollectionNameUsers             = CollectionName("users")
 	CollectionNameBans              = CollectionName("bans")
 	CollectionNameReports           = CollectionName("reports")
-	CollectionNameBadges            = CollectionName("badges")
+	CollectionNameCosmetics         = CollectionName("cosmetics")
 	CollectionNameRoles             = CollectionName("roles")
 	CollectionNameAudit             = CollectionName("audit")
 	CollectionNameEntitlements      = CollectionName("entitlements")

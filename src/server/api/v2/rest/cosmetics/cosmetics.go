@@ -31,7 +31,6 @@ func GetBadges(router fiber.Router) {
 		}
 
 		// Retrieve all users of badges
-		badgedUsers := make(map[primitive.ObjectID]bool)
 		pipeline := mongo.Pipeline{
 			{{
 				Key:   "$sort",
@@ -49,7 +48,9 @@ func GetBadges(router fiber.Router) {
 								"disabled": bson.M{"$not": bson.M{"$eq": true}},
 								"$or": bson.A{
 									bson.M{
-										"kind": "BADGE",
+										"kind": bson.M{
+											"$in": bson.A{"BADGE", "PAINT"},
+										},
 										"$expr": bson.M{
 											"$eq": bson.A{"$data.ref", "$$item._id"},
 										},
@@ -75,7 +76,7 @@ func GetBadges(router fiber.Router) {
 										"$filter": bson.M{
 											"input": "$items",
 											"as":    "it",
-											"cond":  bson.M{"$eq": bson.A{"$$it.kind", "BADGE"}},
+											"cond":  bson.M{"$in": bson.A{"$$it.kind", bson.A{"BADGE", "PAINT"}}},
 										},
 									},
 								},
@@ -91,7 +92,9 @@ func GetBadges(router fiber.Router) {
 						{{
 							Key: "$match",
 							Value: bson.M{
-								"ent.kind": "BADGE",
+								"ent.kind": bson.M{
+									"$in": bson.A{"BADGE", "PAINT"},
+								},
 								"$expr": bson.M{
 									"$in": bson.A{"$ent.data.role_binding", "$roles.data.ref"},
 								},
@@ -109,7 +112,7 @@ func GetBadges(router fiber.Router) {
 				Key: "$set",
 				Value: bson.M{
 					"users": bson.M{
-						"$concatArrays": bson.A{"$users", "$entitled._id"},
+						"$concatArrays": bson.A{"$user_ids", "$entitled._id"},
 					},
 				},
 			}},
@@ -129,8 +132,8 @@ func GetBadges(router fiber.Router) {
 			}},
 		}
 		// Create aggregation
-		userCosmetics := []*datastructure.Badge{}
-		cur, err := mongo.Collection(mongo.CollectionNameBadges).Aggregate(ctx, pipeline)
+		userCosmetics := []*datastructure.Cosmetic{}
+		cur, err := mongo.Collection(mongo.CollectionNameCosmetics).Aggregate(ctx, pipeline)
 		if err != nil {
 			logrus.WithError(err).Error("mongo, create aggregation")
 			return restutil.ErrInternalServer().Send(c, err.Error())
@@ -141,21 +144,39 @@ func GetBadges(router fiber.Router) {
 		}
 
 		// Find directly assigned users
-		result := GetBadgesResult{
-			Badges: []*restutil.BadgeResponse{},
+		result := GetCosmeticsResult{
+			Badges: []*restutil.BadgeCosmeticResponse{},
+			Paints: []*restutil.PaintCosmeticResponse{},
 		}
-		for _, baj := range userCosmetics {
-			users := []*datastructure.User{}
-			for _, u := range baj.Users {
-				if ok := badgedUsers[u.ID]; ok {
-					continue
+		badgedUsers := make(map[primitive.ObjectID]bool)
+		paintedUsers := make(map[primitive.ObjectID]bool)
+		for _, cos := range userCosmetics {
+			switch cos.Kind {
+			case datastructure.CosmeticKindBadge:
+				users := []*datastructure.User{}
+				for _, u := range cos.Users {
+					if ok := badgedUsers[u.ID]; ok {
+						continue
+					}
+					users = append(users, u)
+					badgedUsers[u.ID] = true
 				}
-				users = append(users, u)
-				badgedUsers[u.ID] = true
-			}
 
-			b := restutil.CreateBadgeResponse(baj, users, idType)
-			result.Badges = append(result.Badges, b)
+				b := restutil.CreateBadgeResponse(cos, users, idType)
+				result.Badges = append(result.Badges, b)
+			case datastructure.CosmeticKindNametagPaint:
+				users := []*datastructure.User{}
+				for _, u := range cos.Users {
+					if ok := paintedUsers[u.ID]; ok {
+						continue
+					}
+					users = append(users, u)
+					paintedUsers[u.ID] = true
+				}
+
+				p := restutil.CreatePaintResponse(cos, users, idType)
+				result.Paints = append(result.Paints, p)
+			}
 		}
 
 		b, err := json.Marshal(&result)
@@ -166,8 +187,9 @@ func GetBadges(router fiber.Router) {
 	})
 }
 
-type GetBadgesResult struct {
-	Badges []*restutil.BadgeResponse `json:"badges"`
+type GetCosmeticsResult struct {
+	Badges []*restutil.BadgeCosmeticResponse `json:"badges"`
+	Paints []*restutil.PaintCosmeticResponse `json:"paints"`
 }
 
 type cosmeticsResult struct {

@@ -26,6 +26,7 @@ type EntitlementKind string
 var (
 	EntitlementKindSubscription = EntitlementKind("SUBSCRIPTION") // Subscription Entitlement
 	EntitlementKindBadge        = EntitlementKind("BADGE")        // Badge Entitlement
+	EntitlementKindPaint        = EntitlementKind("PAINT")        // Nametag Paint Entitlement
 	EntitlementKindRole         = EntitlementKind("ROLE")         // Role Entitlement
 	EntitlementKindEmoteSet     = EntitlementKind("EMOTE_SET")    // Emote Set Entitlement
 )
@@ -43,6 +44,15 @@ type EntitledBadge struct {
 	ObjectReference primitive.ObjectID `json:"-" bson:"ref"`
 	Selected        bool               `json:"selected" bson:"selected"`
 	// The role required for the badge to show up
+	RoleBinding   *primitive.ObjectID `json:"role_binding" bson:"role_binding"`
+	RoleBindingID *string             `json:"role_binding_id" bson:"-"`
+}
+
+type EntitledPaint struct {
+	ID              string             `json:"id" bson:"-"`
+	ObjectReference primitive.ObjectID `json:"-" bson:"ref"`
+	Selected        bool               `json:"selected" bson:"selected"`
+	// The role required for the paint to show up
 	RoleBinding   *primitive.ObjectID `json:"role_binding" bson:"role_binding"`
 	RoleBindingID *string             `json:"role_binding_id" bson:"-"`
 }
