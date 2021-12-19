@@ -312,7 +312,7 @@ type Cosmetic struct {
 	Kind     CosmeticKind         `json:"kind" bson:"kind"`
 	Priority int                  `json:"priority" bson:"priority"`
 	Name     string               `json:"name" bson:"name"`
-	UserIDs  []primitive.ObjectID `json:"users" bson:"users"`
+	UserIDs  []primitive.ObjectID `json:"users" bson:"user_ids"`
 	Users    []*User              `json:"user_objects" bson:"user_objects,skip,omitempty"`
 	Data     bson.Raw             `json:"data" bson:"data"`
 }

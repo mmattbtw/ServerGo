@@ -217,6 +217,7 @@ type PaintCosmeticResponse struct {
 	Name       string                                    `json:"name"`
 	Users      []string                                  `json:"users"`
 	Function   string                                    `json:"function"`
+	Color      datastructure.ColorRGBA                   `json:"color"`
 	Stops      []datastructure.CosmeticPaintGradientStop `json:"stops"`
 	Repeat     bool                                      `json:"repeat"`
 	Angle      int32                                     `json:"angle"`
