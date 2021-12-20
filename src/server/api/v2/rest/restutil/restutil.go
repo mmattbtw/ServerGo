@@ -176,6 +176,7 @@ func CreatePaintResponse(paint *datastructure.Cosmetic, users []*datastructure.U
 		ID:         paint.ID.Hex(),
 		Name:       paint.Name,
 		Users:      userIDs,
+		Color:      data.Color,
 		Function:   string(data.Function),
 		Stops:      data.Stops,
 		Repeat:     data.Repeat,
