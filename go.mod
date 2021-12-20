@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/json-iterator/go v1.1.11
+	github.com/json-iterator/go v1.1.12
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/mitchellh/panicwrap v1.0.0
@@ -27,27 +27,27 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sizeofint/webpanimation v0.0.0-20210809145948-1d2b32119882
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.8.1
+	github.com/spf13/viper v1.10.1
 	go.mongodb.org/mongo-driver v1.7.2
 	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d
 	golang.org/x/term v0.0.0-20210317153231-de623e64d2a6 // indirect
-	google.golang.org/api v0.57.0
+	google.golang.org/api v0.63.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/gographics/imagick.v3 v3.4.0
 )
 
 require (
-	cloud.google.com/go v0.94.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	cloud.google.com/go v0.99.0 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobuffalo/logger v1.0.3 // indirect
 	github.com/gobuffalo/packd v1.0.0 // indirect
-	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
-	github.com/googleapis/gax-go/v2 v2.1.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -57,13 +57,13 @@ require (
 	github.com/markbates/errx v1.1.0 // indirect
 	github.com/markbates/oncer v1.0.0 // indirect
 	github.com/markbates/safe v1.0.1 // indirect
-	github.com/mitchellh/mapstructure v1.4.1 // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
-	github.com/pelletier/go-toml v1.9.3 // indirect
+	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
-	github.com/spf13/cast v1.3.1 // indirect
+	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
@@ -74,17 +74,17 @@ require (
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
-	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
-	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
-	golang.org/x/text v0.3.6 // indirect
+	golang.org/x/sys v0.0.0-20211210111614-af8b64212486 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83 // indirect
-	google.golang.org/grpc v1.40.0 // indirect
+	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
+	google.golang.org/grpc v1.43.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
-	gopkg.in/ini.v1 v1.62.0 // indirect
+	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
