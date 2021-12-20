@@ -225,5 +225,5 @@ type PaintCosmeticResponse struct {
 	Shape      string                                    `json:"shape,omitempty"`
 	ImageURL   string                                    `json:"image_url,omitempty"`
 	DropShadow datastructure.CosmeticPaintDropShadow     `json:"drop_shadow,omitempty"`
-	Animation  []datastructure.CosmeticPaintAnimation    `json:"animation,omitempty"`
+	Animation  datastructure.CosmeticPaintAnimation      `json:"animation,omitempty"`
 }

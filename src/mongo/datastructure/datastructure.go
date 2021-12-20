@@ -367,7 +367,7 @@ type CosmeticDataPaint struct {
 	// Properties for a drop shadow
 	DropShadow CosmeticPaintDropShadow `json:"drop_shadow,omitempty" bson:"drop_shadow,omitempty"`
 	// Animation instructions, if any
-	Animation []CosmeticPaintAnimation `json:"animation,omitempty" bson:"animation,omitempty"`
+	Animation CosmeticPaintAnimation `json:"animation,omitempty" bson:"animation,omitempty"`
 }
 
 type CosmeticPaintFunction string
@@ -391,14 +391,14 @@ type CosmeticPaintDropShadow struct {
 }
 
 type CosmeticPaintAnimation struct {
-	Speed     uint32                           `json:"speed" bson:"speed"`
+	Speed     int32                            `json:"speed" bson:"speed"`
 	Keyframes []CosmeticPaintAnimationKeyframe `json:"keyframes" bson:"keyframes"`
 }
 
 type CosmeticPaintAnimationKeyframe struct {
-	At float32 `json:"at" bson:"at"`
-	X  float32 `json:"x" bson:"x"`
-	Y  float32 `json:"y" bson:"y"`
+	At float64 `json:"at" bson:"at"`
+	X  float64 `json:"x" bson:"x"`
+	Y  float64 `json:"y" bson:"y"`
 }
 
 type Meta struct {
