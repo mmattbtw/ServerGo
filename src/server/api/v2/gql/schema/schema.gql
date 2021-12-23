@@ -109,6 +109,10 @@ input UserInput {
   role_id: String
   # User's allowed channel emote slots (0 = use default)
   emote_slots: Int
+  # Edit the selected Paint
+  cosmetic_paint: String
+  # Edit the selected Badge
+  cosmetic_badge: String
 }
 
 input ChannelEmoteInput {
@@ -303,6 +307,16 @@ type User {
   notifications: [Notification]!
   # Get amount of unread notifications this user has
   notification_count: Int!
+  # Cosmetics
+  cosmetics: [UserCosmetic]!
+}
+
+type UserCosmetic {
+  id: String!
+  kind: String!
+  name: String!
+  selected: Boolean!
+  data: String!
 }
 
 type UserPartial {

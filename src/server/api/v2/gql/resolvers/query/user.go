@@ -344,6 +344,51 @@ func GenerateUserResolver(ctx context.Context, user *datastructure.User, userID 
 		user.NotificationCount = &count
 	}
 
+	if _, ok := fields["cosmetics"]; ok && usrValid {
+		cosmetics := []*datastructure.Cosmetic{}
+		pipeline := mongo.Pipeline{
+			{{
+				Key: "$match",
+				Value: bson.M{
+					"user_id": userID,
+					"kind": bson.M{
+						"$in": bson.A{"BADGE", "PAINT"},
+					},
+				},
+			}},
+			{{
+				Key: "$lookup",
+				Value: bson.M{
+					"from":         "cosmetics",
+					"localField":   "data.ref",
+					"foreignField": "_id",
+					"as":           "cosmetic",
+				},
+			}},
+			{{Key: "$set", Value: bson.M{"cosmetic": bson.M{"$first": "$cosmetic"}}}},
+			{{
+				Key: "$project",
+				Value: bson.M{
+					"_id":      "$cosmetic._id",
+					"kind":     "$cosmetic.kind",
+					"name":     "$cosmetic.name",
+					"data":     "$cosmetic.data",
+					"selected": "$data.selected",
+				},
+			}},
+		}
+		cur, err := mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, pipeline)
+		if err != nil {
+			logrus.WithError(err).Error("mongo")
+			return nil, err
+		}
+		if err = cur.All(ctx, &cosmetics); err != nil {
+			return nil, err
+		}
+
+		user.Cosmetics = cosmetics
+	}
+
 	r := &UserResolver{
 		ctx:    ctx,
 		v:      user,
@@ -809,4 +854,13 @@ func (r *UserResolver) NotificationCount() int32 {
 	}
 
 	return int32(*r.v.NotificationCount)
+}
+
+func (r *UserResolver) Cosmetics(ctx context.Context) []*cosmeticResolver {
+	resolvers := []*cosmeticResolver{}
+	for _, cos := range r.v.Cosmetics {
+		resolvers = append(resolvers, GenerateCosmeticResolver(ctx, cos, r.fields))
+	}
+
+	return resolvers
 }

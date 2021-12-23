@@ -19,9 +19,11 @@ type emoteInput struct {
 }
 
 type userInput struct {
-	ID         string  `json:"id"`
-	RoleID     *string `json:"role_id"`
-	EmoteSlots *int32  `json:"emote_slots"`
+	ID            string  `json:"id"`
+	RoleID        *string `json:"role_id"`
+	EmoteSlots    *int32  `json:"emote_slots"`
+	CosmeticPaint *string `json:"cosmetic_paint"`
+	CosmeticBadge *string `json:"cosmetic_badge"`
 }
 
 type entitlementCreateInput struct {

@@ -134,6 +134,7 @@ type User struct {
 	AuditEntries      *[]*AuditLog    `json:"audit_entries" bson:"-"`
 	Reports           *[]*Report      `json:"reports" bson:"-"`
 	Bans              *[]*Ban         `json:"bans" bson:"-"`
+	Cosmetics         []*Cosmetic     `json:"cosmetics" bson:"-"`
 	Notifications     []*Notification `json:"-" bson:"-"`
 	NotificationCount *int64          `json:"-" bson:"-"`
 }
@@ -315,6 +316,9 @@ type Cosmetic struct {
 	UserIDs  []primitive.ObjectID `json:"users" bson:"user_ids"`
 	Users    []*User              `json:"user_objects" bson:"user_objects,skip,omitempty"`
 	Data     bson.Raw             `json:"data" bson:"data"`
+
+	// User Relationals
+	Selected bool `json:"selected" bson:"selected,skip,omitempty"`
 }
 
 func (c *Cosmetic) decode(i interface{}) interface{} {
