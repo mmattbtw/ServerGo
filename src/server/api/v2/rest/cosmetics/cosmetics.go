@@ -48,6 +48,7 @@ func GetBadges(router fiber.Router) {
 								"disabled": bson.M{"$not": bson.M{"$eq": true}},
 								"$or": bson.A{
 									bson.M{
+										"data.selected": true,
 										"kind": bson.M{
 											"$in": bson.A{"BADGE", "PAINT"},
 										},
