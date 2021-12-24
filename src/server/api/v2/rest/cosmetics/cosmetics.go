@@ -96,8 +96,9 @@ func GetBadges(router fiber.Router) {
 								"ent.kind": bson.M{
 									"$in": bson.A{"BADGE", "PAINT"},
 								},
-								"$expr": bson.M{
-									"$in": bson.A{"$ent.data.role_binding", "$roles.data.ref"},
+								"$or": bson.A{
+									bson.M{"$expr": bson.M{"$in": bson.A{"$ent.data.role_binding", "$roles.data.ref"}}},
+									bson.M{"ent.data.role_binding": bson.M{"$exists": false}},
 								},
 							},
 						}},
