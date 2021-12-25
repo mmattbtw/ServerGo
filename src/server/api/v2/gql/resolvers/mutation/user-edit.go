@@ -43,6 +43,12 @@ func (*MutationResolver) EditUser(ctx context.Context, args struct {
 	targetRole := datastructure.GetRole(target.RoleID)
 	target.Role = &targetRole
 
+	if !usr.HasPermission(datastructure.RolePermissionManageUsers) {
+		if usr.ID != target.ID {
+			return nil, resolvers.ErrAccessDenied
+		}
+	}
+
 	update := bson.M{}
 	logChanges := []*datastructure.AuditLogChange{}
 	notifications := []actions.NotificationBuilder{}
