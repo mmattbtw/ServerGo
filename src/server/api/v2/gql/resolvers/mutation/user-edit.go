@@ -139,20 +139,23 @@ func (*MutationResolver) EditUser(ctx context.Context, args struct {
 	}
 
 	if req.CosmeticPaint != nil {
-		paintID, err := primitive.ObjectIDFromHex(*req.CosmeticPaint)
-		if err != nil {
-			return nil, err
+		paintID := primitive.NilObjectID
+		if primitive.IsValidObjectID(*req.CosmeticPaint) {
+			paintID, _ = primitive.ObjectIDFromHex(*req.CosmeticPaint)
 		}
 
-		_, err = mongo.Collection(mongo.CollectionNameEntitlements).UpdateOne(ctx, bson.M{
-			"kind":     "PAINT",
-			"data.ref": paintID,
-			"user_id":  targetID,
-		}, bson.M{"$set": bson.M{"data.selected": true}})
-		if err == mongo.ErrNoDocuments {
-			return nil, fmt.Errorf("you do not own this paint")
-		} else if err != nil {
-			logrus.WithError(err).Error("mongo, failed to select entitlement")
+		// Set the user's paint
+		if !paintID.IsZero() {
+			_, err = mongo.Collection(mongo.CollectionNameEntitlements).UpdateOne(ctx, bson.M{
+				"kind":     "PAINT",
+				"data.ref": paintID,
+				"user_id":  targetID,
+			}, bson.M{"$set": bson.M{"data.selected": true}})
+			if err == mongo.ErrNoDocuments {
+				return nil, fmt.Errorf("you do not own this paint")
+			} else if err != nil {
+				logrus.WithError(err).Error("mongo, failed to select entitlement")
+			}
 		}
 
 		// Disable other paints
