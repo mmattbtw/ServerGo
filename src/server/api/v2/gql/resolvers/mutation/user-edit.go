@@ -146,12 +146,12 @@ func (*MutationResolver) EditUser(ctx context.Context, args struct {
 
 		// Set the user's paint
 		if !paintID.IsZero() {
-			_, err = mongo.Collection(mongo.CollectionNameEntitlements).UpdateOne(ctx, bson.M{
+			res, err := mongo.Collection(mongo.CollectionNameEntitlements).UpdateOne(ctx, bson.M{
 				"kind":     "PAINT",
 				"data.ref": paintID,
 				"user_id":  targetID,
 			}, bson.M{"$set": bson.M{"data.selected": true}})
-			if err == mongo.ErrNoDocuments {
+			if err == mongo.ErrNoDocuments || res.ModifiedCount == 0 {
 				return nil, fmt.Errorf("you do not own this paint")
 			} else if err != nil {
 				logrus.WithError(err).Error("mongo, failed to select entitlement")
@@ -162,6 +162,37 @@ func (*MutationResolver) EditUser(ctx context.Context, args struct {
 		if _, err = mongo.Collection(mongo.CollectionNameEntitlements).UpdateMany(ctx, bson.M{
 			"kind":     "PAINT",
 			"data.ref": bson.M{"$not": bson.M{"$eq": paintID}},
+			"user_id":  targetID,
+		}, bson.M{"$set": bson.M{"data.selected": false}}); err != nil {
+			logrus.WithError(err).Error("mongo, failed to update other entitlements")
+			return nil, err
+		}
+	}
+
+	if req.CosmeticBadge != nil {
+		badgeID := primitive.NilObjectID
+		if primitive.IsValidObjectID(*req.CosmeticBadge) {
+			badgeID, _ = primitive.ObjectIDFromHex(*req.CosmeticBadge)
+		}
+
+		// Set the user's badge
+		if !badgeID.IsZero() {
+			res, err := mongo.Collection(mongo.CollectionNameEntitlements).UpdateOne(ctx, bson.M{
+				"kind":     "BADGE",
+				"data.ref": badgeID,
+				"user_id":  targetID,
+			}, bson.M{"$set": bson.M{"data.selected": true}})
+			if err == mongo.ErrNoDocuments || res.ModifiedCount == 0 {
+				return nil, fmt.Errorf("you do not own this badge")
+			} else if err != nil {
+				logrus.WithError(err).Error("mongo, failed to select entitlement")
+			}
+		}
+
+		// Disable other badges
+		if _, err = mongo.Collection(mongo.CollectionNameEntitlements).UpdateMany(ctx, bson.M{
+			"kind":     "BADGE",
+			"data.ref": bson.M{"$not": bson.M{"$eq": badgeID}},
 			"user_id":  targetID,
 		}, bson.M{"$set": bson.M{"data.selected": false}}); err != nil {
 			logrus.WithError(err).Error("mongo, failed to update other entitlements")
