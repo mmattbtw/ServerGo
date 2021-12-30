@@ -62,7 +62,7 @@ func CreateEmoteResponse(emote *datastructure.Emote, owner *datastructure.User) 
 	response := EmoteResponse{
 		ID:               emote.ID.Hex(),
 		Name:             emote.Name,
-		Owner:            nil,
+		Owner:            CreateUserResponse(datastructure.DeletedUser),
 		Visibility:       emote.Visibility,
 		VisibilitySimple: &simpleVis,
 		Mime:             emote.Mime,
