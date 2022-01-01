@@ -15,9 +15,10 @@ import (
 )
 
 var sess = session.Must(session.NewSession(&aws.Config{
-	Credentials: credentials.NewStaticCredentials(configure.Config.GetString("aws_akid"), configure.Config.GetString("aws_secret_key"), configure.Config.GetString("aws_session_token")),
-	Region:      aws.String(configure.Config.GetString("aws_region")),
-	Endpoint:    aws.String(configure.Config.GetString("aws_endpoint")),
+	Credentials:      credentials.NewStaticCredentials(configure.Config.GetString("aws_akid"), configure.Config.GetString("aws_secret_key"), configure.Config.GetString("aws_session_token")),
+	Region:           aws.String(configure.Config.GetString("aws_region")),
+	S3ForcePathStyle: aws.Bool(true),
+	Endpoint:         aws.String(configure.Config.GetString("aws_endpoint")),
 }))
 
 var svc = s3.New(sess)
