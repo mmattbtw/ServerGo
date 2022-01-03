@@ -10,8 +10,8 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/gobuffalo/packr/v2 v2.8.1
-	github.com/gofiber/fiber/v2 v2.18.0
-	github.com/gofiber/rewrite/v2 v2.1.10
+	github.com/gofiber/fiber/v2 v2.24.0
+	github.com/gofiber/rewrite/v2 v2.1.15
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/graph-gophers/graphql-go v0.0.0-20210319060855-d2656e8bde15
@@ -67,7 +67,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.29.0 // indirect
+	github.com/valyala/fasthttp v1.31.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.0.2 // indirect
