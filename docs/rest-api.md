@@ -165,4 +165,133 @@ Get all active badges
 	]
 }
 ```
+
+</details>
+
+### Get Cosmetics
+
+Get all active cosmetics
+
+> GET `/cosmetics`
+
+> Query: `user_identifier: "object_id", "twitch_id", or "login"`
+
+> Returns: `Lists of Badges and Paints Objects`
+
+<details>
+<summary>View Payload Example</summary>
+
+```json
+{
+	"badges": [
+		{
+			"id": "60cd6255a4531e54f76d4bd4",
+			"name": "Admin",
+			"tooltip": "7TV Admin",
+			"urls": [
+				[
+					"1",
+					"https://cdn.7tv.app/badge/60cd6255a4531e54f76d4bd4/1x",
+					""
+				],
+				[
+					"2",
+					"https://cdn.7tv.app/badge/60cd6255a4531e54f76d4bd4/2x",
+					""
+				],
+				[
+					"3",
+					"https://cdn.7tv.app/badge/60cd6255a4531e54f76d4bd4/3x",
+					""
+				]
+			],
+			"users": [
+				"24377667"
+			]
+		}
+	],
+	"paints": [
+		{
+			"id": "61bede3db6b41ea54419bbb0",
+			"name": "Candy Cane",
+			"users": [
+				"24377667"
+			],
+			"function": "linear-gradient",
+			"color": -10197761,
+			"stops": [
+				{
+					"at": 0.1,
+					"color": -757935361
+				},
+				{
+					"at": 0.2,
+					"color": -757935361
+				},
+				{
+					"at": 0.2,
+					"color": -10197761
+				},
+				{
+					"at": 0.3,
+					"color": -10197761
+				}
+			],
+			"repeat": true,
+			"angle": 45,
+			"drop_shadows": [
+				{
+					"x_offset": 0,
+					"y_offset": 0,
+					"radius": 0,
+					"color": 0
+				}
+			]
+		},
+		{
+			"id": "61c01b08b6b41ea54419bbbd",
+			"name": "Staff Shine",
+			"users": [
+				"24377667"
+			],
+			"function": "url",
+			"color": -97373441,
+			"stops": [],
+			"repeat": false,
+			"angle": 0,
+			"image_url": "https://cdn.7tv.app/misc/img_paints/img_paint_clip_test.webp",
+			"drop_shadows": [
+				{
+					"x_offset": 0,
+					"y_offset": 0,
+					"radius": 4,
+					"color": 100
+				}
+			]
+		}
+	]
+}
+```
+</details>
+
+<details>
+<summary>Additional Notes</summary>
+
+### Color
+ The color property of a paint is a nullable 32-bit integer value representing a RGBA value. If null, then use the user's Twitch color. This can be decoded using the following example (for Javascript/Typescript):
+ 
+ ```ts
+	function decimalColorToRGBA(num: number): string {
+		const r = (num >>> 24) & 0xFF;
+		const g = (num >>> 16) & 0xFF;
+		const b = (num >>> 8) & 0xFF;
+		const a = num & 0xFF;
+
+		return `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+	}
+ ```
+
+### Function
+The function property of a paint can be either `linear-gradient`, `radial-gradient`, or `url`. If `url`, then use the image_url property.
+
 </details>
