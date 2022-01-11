@@ -173,18 +173,19 @@ func CreatePaintResponse(paint *datastructure.Cosmetic, users []*datastructure.U
 	}
 
 	return &PaintCosmeticResponse{
-		ID:         paint.ID.Hex(),
-		Name:       paint.Name,
-		Users:      userIDs,
-		Color:      data.Color,
-		Function:   string(data.Function),
-		Stops:      data.Stops,
-		Repeat:     data.Repeat,
-		Angle:      data.Angle,
-		Shape:      data.Shape,
-		ImageURL:   data.ImageURL,
-		DropShadow: data.DropShadow,
-		Animation:  data.Animation,
+		ID:          paint.ID.Hex(),
+		Name:        paint.Name,
+		Users:       userIDs,
+		Color:       data.Color,
+		Function:    string(data.Function),
+		Stops:       data.Stops,
+		Repeat:      data.Repeat,
+		Angle:       data.Angle,
+		Shape:       data.Shape,
+		ImageURL:    data.ImageURL,
+		DropShadow:  data.DropShadow,
+		DropShadows: data.DropShadows,
+		Animation:   data.Animation,
 	}
 }
 
@@ -214,16 +215,17 @@ type BadgeCosmeticResponse struct {
 }
 
 type PaintCosmeticResponse struct {
-	ID         string                                    `json:"id"`
-	Name       string                                    `json:"name"`
-	Users      []string                                  `json:"users"`
-	Function   string                                    `json:"function"`
-	Color      int32                                     `json:"color"`
-	Stops      []datastructure.CosmeticPaintGradientStop `json:"stops"`
-	Repeat     bool                                      `json:"repeat"`
-	Angle      int32                                     `json:"angle"`
-	Shape      string                                    `json:"shape,omitempty"`
-	ImageURL   string                                    `json:"image_url,omitempty"`
-	DropShadow datastructure.CosmeticPaintDropShadow     `json:"drop_shadow,omitempty"`
-	Animation  datastructure.CosmeticPaintAnimation      `json:"animation,omitempty"`
+	ID          string                                    `json:"id"`
+	Name        string                                    `json:"name"`
+	Users       []string                                  `json:"users"`
+	Function    string                                    `json:"function"`
+	Color       *int32                                    `json:"color"`
+	Stops       []datastructure.CosmeticPaintGradientStop `json:"stops"`
+	Repeat      bool                                      `json:"repeat"`
+	Angle       int32                                     `json:"angle"`
+	Shape       string                                    `json:"shape,omitempty"`
+	ImageURL    string                                    `json:"image_url,omitempty"`
+	DropShadow  datastructure.CosmeticPaintDropShadow     `json:"drop_shadow,omitempty"`
+	DropShadows []datastructure.CosmeticPaintDropShadow   `json:"drop_shadows,omitempty"`
+	Animation   datastructure.CosmeticPaintAnimation      `json:"animation,omitempty"`
 }
