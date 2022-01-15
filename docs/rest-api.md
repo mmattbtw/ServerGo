@@ -37,9 +37,18 @@ Get a single user
         "color": 14105645,
         "allowed": 64,
         "denied": 0
-    }
+    },
+    "profile_picture_id":"c8585ca40aeb48b9b474b8cab99b93e1"
 }
 ```
+</details>
+
+<details>
+<summary>Additional Notes</summary>
+
+### Animated Profile Pictures
+Animated Profile Pictures set on the 7tv website (only available to 7tv Subscribers) is returned in the REST API as `profile_picture_id`. You can use this to find the Animated Profile Picture's URL: `https://cdn.7tv.app/pp/{id}/{profile_picture_id}`. This isn't always returned, as not everyone has an Animated Profile Picture. 
+
 </details>
 
 ### Get Emote
