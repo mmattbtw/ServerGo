@@ -2,9 +2,12 @@ package cosmetics
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
+	"github.com/SevenTV/ServerGo/src/redis"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
@@ -28,6 +31,15 @@ func GetBadges(router fiber.Router) {
 
 		if !utils.Contains([]string{"object_id", "twitch_id", "login"}, idType) {
 			return restutil.ErrMissingQueryParams().Send(c, `user_identifier: must be 'object_id', 'twitch_id' or 'login'`)
+		}
+
+		// Compose Redis Key
+		cacheKey := fmt.Sprintf("cache:cosmetics:%s", idType)
+
+		// Return existing cache?
+		d, err := redis.Client.Get(ctx, cacheKey).Result()
+		if err == nil && d != "" {
+			return c.SendString(d)
 		}
 
 		// Retrieve all users of badges
@@ -185,6 +197,10 @@ func GetBadges(router fiber.Router) {
 		if err != nil {
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
+
+		if redis.Client.Set(ctx, cacheKey, utils.B2S(b), 10*time.Minute).Err() != nil {
+			logrus.WithField("id_type", idType).WithError(err).Error("couldn't save cosmetics response to redis cache")
+		}
 		return c.Status(200).Send(b)
 	})
 }
@@ -192,19 +208,4 @@ func GetBadges(router fiber.Router) {
 type GetCosmeticsResult struct {
 	Badges []*restutil.BadgeCosmeticResponse `json:"badges"`
 	Paints []*restutil.PaintCosmeticResponse `json:"paints"`
-}
-
-type cosmeticsResult struct {
-	UserID primitive.ObjectID           `bson:"_id"`
-	User   *datastructure.User          `bson:"user"`
-	Badges []*cosmeticsResultBadge      `bson:"badges"`
-	Roles  []*datastructure.Entitlement `bson:"roles"`
-}
-
-type cosmeticsResultBadge struct {
-	BadgeID       primitive.ObjectID `bson:"_id"`
-	Name          string             `bson:"name"`
-	EntitlementID primitive.ObjectID `bson:"ent_id"`
-	Priority      int32              `bson:"priority"`
-	RoleBinding   primitive.ObjectID `bson:"role_binding"`
 }
