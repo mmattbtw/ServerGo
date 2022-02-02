@@ -34,6 +34,14 @@ func init() {
 			Token: s[1],
 		}
 	}
+
+	s = configure.Config.GetStringSlice("discord.webhooks.reports")
+	if len(s) == 2 {
+		webhooks["reports"] = webhookInfo{
+			ID:    s[0],
+			Token: s[1],
+		}
+	}
 }
 
 func toIntColor(s string) int {

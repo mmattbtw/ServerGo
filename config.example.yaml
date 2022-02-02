@@ -53,6 +53,7 @@ discord:
   webhooks:
     activity: [<webhook_id>, <webhook_token>] 
     alerts: [<webhook_id>, <webhook_token>] 
+    reports: [<webhook_id>, <webhook_token>]
 
     devops_role_id: 000000000000000000
 

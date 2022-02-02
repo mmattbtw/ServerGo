@@ -23,7 +23,7 @@ type Mutation {
   # Remove an editor from a channel. Requires permission.
   removeChannelEditor(channel_id: String!, editor_id: String!, reason: String): User
   # Report an emote. Requires login.
-  reportEmote(emote_id: String!, reason: String): Response
+  reportEmote(emote_id: String!, reason: String!): Response
   # Report a user. Requires login.
   reportUser(user_id: String!, reason: String): Response
   # Edit a user

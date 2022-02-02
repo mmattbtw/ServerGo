@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"github.com/SevenTV/ServerGo/src/configure"
+	"github.com/SevenTV/ServerGo/src/discord"
 	"github.com/SevenTV/ServerGo/src/mongo"
 	"github.com/SevenTV/ServerGo/src/mongo/datastructure"
 	"github.com/SevenTV/ServerGo/src/server/api/actions"
 	"github.com/SevenTV/ServerGo/src/server/api/v2/gql/resolvers"
 	"github.com/SevenTV/ServerGo/src/utils"
+	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,7 +23,7 @@ import (
 //
 func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 	EmoteID string
-	Reason  *string
+	Reason  string
 }) (*response, error) {
 	if configure.Config.GetBool("maintenance_mode") {
 		return nil, fmt.Errorf("Maintenance Mode")
@@ -42,6 +44,12 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 	})
 
 	emote := &datastructure.Emote{}
+	reason := args.Reason
+	if len(reason) < 6 {
+		return nil, fmt.Errorf("please write at least 6 characters")
+	} else if len(reason) > 4000 {
+		return nil, fmt.Errorf("your report is too long. it should be under 4,000 characters")
+	}
 
 	err = res.Err()
 
@@ -54,6 +62,9 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 		}
 		logrus.WithError(err).Error("mongo")
 		return nil, resolvers.ErrInternalServer
+	}
+	if emote.Owner == nil {
+		emote.Owner = datastructure.DeletedUser
 	}
 
 	opts := options.Update().SetUpsert(true)
@@ -82,11 +93,38 @@ func (*MutationResolver) ReportEmote(ctx context.Context, args struct {
 		CreatedBy: usr.ID,
 		Target:    &datastructure.Target{ID: &id, Type: "emotes"},
 		Changes:   nil,
-		Reason:    args.Reason,
+		Reason:    &args.Reason,
 	})
 	if err != nil {
 		logrus.WithError(err).Error("mongo")
 	}
+
+	// Post to Discord
+	go func() {
+		discord.SendWebhook("reports", &discordgo.WebhookParams{
+			Content: fmt.Sprintf(
+				"Report on [%s](%s) submitted by [%s](%s)",
+				fmt.Sprintf("%s by [%s](%s)",
+					emote.Name,
+					emote.Owner.DisplayName,
+					utils.GetUserPageURL(emote.Owner.ID.Hex()),
+				),
+				utils.GetEmotePageURL(emote.ID.Hex()),
+				usr.Login,
+				utils.GetUserPageURL(usr.ID.Hex()),
+			),
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					URL:         utils.GetEmotePageURL(emote.ID.Hex()),
+					Description: reason,
+					Color:       5124776,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: utils.GetEmoteImageURL(emote.ID.Hex()),
+					},
+				},
+			},
+		})
+	}()
 
 	return &response{
 		OK:      true,
