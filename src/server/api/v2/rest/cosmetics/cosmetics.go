@@ -3,6 +3,7 @@ package cosmetics
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/SevenTV/ServerGo/src/mongo"
@@ -23,7 +24,10 @@ import (
 func GetBadges(router fiber.Router) {
 	Avatar(router)
 
+	mx := sync.Mutex{}
 	router.Get("/", func(c *fiber.Ctx) error {
+		mx.Lock()
+		defer mx.Unlock()
 		ctx := c.Context()
 		c.Set("Cache-Control", "max-age=150 s-maxage=300")
 
