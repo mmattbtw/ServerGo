@@ -9,7 +9,7 @@ RUN wget https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.g
 	tar -xvf ImageMagick.tar.gz && \
 	cd ImageMagick-7.*/ && \
 	./configure && \
-	make && \
+	make -j$(nproc) && \
 	make install && \
 	ldconfig /usr/local/lib
 
@@ -37,7 +37,7 @@ RUN wget https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.g
         tar -xvf ImageMagick.tar.gz && \
         cd ImageMagick-7.*/ && \
         ./configure && \
-        make && \
+        make -j$(nproc) && \
         make install && \
         ldconfig /usr/local/lib
 
