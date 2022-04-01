@@ -1,6 +1,7 @@
 package datastructure
 
 import (
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -20,6 +21,27 @@ type Entitlement struct {
 	Disabled bool `json:"disabled,omitempty" bson:"disabled,omitempty"`
 }
 
+func (e *Entitlement) GetData() EntitlementData {
+	return EntitlementData(e.Data)
+}
+
+type EntitlementData bson.Raw
+
+func (d EntitlementData) ReadItem() *EntitledItem {
+	return d.unmarshal(&EntitledItem{}).(*EntitledItem)
+}
+
+func (d EntitlementData) ReadRole() *EntitledRole {
+	return d.unmarshal(&EntitledRole{}).(*EntitledRole)
+}
+
+func (d EntitlementData) unmarshal(i interface{}) interface{} {
+	if err := bson.Unmarshal(d, i); err != nil {
+		logrus.WithError(err).Error("message, decoding message data failed")
+	}
+	return i
+}
+
 // A string representing an Entitlement Kind
 type EntitlementKind string
 
@@ -30,6 +52,12 @@ var (
 	EntitlementKindRole         = EntitlementKind("ROLE")         // Role Entitlement
 	EntitlementKindEmoteSet     = EntitlementKind("EMOTE_SET")    // Emote Set Entitlement
 )
+
+type EntitledItem struct {
+	ObjectReference primitive.ObjectID  `json:"-" bson:"ref"`
+	RoleBinding     *primitive.ObjectID `json:"role_binding,omitempty" bson:"role_binding,omitempty"`
+	Selected        bool                `json:"selected,omitempty" bson:"selected,omitempty"`
+}
 
 // (Data) Subscription binding in an Entitlement
 type EntitledSubscription struct {
