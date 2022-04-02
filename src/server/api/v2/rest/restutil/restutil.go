@@ -192,6 +192,9 @@ func CreatePaintResponse(paint *datastructure.Cosmetic, users []*datastructure.U
 func selectUserIDType(users []*datastructure.User, t string) []string {
 	userIDs := make([]string, len(users))
 	for i, u := range users {
+		if u == nil {
+			continue
+		}
 		switch t {
 		case "object_id":
 			userIDs[i] = u.ID.Hex()

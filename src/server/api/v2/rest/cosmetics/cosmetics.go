@@ -14,7 +14,6 @@ import (
 	"github.com/SevenTV/ServerGo/src/server/api/v2/rest/restutil"
 	"github.com/SevenTV/ServerGo/src/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -28,14 +27,10 @@ import (
 func GetCosmetics(router fiber.Router) {
 	Avatar(router)
 
-	gmx := &sync.Mutex{}
-	mx := map[string]*sync.Mutex{
-		"object_id": {},
-		"twitch_id": {},
-		"login":     {},
-	}
-
+	mx := &sync.Mutex{}
 	cosmeticsHandler := func(c *fiber.Ctx) error {
+		mx.Lock()
+		defer mx.Unlock()
 		ctx := c.Context()
 		c.Set("Cache-Control", "max-age=600, s-maxage=600")
 
@@ -52,14 +47,10 @@ func GetCosmetics(router fiber.Router) {
 		if err == nil && d != "" {
 			return c.SendString(d)
 		}
-		gmx.Lock()
-		x := mx[idType]
-		gmx.Unlock()
-		x.Lock()
-		defer x.Unlock()
 
 		// Retrieve all users of badges
-		pipeline := mongo.Pipeline{
+		// Find entitlements
+		cur, err := mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, mongo.Pipeline{
 			{{Key: "$sort", Value: bson.M{"priority": -1}}},
 			{{Key: "$match", Value: bson.M{
 				"disabled": bson.M{"$not": bson.M{"$eq": true}},
@@ -69,48 +60,15 @@ func GetCosmetics(router fiber.Router) {
 					datastructure.EntitlementKindPaint,
 				}},
 			}}},
-			// Lookup cosmetics
-			{{
-				Key: "$group",
-				Value: bson.M{
-					"_id": nil,
-					"entitlements": bson.M{
-						"$push": "$$ROOT",
-					},
-				},
-			}},
-			// Lookup: Users
-			{{
-				Key: "$lookup",
-				Value: bson.M{
-					"from":         mongo.CollectionNameUsers,
-					"localField":   "entitlements.user_id",
-					"foreignField": "_id",
-					"as":           "users",
-				},
-			}},
-			{{Key: "$project", Value: bson.M{
-				"entitlements._id":     1,
-				"entitlements.kind":    1,
-				"entitlements.data":    1,
-				"entitlements.user_id": 1,
-				"users._id":            1,
-				"users.id":             1,
-				"users.login":          1,
-			}}},
-		}
-
-		// Run the aggregation
-		cur, err := mongo.Collection(mongo.CollectionNameEntitlements).Aggregate(ctx, pipeline)
+		})
 		if err != nil {
 			logrus.WithError(err).Error("mongo, failed to spawn cosmetic entitlements aggregation")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
 
 		// Decode data
-		data := &aggregatedCosmeticsResult{}
-		cur.Next(ctx)
-		if err = multierror.Append(cur.Decode(data), cur.Close(ctx)).ErrorOrNil(); err != nil {
+		entitlements := []*datastructure.Entitlement{}
+		if err = cur.All(ctx, &entitlements); err != nil {
 			logrus.WithError(err).Error("mongo, failed to decode aggregated cosmetic entitlements")
 			return restutil.ErrInternalServer().Send(c, err.Error())
 		}
@@ -137,27 +95,84 @@ func GetCosmetics(router fiber.Router) {
 
 		// Structure entitlements by kind
 		// kind:ent_id:[]ent
-		ents := make(map[datastructure.EntitlementKind]map[primitive.ObjectID]*datastructure.Entitlement)
-		for _, ent := range data.Entitlements {
-			m := ents[ent.Kind]
-			if m == nil {
-				ents[ent.Kind] = map[primitive.ObjectID]*datastructure.Entitlement{}
-				m = ents[ent.Kind]
+		ents := make(map[datastructure.EntitlementKind][]*datastructure.Entitlement)
+		for _, ent := range entitlements {
+			a := ents[ent.Kind]
+			if a == nil {
+				ents[ent.Kind] = []*datastructure.Entitlement{ent}
+			} else {
+				ents[ent.Kind] = append(a, ent)
 			}
-			m[ent.ID] = ent
 		}
 
-		// Map users with their roles
-		userMap := make(map[primitive.ObjectID]*datastructure.User)
-		userCosmetics := make(map[primitive.ObjectID][2]bool) // [0]: badge, [1] paint
-		for _, u := range data.Users {
-			userMap[u.ID] = u
-			userCosmetics[u.ID] = [2]bool{false, false}
-		}
+		// Map user IDs by roles
+		roleMap := make(map[primitive.ObjectID][]primitive.ObjectID)
 		for _, ent := range ents[datastructure.EntitlementKindRole] {
-			u := userMap[ent.UserID]
-			rol := ent.GetData().ReadRole()
-			u.RoleIDs = append(u.RoleIDs, rol.ObjectReference)
+			r := ent.GetData().ReadRole()
+			if a := roleMap[ent.UserID]; a != nil {
+				roleMap[ent.UserID] = append(roleMap[ent.UserID], r.ObjectReference)
+			} else {
+				roleMap[ent.UserID] = []primitive.ObjectID{r.ObjectReference}
+			}
+		}
+
+		// Check entitled paints / badges for users we need to fetch
+		entitledUserCount := 0
+		entitledUserIDs := make([]primitive.ObjectID, len(ents[datastructure.EntitlementKindBadge])+len(ents[datastructure.EntitlementKindPaint]))
+		userCosmetics := make(map[primitive.ObjectID][3]bool) // [0]: seen, [1] has badge, [2 has paint
+
+		for _, ent := range ents[datastructure.EntitlementKindBadge] {
+			if ok, d := readEntitled(roleMap, ent); ok {
+				uc := userCosmetics[ent.UserID]
+				uc[0] = true
+				if !uc[1] { // assign badge
+					uc[1] = true
+					cos := cosMap[d.ObjectReference]
+					cos.UserIDs = append(cos.UserIDs, ent.UserID)
+				}
+
+				userCosmetics[ent.UserID] = uc
+				entitledUserIDs[entitledUserCount] = ent.UserID
+				entitledUserCount++
+			}
+		}
+		for _, ent := range ents[datastructure.EntitlementKindPaint] {
+			if ok, d := readEntitled(roleMap, ent); ok {
+				uc := userCosmetics[ent.UserID]
+				uc[0] = true
+				if !uc[2] {
+					uc[2] = true
+					cos := cosMap[d.ObjectReference]
+					cos.UserIDs = append(cos.UserIDs, ent.UserID)
+				}
+
+				userCosmetics[ent.UserID] = uc
+				entitledUserIDs[entitledUserCount] = ent.UserID
+				entitledUserCount++
+			}
+		}
+
+		// At this point we can fetch our users
+		cur, err = mongo.Collection(mongo.CollectionNameUsers).Find(ctx, bson.M{
+			"_id": bson.M{"$in": entitledUserIDs[:entitledUserCount]},
+		}, options.Find().SetProjection(bson.M{
+			"_id":   1,
+			"id":    1,
+			"login": 1,
+		}))
+		if err != nil {
+			logrus.WithError(err).Error("mongo, failed to spawn cosmetic users cursor")
+			return restutil.ErrInternalServer().Send(c, err.Error())
+		}
+		// Decode data
+		users := []*datastructure.User{}
+		if err = cur.All(ctx, &users); err != nil {
+			logrus.WithError(err).Error("mongo, failed to decode cosmetic users")
+			return restutil.ErrInternalServer().Send(c, err.Error())
+		}
+		userMap := make(map[primitive.ObjectID]*datastructure.User, len(users))
+		for _, u := range users {
+			userMap[u.ID] = u
 		}
 
 		// Find directly assigned users
@@ -165,42 +180,15 @@ func GetCosmetics(router fiber.Router) {
 			Badges: []*restutil.BadgeCosmeticResponse{},
 			Paints: []*restutil.PaintCosmeticResponse{},
 		}
-
-		for _, ent := range ents[datastructure.EntitlementKindBadge] {
-			entd := ent.GetData().ReadItem()
-			cos := cosMap[entd.ObjectReference]
-			u := userMap[ent.UserID]
-			uc := userCosmetics[u.ID]
-			if uc[0] || !entd.Selected {
-				continue // user already has a badge
-			}
-
-			if entd.RoleBinding == nil || utils.ContainsObjectID(u.RoleIDs, *entd.RoleBinding) {
-				cos.Users = append(cos.Users, u)
-				uc[0] = true
-				userCosmetics[u.ID] = uc
-			}
-		}
-		for _, ent := range ents[datastructure.EntitlementKindPaint] {
-			entd := ent.GetData().ReadItem()
-			cos := cosMap[entd.ObjectReference]
-			u := userMap[ent.UserID]
-			uc := userCosmetics[u.ID]
-			if uc[1] || !entd.Selected {
-				continue // user already has a paint
-			}
-
-			if entd.RoleBinding == nil || utils.ContainsObjectID(u.RoleIDs, *entd.RoleBinding) {
-				cos.Users = append(cos.Users, u)
-				uc[1] = true
-				userCosmetics[u.ID] = uc
-			}
-		}
-
 		for _, cos := range cosmetics {
-			if len(cos.Users) == 0 {
+			if len(cos.UserIDs) == 0 {
 				continue // skip if cosmetic has no users
 			}
+			cos.Users = make([]*datastructure.User, len(cos.UserIDs))
+			for i, uid := range cos.UserIDs {
+				cos.Users[i] = userMap[uid]
+			}
+
 			switch cos.Kind {
 			case datastructure.CosmeticKindBadge:
 				badge := cos.ReadBadge()
@@ -244,6 +232,7 @@ func GetCosmetics(router fiber.Router) {
 		if redis.Client.Set(ctx, cacheKey, utils.B2S(b), 10*time.Minute).Err() != nil {
 			logrus.WithField("id_type", idType).WithError(err).Error("couldn't save cosmetics response to redis cache")
 		}
+
 		return c.Status(200).Send(b)
 	}
 
@@ -256,9 +245,20 @@ func GetCosmetics(router fiber.Router) {
 	})
 }
 
-type aggregatedCosmeticsResult struct {
-	Entitlements []*datastructure.Entitlement `bson:"entitlements"`
-	Users        []*datastructure.User        `bson:"users"`
+func readEntitled(rm map[primitive.ObjectID][]primitive.ObjectID, ent *datastructure.Entitlement) (bool, *datastructure.EntitledItem) {
+	d := ent.GetData().ReadItem()
+
+	if !d.Selected {
+		return false, d
+	}
+	if d.RoleBinding != nil {
+		rb := *d.RoleBinding
+		roleList := rm[ent.UserID]
+		if !utils.ContainsObjectID(roleList, rb) {
+			return false, d // skip if user not
+		}
+	}
+	return true, d
 }
 
 type GetCosmeticsResult struct {
