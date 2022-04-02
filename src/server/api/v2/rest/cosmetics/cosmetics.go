@@ -243,6 +243,8 @@ func GetCosmetics(router fiber.Router) {
 	router.Get("/badges", func(c *fiber.Ctx) error {
 		return cosmeticsHandler(c)
 	})
+
+	Avatar(router)
 }
 
 func readEntitled(rm map[primitive.ObjectID][]primitive.ObjectID, ent *datastructure.Entitlement) (bool, *datastructure.EntitledItem) {

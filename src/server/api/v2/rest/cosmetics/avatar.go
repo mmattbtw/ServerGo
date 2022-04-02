@@ -27,7 +27,7 @@ func Avatar(router fiber.Router) {
 		return hex.EncodeToString(hasher.Sum(nil))
 	}
 
-	router.Get("/avatars", func(c *fiber.Ctx) error {
+	router.Get("/cosmetics/avatars", func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		mapTo := c.Query("map_to", "hash") // Retrieve key mapping parameter
 
