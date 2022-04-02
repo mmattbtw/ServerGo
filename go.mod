@@ -33,11 +33,13 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
-require github.com/seventv/ImageProcessor v0.0.0-20220325022701-0445c58fb68e
+require github.com/seventv/ImageProcessor v0.0.0-20220402223503-c8b4cd79847e
 
 require (
 	cloud.google.com/go/compute v1.5.0 // indirect
+	github.com/bugsnag/panicwrap v1.3.4 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect

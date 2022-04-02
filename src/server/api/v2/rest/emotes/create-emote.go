@@ -113,7 +113,13 @@ func CreateEmoteRoute(router fiber.Router) {
 				logrus.WithError(err).Error("mkdir")
 				return restutil.ErrInternalServer().Send(c)
 			}
-			defer os.RemoveAll(tmpDir)
+
+			wipe := true
+			defer func() {
+				if wipe {
+					os.RemoveAll(tmpDir)
+				}
+			}()
 
 			// Get form data parts
 			channelID = &usr.ID // Default channel ID to the uploader
@@ -203,7 +209,7 @@ func CreateEmoteRoute(router fiber.Router) {
 					}
 
 					ogFilePath = path.Join(tmpDir, fmt.Sprintf("og.%s", imgType))
-					if err := os.WriteFile(ogFilePath, data, 0700); err != nil {
+					if err := os.WriteFile(ogFilePath, data, 0666); err != nil {
 						logrus.WithError(err).Error("read")
 						return restutil.ErrBadRequest().Send(c, "File Not Readable")
 					}
@@ -379,76 +385,17 @@ func CreateEmoteRoute(router fiber.Router) {
 
 			task := task.New(c.Context(), job)
 
-			task.Start(gCtx)
-			for range task.Events() {
-			}
-			<-task.Done()
-			if err := task.Failed(); err != nil {
-				logrus.WithError(err).Error("failed to process emote")
-				return restutil.ErrInternalServer().Send(c, "Failed to process emote")
-			}
-
-			files := task.Files()
-			widths := [4]int16{}
-			heights := [4]int16{}
-			for _, file := range files {
-				switch file.Name {
-				case "1x.webp":
-					widths[0] = int16(file.Width)
-					heights[0] = int16(file.Height)
-				case "2x.webp":
-					widths[1] = int16(file.Width)
-					heights[1] = int16(file.Height)
-				case "3x.webp":
-					widths[2] = int16(file.Width)
-					heights[2] = int16(file.Height)
-				case "4x.webp":
-					widths[3] = int16(file.Width)
-					heights[3] = int16(file.Height)
-				}
-			}
-
-			emotePath := path.Join("emote", id.Hex())
-			wg := sync.WaitGroup{}
-			wg.Add(4)
-			errCh := make(chan error, 4)
-			for i := 1; i <= 4; i++ {
-				go func(i int) {
-					defer wg.Done()
-
-					file, err := os.OpenFile(path.Join(tmpDir, fmt.Sprintf("%dx.webp", i)), os.O_RDONLY, 0700)
-					if err != nil {
-						errCh <- err
-						return
-					}
-
-					errCh <- aws.UploadFile(configure.Config.GetString("aws_cdn_bucket"), path.Join(emotePath, fmt.Sprintf("%dx", i)), file, &mime)
-				}(i)
-			}
-
-			var tErr error
-			wg.Wait()
-			for i := 0; i < 4; i++ {
-				tErr = multierror.Append(tErr, <-errCh).ErrorOrNil()
-			}
-			close(errCh)
-
-			if tErr != nil {
-				logrus.WithError(tErr).Error("failed to upload to aws")
-				return restutil.ErrInternalServer().Send(c)
-			}
-
 			emote = &datastructure.Emote{
 				ID:               id,
 				Name:             emoteName,
 				Mime:             mime,
-				Status:           datastructure.EmoteStatusLive,
+				Status:           datastructure.EmoteStatusPending,
 				Tags:             utils.Ternary(emoteTags != nil, emoteTags, []string{}).([]string),
 				Visibility:       emoteVisibility | datastructure.EmoteVisibilityUnlisted,
 				OwnerID:          *channelID,
 				LastModifiedDate: time.Now(),
-				Width:            widths,
-				Height:           heights,
+				Width:            [4]int16{},
+				Height:           [4]int16{},
 				Animated:         frameCount > 1,
 			}
 
@@ -456,25 +403,104 @@ func CreateEmoteRoute(router fiber.Router) {
 				logrus.WithError(err).Error("mongo")
 				return restutil.ErrInternalServer().Send(c)
 			}
+			go func() {
+				ctx := context.TODO()
 
-			_, err := mongo.Collection(mongo.CollectionNameAudit).InsertOne(c.Context(), &datastructure.AuditLog{
-				Type: datastructure.AuditLogTypeEmoteCreate,
-				Changes: []*datastructure.AuditLogChange{
-					{Key: "name", OldValue: nil, NewValue: emoteName},
-					{Key: "tags", OldValue: nil, NewValue: []string{}},
-					{Key: "owner", OldValue: nil, NewValue: usr.ID},
-					{Key: "visibility", OldValue: nil, NewValue: datastructure.EmoteVisibilityPrivate},
-					{Key: "mime", OldValue: nil, NewValue: mime},
-					{Key: "status", OldValue: nil, NewValue: datastructure.EmoteStatusProcessing},
-				},
-				Target:    &datastructure.Target{ID: &id, Type: "emotes"},
-				CreatedBy: usr.ID,
-			})
-			if err != nil {
-				logrus.WithError(err).Error("mongo")
-			}
+				task.Start(gCtx)
+				for t := range task.Events() {
+					logrus.WithField("event", t).Info("emote status update: ", id.Hex())
+				}
+				<-task.Done()
+				if err := task.Failed(); err != nil {
+					logrus.WithError(err).Error("failed to process emote")
+					_, _ = mongo.Collection(mongo.CollectionNameEmotes).DeleteOne(context.TODO(), bson.M{"_id": id})
+					return
+				}
 
-			go discord.SendEmoteCreate(*emote, *usr)
+				files := task.Files()
+				widths := [4]int16{}
+				heights := [4]int16{}
+				for _, file := range files {
+					switch file.Name {
+					case "1x.webp":
+						widths[0] = int16(file.Width)
+						heights[0] = int16(file.Height)
+						logrus.Infof("emote timeings 1x took %s : %s", file.TimeTaken, id.Hex())
+					case "2x.webp":
+						widths[1] = int16(file.Width)
+						heights[1] = int16(file.Height)
+						logrus.Infof("emote timeings 2x took %s : %s", file.TimeTaken, id.Hex())
+					case "3x.webp":
+						widths[2] = int16(file.Width)
+						heights[2] = int16(file.Height)
+						logrus.Infof("emote timeings 3x took %s : %s", file.TimeTaken, id.Hex())
+					case "4x.webp":
+						widths[3] = int16(file.Width)
+						heights[3] = int16(file.Height)
+						logrus.Infof("emote timeings 4x took %s : %s", file.TimeTaken, id.Hex())
+					}
+				}
+
+				emotePath := path.Join("emote", id.Hex())
+				wg := sync.WaitGroup{}
+				wg.Add(4)
+				errCh := make(chan error, 4)
+				for i := 1; i <= 4; i++ {
+					go func(i int) {
+						defer wg.Done()
+
+						file, err := os.OpenFile(path.Join(tmpDir, fmt.Sprintf("%dx.webp", i)), os.O_RDONLY, 0666)
+						if err != nil {
+							errCh <- err
+							return
+						}
+
+						errCh <- aws.UploadFile(configure.Config.GetString("aws_cdn_bucket"), path.Join(emotePath, fmt.Sprintf("%dx", i)), file, &mime)
+					}(i)
+				}
+
+				var tErr error
+				wg.Wait()
+				for i := 0; i < 4; i++ {
+					tErr = multierror.Append(tErr, <-errCh).ErrorOrNil()
+				}
+				close(errCh)
+
+				if tErr != nil {
+					logrus.WithError(tErr).Error("failed to upload to aws")
+					_, _ = mongo.Collection(mongo.CollectionNameEmotes).DeleteOne(ctx, bson.M{"_id": id})
+					return
+				}
+
+				_, _ = mongo.Collection(mongo.CollectionNameEmotes).UpdateOne(ctx, bson.M{"_id": id}, bson.M{
+					"$set": bson.M{
+						"status": datastructure.EmoteStatusLive,
+						"width":  widths,
+						"height": heights,
+					},
+				})
+
+				_, err := mongo.Collection(mongo.CollectionNameAudit).InsertOne(ctx, &datastructure.AuditLog{
+					Type: datastructure.AuditLogTypeEmoteCreate,
+					Changes: []*datastructure.AuditLogChange{
+						{Key: "name", OldValue: nil, NewValue: emoteName},
+						{Key: "tags", OldValue: nil, NewValue: []string{}},
+						{Key: "owner", OldValue: nil, NewValue: usr.ID},
+						{Key: "visibility", OldValue: nil, NewValue: datastructure.EmoteVisibilityPrivate},
+						{Key: "mime", OldValue: nil, NewValue: mime},
+						{Key: "status", OldValue: nil, NewValue: datastructure.EmoteStatusLive},
+					},
+					Target:    &datastructure.Target{ID: &id, Type: "emotes"},
+					CreatedBy: usr.ID,
+				})
+				if err != nil {
+					logrus.WithError(err).Error("mongo")
+				}
+
+				go discord.SendEmoteCreate(*emote, *usr)
+			}()
+
+			wipe = false
 			return c.SendString(fmt.Sprintf(`{"id":"%v"}`, emote.ID.Hex()))
 		})
 }
