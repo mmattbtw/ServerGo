@@ -2,62 +2,9 @@ package datastructure
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-
-	"gopkg.in/gographics/imagick.v3/imagick"
-
-	"github.com/SevenTV/ServerGo/src/utils"
-	"github.com/sirupsen/logrus"
 )
 
 type emoteUtil struct{}
-
-//
-// Get size metadata of an emote
-// (Width/Height)
-//
-func (*emoteUtil) AddSizeMetadata(emote *Emote) ([4]int16, [4]int16, error) {
-	width := [4]int16{0, 0, 0, 0}
-	height := [4]int16{0, 0, 0, 0}
-
-	for i := int8(1); i <= 4; i++ {
-		url := utils.GetCdnURL(emote.ID.Hex(), i)
-
-		// Fetch emote data from the CDN
-		res, err := http.Get(url)
-		if err != nil {
-			logrus.WithError(err).Error("http")
-			return width, height, err
-		}
-
-		// Decode the data
-		// We'll use imagemagick to do this, as golang has no proper webp decoder at this time
-		wand := imagick.NewMagickWand()
-		b, err := io.ReadAll(res.Body)
-		if err != nil {
-			return width, height, err
-		}
-
-		if err = wand.ReadImageBlob(b); err != nil {
-			return width, height, err
-		}
-
-		coalesce := wand.CoalesceImages()
-		w := coalesce.GetImageWidth()
-		h := coalesce.GetImageHeight()
-		wand.Destroy()
-
-		if err != nil {
-			return width, height, err
-		}
-
-		width[i-1] = int16(w)
-		height[i-1] = int16(h)
-	}
-
-	return width, height, nil
-}
 
 func (*emoteUtil) GetFilesMeta(fileDir string) [][]string {
 	// Define sizes to be generated
@@ -71,7 +18,3 @@ func (*emoteUtil) GetFilesMeta(fileDir string) [][]string {
 }
 
 var EmoteUtil emoteUtil
-
-func init() {
-	imagick.Initialize()
-}

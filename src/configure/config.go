@@ -14,6 +14,8 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+var Cfg = ServerCfg{}
+
 type ServerCfg struct {
 	Level      string `mapstructure:"level" json:"level"`
 	ConfigFile string `mapstructure:"config_file" json:"config_file"`
@@ -42,6 +44,7 @@ type ServerCfg struct {
 	AwsSecretKey string `mapstructure:"aws_secret_key" json:"aws_secret_key"`
 	AwsCDNBucket string `mapstructure:"aws_cdn_bucket" json:"aws_cdn_bucket"`
 	AwsRegion    string `mapstructure:"aws_region" json:"aws_region"`
+	AwsEndpoint  string `mapstructure:"aws_endpoint" json:"aws_endpoint"`
 
 	NodeID string `mapstructure:"node_id" json:"node_id"`
 
@@ -120,6 +123,7 @@ func init() {
 	pflag.String("aws_secret_key", "", "AWS SecretKey")
 	pflag.String("aws_cdn_bucket", "", "AWS s3 bucket name for our cdn")
 	pflag.String("aws_region", "", "AWS region")
+	pflag.String("aws_endpoint", "", "AWS Endpoint")
 
 	pflag.String("node_id", "", "Used in the response header of a requset X-Node-ID")
 
@@ -154,8 +158,7 @@ func init() {
 	initLog()
 
 	// Print final config
-	c := ServerCfg{}
-	checkErr(Config.Unmarshal(&c))
+	checkErr(Config.Unmarshal(&Cfg))
 }
 
 func BindEnvs(config *viper.Viper, iface interface{}, parts ...string) {

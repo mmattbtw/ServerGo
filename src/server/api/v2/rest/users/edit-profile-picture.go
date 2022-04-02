@@ -159,8 +159,8 @@ func EditProfilePicture(router fiber.Router) {
 		}
 
 		// Result
-		var b bytes.Buffer
-		if err = anim.Encode(&b); err != nil {
+		b := &bytes.Buffer{}
+		if err = anim.Encode(b); err != nil {
 			return restutil.ErrInternalServer().Send(c, "Encoding Failure")
 		}
 
@@ -171,7 +171,7 @@ func EditProfilePicture(router fiber.Router) {
 		if err = aws.UploadFile(
 			configure.Config.GetString("aws_cdn_bucket"),
 			fmt.Sprintf("pp/%s/%s", user.ID.Hex(), strId),
-			b.Bytes(),
+			b,
 			utils.StringPointer("image/webp"),
 		); err != nil {
 			logrus.WithError(err).Error("aws")

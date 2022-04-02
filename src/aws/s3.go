@@ -1,8 +1,8 @@
 package aws
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/SevenTV/ServerGo/src/configure"
 	"github.com/sirupsen/logrus"
@@ -25,15 +25,18 @@ var svc = s3.New(sess)
 
 var uploader = s3manager.NewUploader(sess)
 
-func UploadFile(bucket, key string, body []byte, contentType *string) error {
+func UploadFile(bucket, key string, body io.Reader, contentType *string) error {
 	// The session the S3 Uploader will use
+	if rc, ok := body.(io.ReadCloser); ok {
+		defer rc.Close()
+	}
 
 	// Create an uploader with the session and default options
 	// Upload the file to S3.
 	result, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket:       aws.String(bucket),
 		Key:          aws.String(key),
-		Body:         bytes.NewReader(body),
+		Body:         body,
 		ACL:          aws.String("public-read"),
 		ContentType:  contentType,
 		CacheControl: aws.String("public, max-age=15552000"),

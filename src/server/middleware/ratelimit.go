@@ -31,6 +31,9 @@ func RateLimitMiddleware(tag string, limit int32, duration time.Duration) func(c
 		if c.Locals("user") != nil {
 			user := c.Locals("user").(*datastructure.User)
 			identifier = user.ID.Hex()
+			if user.HasPermission(datastructure.RolePermissionAdministrator) && c.Get("X-BypassRates") == "true" {
+				return c.Next()
+			}
 		} else {
 			identifier = c.Get("Cf-Connecting-IP") // cf-ip
 		}

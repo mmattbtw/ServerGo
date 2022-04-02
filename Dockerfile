@@ -1,50 +1,40 @@
-FROM golang:1.18 AS build_base
+FROM harbor.disembark.dev/libs/libwebp:latest as libwebp
 
-RUN apt-get update && apt install build-essential make wget -y
+FROM harbor.disembark.dev/libs/libavif:latest as libavif
 
-# Set the Current Working Directory inside the container
-WORKDIR /tmp/im
+FROM harbor.disembark.dev/libs/gifsicle:latest as gifsicle
 
-RUN wget https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.gz && \
-	tar -xvf ImageMagick.tar.gz && \
-	cd ImageMagick-7.*/ && \
-	./configure && \
-	make -j$(nproc) && \
-	make install && \
-	ldconfig /usr/local/lib
+FROM harbor.disembark.dev/libs/gifski:latest as gifski
+
+FROM golang:1.18 AS builder
 
 WORKDIR /tmp/app
 
-# We want to populate the module cache based on the go.{mod,sum} files.
-COPY go.mod .
-COPY go.sum .
-
-RUN go mod download && go install github.com/gobuffalo/packr/v2/packr2@latest
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git libwebp-dev build-essential
 
 COPY . .
 
-# Build the Go app
-RUN packr2 && go build -o seventv
+RUN go install github.com/gobuffalo/packr/v2/packr2@latest && packr2 && go build -o seventv
 
-# Start fresh from a smaller image
-FROM ubuntu:latest
-ENV MAGICK_HOME=/usr
-RUN apt-get update && apt-get install -y ca-certificates webp libwebp-dev libpng-dev libjpeg-dev libgif-dev build-essential make wget
+FROM harbor.disembark.dev/libs/ffmpeg:latest
 
-WORKDIR /tmp/im
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y webp optipng libvips-tools && apt-get clean
 
-RUN wget https://download.imagemagick.org/ImageMagick/download/ImageMagick.tar.gz && \
-        tar -xvf ImageMagick.tar.gz && \
-        cd ImageMagick-7.*/ && \
-        ./configure && \
-        make -j$(nproc) && \
-        make install && \
-        ldconfig /usr/local/lib
+COPY --from=libwebp /libwebp/cwebp /usr/bin
+COPY --from=libwebp /libwebp/dwebp /usr/bin
+COPY --from=libwebp /libwebp/webpmux /usr/bin
+COPY --from=libwebp /libwebp/img2webp /usr/bin
+COPY --from=libwebp /libwebp/anim_dump /usr/bin
 
+COPY --from=libavif /libavif/avifdump /usr/bin
+COPY --from=libavif /libavif/avifdec /usr/bin
+COPY --from=libavif /libavif/avifenc /usr/bin
+
+COPY --from=gifsicle /gifsicle/gifsicle /usr/bin
+COPY --from=gifski /gifski/target/release/gifski /usr/bin
 
 WORKDIR /app
 
-COPY --from=build_base /tmp/app/seventv /app/seventv
+COPY --from=builder /tmp/app/seventv .
 
-# Run the binary program produced by `go install`
-CMD ["/app/seventv"]
+ENTRYPOINT ["./seventv"]
