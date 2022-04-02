@@ -36,18 +36,12 @@ func GetBadges(router fiber.Router) {
 	}
 	router.Get("/", func(c *fiber.Ctx) error {
 		ctx := c.Context()
-		c.Set("Cache-Control", "max-age=600 s-maxage=600")
+		c.Set("Cache-Control", "max-age=600, s-maxage=600")
 
 		idType := c.Query("user_identifier")
 		if !utils.Contains([]string{"object_id", "twitch_id", "login"}, idType) {
 			return restutil.ErrMissingQueryParams().Send(c, `user_identifier: must be 'object_id', 'twitch_id' or 'login'`)
 		}
-
-		gmx.Lock()
-		x := mx[idType]
-		gmx.Unlock()
-		x.Lock()
-		defer x.Unlock()
 
 		// Compose Redis Key
 		cacheKey := fmt.Sprintf("cache:cosmetics:%s", idType)
@@ -57,6 +51,11 @@ func GetBadges(router fiber.Router) {
 		if err == nil && d != "" {
 			return c.SendString(d)
 		}
+		gmx.Lock()
+		x := mx[idType]
+		gmx.Unlock()
+		x.Lock()
+		defer x.Unlock()
 
 		// Retrieve all users of badges
 		pipeline := mongo.Pipeline{
