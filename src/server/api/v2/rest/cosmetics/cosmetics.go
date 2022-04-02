@@ -25,7 +25,7 @@ import (
 * Query Params:
 * user_identifier: "object_id", "twitch_id", "login"
  */
-func GetBadges(router fiber.Router) {
+func GetCosmetics(router fiber.Router) {
 	Avatar(router)
 
 	gmx := &sync.Mutex{}
@@ -34,7 +34,8 @@ func GetBadges(router fiber.Router) {
 		"twitch_id": {},
 		"login":     {},
 	}
-	router.Get("/", func(c *fiber.Ctx) error {
+
+	cosmeticsHandler := func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		c.Set("Cache-Control", "max-age=600, s-maxage=600")
 
@@ -244,6 +245,14 @@ func GetBadges(router fiber.Router) {
 			logrus.WithField("id_type", idType).WithError(err).Error("couldn't save cosmetics response to redis cache")
 		}
 		return c.Status(200).Send(b)
+	}
+
+	router.Get("/cosmetics", func(c *fiber.Ctx) error {
+		return cosmeticsHandler(c)
+	})
+
+	router.Get("/badges", func(c *fiber.Ctx) error {
+		return cosmeticsHandler(c)
 	})
 }
 
