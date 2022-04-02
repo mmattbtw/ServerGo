@@ -28,18 +28,26 @@ import (
 func GetBadges(router fiber.Router) {
 	Avatar(router)
 
-	mx := sync.Mutex{}
+	gmx := &sync.Mutex{}
+	mx := map[string]*sync.Mutex{
+		"object_id": {},
+		"twitch_id": {},
+		"login":     {},
+	}
 	router.Get("/", func(c *fiber.Ctx) error {
-		mx.Lock()
-		defer mx.Unlock()
 		ctx := c.Context()
-		c.Set("Cache-Control", "max-age=150 s-maxage=300")
+		c.Set("Cache-Control", "max-age=600 s-maxage=600")
 
 		idType := c.Query("user_identifier")
-
 		if !utils.Contains([]string{"object_id", "twitch_id", "login"}, idType) {
 			return restutil.ErrMissingQueryParams().Send(c, `user_identifier: must be 'object_id', 'twitch_id' or 'login'`)
 		}
+
+		gmx.Lock()
+		x := mx[idType]
+		gmx.Unlock()
+		x.Lock()
+		defer x.Unlock()
 
 		// Compose Redis Key
 		cacheKey := fmt.Sprintf("cache:cosmetics:%s", idType)
@@ -82,17 +90,13 @@ func GetBadges(router fiber.Router) {
 				},
 			}},
 			{{Key: "$project", Value: bson.M{
-				"cosmetics":                  1,
-				"entitlements._id":           1,
-				"entitlements.kind":          1,
-				"entitlements.data":          1,
-				"entitlements.user_id":       1,
-				"users.connections.id":       1,
-				"users.connections.platform": 1,
-				"users.username":             1,
-				"users._id":                  1,
-				"users.id":                   1,
-				"users.login":                1,
+				"entitlements._id":     1,
+				"entitlements.kind":    1,
+				"entitlements.data":    1,
+				"entitlements.user_id": 1,
+				"users._id":            1,
+				"users.id":             1,
+				"users.login":          1,
 			}}},
 		}
 
