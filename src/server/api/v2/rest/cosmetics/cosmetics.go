@@ -119,17 +119,28 @@ func GetCosmetics(router fiber.Router) {
 		// Check entitled paints / badges for users we need to fetch
 		entitledUserCount := 0
 		entitledUserIDs := make([]primitive.ObjectID, len(ents[datastructure.EntitlementKindBadge])+len(ents[datastructure.EntitlementKindPaint]))
-		userCosmetics := make(map[primitive.ObjectID][3]bool) // [0]: seen, [1] has badge, [2 has paint
+		userCosmetics := make(map[primitive.ObjectID][2]primitive.ObjectID) // [0] has badge, [1] has paint
 
 		for _, ent := range ents[datastructure.EntitlementKindBadge] {
 			if ok, d := readEntitled(roleMap, ent); ok {
 				uc := userCosmetics[ent.UserID]
-				uc[0] = true
-				if !uc[1] { // assign badge
-					uc[1] = true
-					cos := cosMap[d.ObjectReference]
-					cos.UserIDs = append(cos.UserIDs, ent.UserID)
+				cos := cosMap[d.ObjectReference]
+				if !uc[0].IsZero() {
+					oldCos := cosMap[uc[0]]
+					if oldCos == nil || oldCos.Priority >= cos.Priority {
+						continue // skip if priority is lower
+					}
+					// Find index of old
+					for i, id := range oldCos.UserIDs {
+						if id == ent.UserID {
+							oldCos.UserIDs[i] = oldCos.UserIDs[len(oldCos.UserIDs)-1]
+							oldCos.UserIDs = oldCos.UserIDs[:len(oldCos.UserIDs)-1]
+							break
+						}
+					}
 				}
+				uc[0] = cos.ID
+				cos.UserIDs = append(cos.UserIDs, ent.UserID)
 
 				userCosmetics[ent.UserID] = uc
 				entitledUserIDs[entitledUserCount] = ent.UserID
@@ -139,11 +150,10 @@ func GetCosmetics(router fiber.Router) {
 		for _, ent := range ents[datastructure.EntitlementKindPaint] {
 			if ok, d := readEntitled(roleMap, ent); ok {
 				uc := userCosmetics[ent.UserID]
-				uc[0] = true
-				if !uc[2] {
-					uc[2] = true
+				if uc[1].IsZero() {
 					cos := cosMap[d.ObjectReference]
 					cos.UserIDs = append(cos.UserIDs, ent.UserID)
+					uc[1] = cos.ID
 				}
 
 				userCosmetics[ent.UserID] = uc
