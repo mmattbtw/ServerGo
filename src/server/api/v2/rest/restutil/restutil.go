@@ -105,7 +105,7 @@ func CreateUserResponse(user *datastructure.User, opt ...UserResponseOptions) *U
 		DisplayName:      user.DisplayName,
 		Role:             datastructure.GetRole(user.RoleID),
 		EmoteAliases:     utils.Ternary(options.IncludeAliases, user.EmoteAlias, map[string]string{}).(map[string]string),
-		ProfilePictureID: user.ProfilePictureID,
+		ProfilePictureID: utils.Ternary(user.HasPermission(datastructure.RolePermissionUseCustomAvatars), user.ProfilePictureID, "").(string),
 	}
 
 	return &response
